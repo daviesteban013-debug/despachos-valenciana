@@ -3,12 +3,7 @@ import { useWms } from '../context/WmsContext';
 import { 
   X, 
   Printer, 
-  QrCode, 
-  Barcode, 
-  CheckCircle2, 
-  MapPin, 
-  Truck, 
-  Warehouse 
+  QrCode 
 } from 'lucide-react';
 
 export default function PackageLabelModal() {
@@ -18,19 +13,26 @@ export default function PackageLabelModal() {
 
   const handlePrint = () => {
     playBeep(1200);
-    showToast(`Enviado a Impresora Térmica Zebra (Bahía ${packageLabelDespacho.bahia_asignada})`, 'success');
+    showToast(`Enviado a Impresora Térmica Zebra (${packageLabelDespacho.bahia_asignada})`, 'success');
     window.print();
   };
 
   const totalPiezas = packageLabelDespacho.items?.reduce((acc, it) => acc + it.cantidad_solicitada, 0) || 1;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex flex-col justify-end md:justify-center md:items-center p-0 md:p-4 animate-fadeIn"
+      onClick={() => setPackageLabelDespacho(null)}
+    >
       <div 
-        className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden"
+        className="w-full md:max-w-md bg-white rounded-t-3xl md:rounded-3xl shadow-2xl border border-slate-300 overflow-hidden max-h-[92vh] flex flex-col animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
-        
+        {/* Pull handle móvil */}
+        <div className="pt-2 pb-1 bg-[#E11D24] md:hidden cursor-pointer" onClick={() => setPackageLabelDespacho(null)}>
+          <div className="w-12 h-1.5 bg-white/40 rounded-full mx-auto" />
+        </div>
+
         {/* Cabecera del Modal */}
         <div className="bg-[#E11D24] text-white p-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -47,111 +49,101 @@ export default function PackageLabelModal() {
           </button>
         </div>
 
-        {/* ETIQUETA TÉRMICA ESTILO ZEBRA INDUSTRIAL (4x6 pulg) */}
-        <div className="p-5 bg-white text-slate-950 font-sans border-b border-slate-200 print:m-0 print:p-2 space-y-4">
+        {/* ETIQUETA TÉRMICA ESTILO ZEBRA INDUSTRIAL */}
+        <div className="p-4 bg-white text-slate-950 font-sans border-b border-slate-200 overflow-y-auto space-y-3">
           
-          {/* Logo y Encabezado Remitente */}
-          <div className="border-2 border-slate-900 p-3 flex items-center justify-between">
+          {/* Logo y Encabezado */}
+          <div className="border-2 border-slate-900 p-2.5 flex items-center justify-between">
             <div className="leading-tight">
-              <span className="font-black text-base uppercase tracking-tight block">
+              <span className="font-black text-sm uppercase tracking-tight block">
                 La Valenciana FERREHOGAR
               </span>
-              <span className="text-[10px] text-slate-600 block">
-                NIT: 890.501.240-1 • Cúcuta, N. de Santander
-              </span>
-              <span className="text-[10px] font-bold text-[#E11D24] block">
-                DESPACHO DE BODEGA & FERRETERÍA
+              <span className="text-[11px] text-slate-600 block font-semibold">
+                Cúcuta • Despacho de Materiales
               </span>
             </div>
-            <div className="h-10 w-10 border-2 border-slate-900 p-1 flex items-center justify-center font-mono font-black text-xs">
-              BOG-01
+            <div className="h-9 w-9 border-2 border-slate-900 p-1 flex items-center justify-center font-mono font-black text-xs">
+              01
             </div>
           </div>
 
-          {/* Factura ERP y Orden en Tamaño Gigante */}
-          <div className="border-2 border-slate-900 p-3 bg-slate-50 text-center space-y-1">
-            <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-500 block">
+          {/* Factura ERP y Orden */}
+          <div className="border-2 border-slate-900 p-2.5 bg-slate-50 text-center space-y-0.5">
+            <span className="text-[11px] uppercase font-bold tracking-wider text-slate-500 block">
               Factura Electrónica ERP / Pedido
             </span>
-            <div className="font-mono text-2xl sm:text-3xl font-black text-slate-950 tracking-wider">
+            <div className="font-mono text-2xl font-black text-slate-950 tracking-wider">
               {packageLabelDespacho.codigo_factura_erp || packageLabelDespacho.codigo_orden}
             </div>
             <span className="font-mono text-xs font-bold text-slate-600">
-              Orden WMS: {packageLabelDespacho.codigo_orden}
+              WMS: {packageLabelDespacho.codigo_orden}
             </span>
           </div>
 
-          {/* Datos del Destinatario */}
-          <div className="border-2 border-slate-900 p-3 space-y-1.5 text-xs">
-            <span className="text-[9px] uppercase font-extrabold text-slate-500 block">DESTINATARIO:</span>
+          {/* Destinatario */}
+          <div className="border-2 border-slate-900 p-2.5 space-y-1 text-xs">
+            <span className="text-[10px] uppercase font-bold text-slate-500 block">DESTINATARIO:</span>
             <h3 className="font-black text-sm uppercase leading-tight">
               {packageLabelDespacho.cliente_nombre}
             </h3>
-            <p className="font-semibold text-slate-700">
-              Zona de Entrega: <strong className="text-slate-950">{packageLabelDespacho.zona_entrega}</strong>
+            <p className="font-medium text-slate-700">
+              Zona: <strong className="text-slate-950">{packageLabelDespacho.zona_entrega}</strong>
             </p>
           </div>
 
-          {/* Muelle, Transportadora, Peso y Bultos */}
+          {/* Muelle y Transportadora */}
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="border-2 border-slate-900 p-2.5 text-center">
-              <span className="text-[9px] font-extrabold uppercase text-slate-500 block">Bahía de Carga</span>
-              <span className="font-mono text-lg font-black text-purple-900 block">
+            <div className="border-2 border-slate-900 p-2 text-center">
+              <span className="text-[10px] font-bold uppercase text-slate-500 block">Bahía Carga</span>
+              <span className="font-mono text-base font-black text-purple-900 block">
                 {packageLabelDespacho.bahia_asignada}
               </span>
             </div>
-            <div className="border-2 border-slate-900 p-2.5 text-center">
-              <span className="text-[9px] font-extrabold uppercase text-slate-500 block">Transportadora</span>
-              <span className="text-xs font-black block mt-1">
+            <div className="border-2 border-slate-900 p-2 text-center">
+              <span className="text-[10px] font-bold uppercase text-slate-500 block">Flota / Guía</span>
+              <span className="text-xs font-black block mt-0.5 truncate">
                 {packageLabelDespacho.transportadora}
               </span>
             </div>
           </div>
 
+          {/* Peso y Bultos */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="border-2 border-slate-900 p-2 text-center">
-              <span className="text-[9px] font-bold text-slate-500 uppercase block">Peso Báscula</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase block">Peso Báscula</span>
               <span className="font-mono font-black text-sm">{packageLabelDespacho.peso_bascula_kg || packageLabelDespacho.peso_total_kg} kg</span>
             </div>
             <div className="border-2 border-slate-900 p-2 text-center">
-              <span className="text-[9px] font-bold text-slate-500 uppercase block">Total Piezas</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase block">Total Piezas</span>
               <span className="font-mono font-black text-sm">{totalPiezas} und</span>
             </div>
           </div>
 
-          {/* Código QR y Código de Barras de Remisión */}
-          <div className="border-2 border-slate-900 p-3 flex items-center justify-between gap-3 bg-white">
-            <div className="space-y-1">
-              <span className="text-[9px] font-mono font-bold uppercase text-slate-500 block">
-                GUÍA DE REMISIÓN:
-              </span>
-              <span className="font-mono text-sm font-black tracking-wider block">
-                {packageLabelDespacho.numero_guia}
-              </span>
-              <div className="flex items-center gap-1 text-[9px] text-slate-600 font-mono">
-                <span>REVISADO WMS VALENCIANA</span>
-              </div>
+          {/* QR de Remisión */}
+          <div className="border-2 border-slate-900 p-2.5 flex items-center justify-between gap-2 bg-white">
+            <div className="space-y-0.5 text-xs font-mono">
+              <span className="text-[10px] font-bold text-slate-500 block">GUÍA DE REMISIÓN:</span>
+              <span className="font-black tracking-wider block text-sm">{packageLabelDespacho.numero_guia}</span>
+              <span className="text-[10px] text-emerald-700 font-bold block">✓ AUDITADO VALENCIANA</span>
             </div>
-
-            {/* Simulación Gráfica de Código QR */}
-            <div className="h-16 w-16 bg-slate-950 p-1 rounded-md flex items-center justify-center shrink-0">
+            <div className="h-14 w-14 bg-slate-950 p-1 rounded-md flex items-center justify-center shrink-0">
               <QrCode className="h-full w-full text-white" />
             </div>
           </div>
 
         </div>
 
-        {/* Botones de Acción */}
-        <div className="p-4 bg-slate-50 flex items-center justify-end gap-2.5 print:hidden">
+        {/* Acciones */}
+        <div className="p-3 bg-slate-50 flex items-center justify-end gap-2 shrink-0">
           <button
             onClick={() => setPackageLabelDespacho(null)}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100"
+            className="min-h-[44px] px-4 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100"
           >
             Cerrar
           </button>
           <button
             onClick={handlePrint}
-            className="px-5 py-2 bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-2 active:scale-95 transition-all"
+            className="min-h-[44px] px-5 bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
           >
             <Printer className="h-4 w-4" />
             <span>Imprimir Etiqueta</span>

@@ -6,15 +6,14 @@ import {
   CheckCircle2, 
   PackageX, 
   Scale, 
-  FileWarning, 
-  HelpCircle 
+  FileWarning 
 } from 'lucide-react';
 
 const INCIDENT_TYPES = [
-  { id: 'DIVERGENCIA_PESO', label: 'Divergencia de Peso en Báscula (> ±3%)', icon: Scale, desc: 'Diferencia detectada entre peso de báscula y peso teórico de factura' },
-  { id: 'FALTANTE', label: 'Faltante de Inventario / Stock en Rack', icon: PackageX, desc: 'Unidades físicas en bodega inferiores a las requeridas en el pedido' },
-  { id: 'AVERIA', label: 'Avería / Bulto Roto o Dañado', icon: AlertTriangle, desc: 'Empaque roto, bolsa de cemento abierta o producto con daño estructural' },
-  { id: 'ERROR_GUIA', label: 'Error en Guía / Dirección Errónea', icon: FileWarning, desc: 'Rótulo ilegible o inconsistencia de zona en la orden' }
+  { id: 'DIVERGENCIA_PESO', label: 'Divergencia de Peso en Báscula (> ±3%)', icon: Scale, desc: 'Diferencia detectada entre báscula y peso teórico' },
+  { id: 'FALTANTE', label: 'Faltante de Inventario / Stock en Rack', icon: PackageX, desc: 'Unidades físicas inferiores a las facturadas' },
+  { id: 'AVERIA', label: 'Avería / Bulto Roto o Dañado', icon: AlertTriangle, desc: 'Empaque roto o producto con daño' },
+  { id: 'ERROR_GUIA', label: 'Error en Guía / Rótulo', icon: FileWarning, desc: 'Rótulo ilegible o dirección errónea' }
 ];
 
 export default function IncidentModal() {
@@ -26,7 +25,7 @@ export default function IncidentModal() {
 
   const [selectedType, setSelectedType] = useState('DIVERGENCIA_PESO');
   const [description, setDescription] = useState(
-    isResolving ? 'Se verificó físicamente el producto y se ajustó la discrepancia con el supervisor de bodega.' : ''
+    isResolving ? 'Se verificó físicamente el producto y se regularizó la discrepancia con el supervisor de bodega.' : ''
   );
   const [destinationStage, setDestinationStage] = useState('PACKING');
 
@@ -42,23 +41,30 @@ export default function IncidentModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex flex-col justify-end md:justify-center md:items-center p-0 md:p-4 animate-fadeIn"
+      onClick={() => setIncidentModalTarget(null)}
+    >
       <div 
-        className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-scaleUp"
+        className="w-full md:max-w-lg bg-white rounded-t-3xl md:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
-        
+        {/* Pull handle en móvil */}
+        <div className="pt-2 pb-1 bg-white md:hidden cursor-pointer" onClick={() => setIncidentModalTarget(null)}>
+          <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto" />
+        </div>
+
         {/* Encabezado */}
-        <div className={`p-4 border-b flex items-center justify-between text-white ${
+        <div className={`p-4 flex items-center justify-between text-white ${
           isResolving ? 'bg-emerald-600' : 'bg-[#E11D24]'
         }`}>
           <div className="flex items-center gap-2.5">
             {isResolving ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
             <div>
-              <h3 className="text-sm font-black uppercase tracking-wider">
-                {isResolving ? 'Resolver Novedad y Liberar Despacho' : 'Reportar Incidencia / Retener en Muelle'}
+              <h3 className="text-sm sm:text-base font-black uppercase tracking-wide">
+                {isResolving ? 'Resolver Novedad & Liberar' : 'Reportar Novedad en Muelle'}
               </h3>
-              <p className="text-xs opacity-90">
+              <p className="text-xs opacity-90 font-medium">
                 Orden: <strong>{incidentModalTarget.codigo_factura_erp || incidentModalTarget.codigo_orden}</strong>
               </p>
             </div>
@@ -73,12 +79,12 @@ export default function IncidentModal() {
         </div>
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 text-sm">
           
           {isResolving && incidentModalTarget.incidencia_activa && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl space-y-1">
-              <span className="text-[10px] font-bold uppercase text-[#E11D24]">Causa de Retención:</span>
-              <p className="text-xs text-red-900 font-bold">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-2xl space-y-1">
+              <span className="text-xs font-black uppercase text-[#E11D24]">Causa de Retención:</span>
+              <p className="text-sm text-red-900 font-bold">
                 [{incidentModalTarget.incidencia_activa.tipo}] {incidentModalTarget.incidencia_activa.descripcion}
               </p>
             </div>
@@ -87,7 +93,7 @@ export default function IncidentModal() {
           {/* Selección de Tipo */}
           {!isResolving && (
             <div className="space-y-2">
-              <label className="font-black uppercase tracking-wider text-slate-700 block">
+              <label className="font-black uppercase tracking-wide text-slate-700 block text-xs">
                 Tipo de Novedad Operativa:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -99,17 +105,17 @@ export default function IncidentModal() {
                       type="button"
                       key={t.id}
                       onClick={() => setSelectedType(t.id)}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
+                      className={`p-3 rounded-2xl border text-left transition-all ${
                         isSelected
-                          ? 'border-[#E11D24] bg-red-50 text-[#E11D24] ring-1 ring-red-400 font-bold'
-                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          ? 'border-[#E11D24] bg-red-50 text-[#E11D24] ring-1 ring-red-300 font-bold'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 font-bold">
+                      <div className="flex items-center gap-1.5 font-bold text-xs">
                         <Icon className="h-4 w-4 shrink-0" />
                         <span>{t.label}</span>
                       </div>
-                      <p className="text-[10px] opacity-80 mt-1">{t.desc}</p>
+                      <p className="text-xs opacity-75 mt-1">{t.desc}</p>
                     </button>
                   );
                 })}
@@ -120,13 +126,13 @@ export default function IncidentModal() {
           {/* Destino tras Resolver */}
           {isResolving && (
             <div className="space-y-1.5">
-              <label className="font-black uppercase tracking-wider text-slate-700 block">
+              <label className="font-black uppercase tracking-wide text-slate-700 block text-xs">
                 Reincorporar orden a la fase:
               </label>
               <select
                 value={destinationStage}
                 onChange={(e) => setDestinationStage(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
               >
                 <option value="PACKING">En Packing (Reauditar y aforar báscula)</option>
                 <option value="PICKING">En Picking (Completar sustituto en rack)</option>
@@ -137,7 +143,7 @@ export default function IncidentModal() {
 
           {/* Justificación */}
           <div className="space-y-1.5">
-            <label className="font-black uppercase tracking-wider text-slate-700 block">
+            <label className="font-black uppercase tracking-wide text-slate-700 block text-xs">
               {isResolving ? 'Solución Aplicada en Bodega:' : 'Descripción del Problema o Divergencia:'}
             </label>
             <textarea
@@ -146,22 +152,22 @@ export default function IncidentModal() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={isResolving ? 'Explica el ajuste realizado...' : 'Indica el SKU, cantidad o motivo de la retención...'}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-[#E11D24] font-sans"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm text-slate-900 focus:outline-none focus:border-[#E11D24] font-sans"
             />
           </div>
 
-          {/* Botones */}
+          {/* Botones táctiles grandes (min 44px) */}
           <div className="flex items-center justify-end gap-2.5 pt-2">
             <button
               type="button"
               onClick={() => setIncidentModalTarget(null)}
-              className="min-h-[44px] px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all"
+              className="min-h-[44px] px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all text-xs sm:text-sm"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className={`min-h-[44px] px-5 rounded-xl text-white font-black transition-all shadow-md active:scale-95 flex items-center gap-1.5 ${
+              className={`min-h-[44px] px-5 rounded-xl text-white font-black transition-all shadow-md active:scale-95 flex items-center gap-1.5 text-xs sm:text-sm ${
                 isResolving 
                   ? 'bg-emerald-600 hover:bg-emerald-700' 
                   : 'bg-[#E11D24] hover:bg-red-700'

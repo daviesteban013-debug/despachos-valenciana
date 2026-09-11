@@ -3,12 +3,7 @@ import { useWms } from '../context/WmsContext';
 import { 
   X, 
   ScanLine, 
-  Barcode, 
-  QrCode, 
-  Check, 
-  Sparkles, 
-  Search, 
-  ArrowRight 
+  Barcode
 } from 'lucide-react';
 
 export default function BarcodeScannerModal() {
@@ -62,50 +57,56 @@ export default function BarcodeScannerModal() {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn"
+      onClick={() => setScannerModalOpen(false)}
+    >
       <div 
-        className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full sm:max-w-md bg-slate-900 border-t sm:border border-slate-700 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        
+        {/* Manija táctil para móvil */}
+        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Encabezado */}
-        <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between text-white">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-red-600/20 border border-red-500/40 text-[#E11D24]">
+        <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between text-white shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-red-600/20 border border-red-500/40 text-[#E11D24]">
               <ScanLine className="h-5 w-5 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-100">
-                Simulador de Pistola RF & Lector Láser
+              <h3 className="text-sm font-black uppercase tracking-wider text-slate-100">
+                Pistola RF / Lector Láser
               </h3>
-              <p className="text-[11px] text-slate-400">Escaneo de Códigos de Barras 1D / QR</p>
+              <p className="text-xs text-slate-400">Escaneo de Códigos de Barras 1D / QR</p>
             </div>
           </div>
 
           <button
             onClick={() => setScannerModalOpen(false)}
-            className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors active:scale-95"
+            aria-label="Cerrar modal de escáner"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
           
           {/* Animación del Visor Láser */}
-          <div className="relative h-32 bg-black rounded-xl border-2 border-slate-700 flex flex-col items-center justify-center overflow-hidden">
+          <div className="relative h-28 sm:h-32 bg-black rounded-xl border-2 border-slate-700 flex flex-col items-center justify-center overflow-hidden">
             {/* Línea roja láser animada */}
             <div className="absolute left-0 right-0 h-[2px] bg-red-500 shadow-[0_0_12px_#E11D24] animate-bounce" />
             
-            <Barcode className="h-14 w-40 text-slate-600 opacity-60" />
-            <span className="text-[10px] font-mono text-red-400 font-bold tracking-widest mt-1">
+            <Barcode className="h-12 w-36 text-slate-600 opacity-60" />
+            <span className="text-xs font-mono text-red-400 font-bold tracking-wider mt-2">
               APUNTE AL CÓDIGO DE BARRAS O QR
             </span>
           </div>
 
           {/* Formulario Manual / Pistoleo */}
           <form onSubmit={handleManualSubmit} className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300 block">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 block">
               Entrada de Lector / Digitar Código:
             </label>
             <div className="flex items-center gap-2">
@@ -115,11 +116,11 @@ export default function BarcodeScannerModal() {
                 placeholder="Ej. FE-80297 o SKU-CEM-50..."
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value)}
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white placeholder-slate-500 focus:outline-none focus:border-[#E11D24]"
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3.5 h-11 text-sm font-mono font-bold text-white placeholder-slate-500 focus:outline-none focus:border-[#E11D24]"
               />
               <button
                 type="submit"
-                className="bg-[#E11D24] hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95"
+                className="bg-[#E11D24] hover:bg-red-700 text-white px-5 h-11 rounded-xl text-sm font-black transition-all shadow-sm active:scale-95 shrink-0"
               >
                 Pistolear
               </button>
@@ -128,22 +129,22 @@ export default function BarcodeScannerModal() {
 
           {/* Códigos de Prueba Rápidos para Simulación */}
           <div className="space-y-2 pt-2 border-t border-slate-800">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-              Códigos de Prueba Rápidos (Hacer Clic):
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+              Accesos Rápidos de Simulación (Tap para escanear):
             </span>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {SAMPLE_BARCODES.map((item) => (
                 <button
                   key={item.code}
                   type="button"
                   onClick={() => handleScanSample(item.code)}
-                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-800/70 hover:bg-red-950/40 hover:border-red-500/40 border border-slate-700/80 text-left transition-all group"
+                  className="w-full min-h-[44px] flex items-center justify-between p-3 rounded-xl bg-slate-800/80 hover:bg-red-950/40 hover:border-red-500/40 border border-slate-700 text-left transition-all active:scale-[0.98] group"
                 >
-                  <div className="flex items-center gap-2">
-                    <Barcode className="h-4 w-4 text-slate-400 group-hover:text-red-400 transition-colors" />
+                  <div className="flex items-center gap-2.5">
+                    <Barcode className="h-5 w-5 text-slate-400 group-hover:text-red-400 transition-colors shrink-0" />
                     <span className="text-xs font-bold text-slate-200">{item.label}</span>
                   </div>
-                  <span className="font-mono text-xs font-black text-amber-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">
+                  <span className="font-mono text-xs font-black text-amber-400 bg-slate-900 px-2 py-1 rounded border border-slate-700 shrink-0">
                     {item.code}
                   </span>
                 </button>

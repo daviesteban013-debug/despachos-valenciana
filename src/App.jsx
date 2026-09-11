@@ -13,31 +13,30 @@ import PackageLabelModal from './components/PackageLabelModal';
 import BarcodeScannerModal from './components/BarcodeScannerModal';
 import ReturnsDrawer from './components/ReturnsDrawer';
 import ToastNotification from './components/ToastNotification';
-import { Database, ShieldCheck } from 'lucide-react';
 
 function AppContent() {
   const { activeDockTab } = useWms();
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col selection:bg-red-600 selection:text-white pb-20 md:pb-24">
-      {/* 1. Header con Identidad Corporativa La Valenciana FERREHOGAR */}
+    <div className="min-h-screen bg-slate-100 flex flex-col selection:bg-red-600 selection:text-white pb-24">
+      {/* 1. Header Compacto Mobile-First */}
       <Header />
 
-      {/* 2. Carousel de Métricas Superiores */}
+      {/* 2. Resumen / Acordeón de Métricas Operativas */}
       <MetricsCarousel />
 
-      {/* 3. Contenido según pestaña activa del Bottom Dock */}
-      <main className="flex-1">
+      {/* 3. Contenido Principal según Pestaña Activa */}
+      <main className="flex-1 w-full max-w-7xl mx-auto">
         {activeDockTab === 'waves' && <KanbanBoard />}
         {activeDockTab === 'packing' && <PackingStationView />}
         {activeDockTab === 'bays' && <BayFleetView />}
         {activeDockTab === 'incidents' && <IncidentsView />}
       </main>
 
-      {/* 4. Barra Inferior Táctil (Bottom Navigation Dock) para el Pulgar */}
+      {/* 4. Dock Inferior Táctil con Botón Destacado de Escáner */}
       <BottomDock />
 
-      {/* 5. Modales y Bottom Sheets Modulares */}
+      {/* 5. Modales y Bottom Sheets */}
       <DispatchDetailDrawer />
       <IncidentModal />
       <PackageLabelModal />

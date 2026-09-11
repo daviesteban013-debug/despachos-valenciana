@@ -2,19 +2,11 @@ import React from 'react';
 import { useWms } from '../context/WmsContext';
 import { 
   Warehouse, 
-  Truck, 
-  UserCheck, 
-  MapPin, 
-  Weight, 
-  Package, 
-  FileText, 
-  CheckCircle2,
-  Clock,
-  ArrowRight
+  MapPin
 } from 'lucide-react';
 
 export default function BayFleetView() {
-  const { despachos, rutasVehiculos, setSelectedDespachoId, advanceStage } = useWms();
+  const { despachos, rutasVehiculos, setSelectedDespachoId } = useWms();
 
   const BAYS_CONFIG = [
     { bayCode: 'Bahía A-01', rutaId: 'rt-101', type: 'Muelle Principal' },
@@ -24,20 +16,20 @@ export default function BayFleetView() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 space-y-4">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-3 space-y-4">
       
       {/* Encabezado */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-purple-50 text-purple-700 border border-purple-200">
+          <div className="p-2.5 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
             <Warehouse className="h-6 w-6" />
           </div>
           <div>
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">
-              Mapa de Bahías de Carga & Flota de Transporte
+              Mapa de Bahías & Flota
             </h2>
             <p className="text-xs text-slate-500">
-              Control físico de estibas listas, cubicaje de camiones y despacho de rutas
+              Control físico de estibas listas, cubicaje y despacho
             </p>
           </div>
         </div>
@@ -66,18 +58,18 @@ export default function BayFleetView() {
               {/* Encabezado Bahía */}
               <div className="flex items-start justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-10 w-10 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center font-mono font-black text-purple-900 text-sm">
+                  <div className="h-10 w-10 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center font-mono font-black text-purple-900 text-sm shrink-0">
                     {bay.bayCode.replace('Bahía ', '')}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-black text-slate-900 text-sm">{bay.bayCode}</h3>
-                      <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
                         {bay.type}
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                      <MapPin className="h-3.5 w-3.5 text-purple-600" />
+                      <MapPin className="h-3.5 w-3.5 text-purple-600 shrink-0" />
                       <span>{ruta.zona}</span>
                     </p>
                   </div>
@@ -95,25 +87,25 @@ export default function BayFleetView() {
               {/* Información del Vehículo y Conductor */}
               <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Vehículo / Placa</span>
+                  <span className="text-xs uppercase font-bold text-slate-400 block">Vehículo / Placa</span>
                   <div className="flex items-baseline gap-1.5 mt-0.5">
                     <span className="font-mono text-base font-black text-slate-900">{ruta.vehiculo.placa}</span>
-                    <span className="text-[11px] text-slate-500 font-bold">({ruta.vehiculo.tipo})</span>
+                    <span className="text-xs text-slate-500 font-bold">({ruta.vehiculo.tipo})</span>
                   </div>
-                  <p className="text-[11px] text-slate-500">{ruta.vehiculo.modelo}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{ruta.vehiculo.modelo}</p>
                 </div>
 
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Conductor Asignado</span>
+                  <span className="text-xs uppercase font-bold text-slate-400 block">Conductor</span>
                   <p className="text-xs font-bold text-slate-900 mt-0.5">{ruta.conductor.nombre}</p>
-                  <p className="text-[11px] text-purple-700 font-mono font-medium">{ruta.conductor.telefono}</p>
+                  <p className="text-xs text-purple-700 font-mono font-bold mt-0.5">{ruta.conductor.telefono}</p>
                 </div>
               </div>
 
               {/* Medidor de Cubicaje / Peso Acumulado */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-mono">
-                  <span className="text-slate-500 font-medium">Carga en Bahía vs Capacidad:</span>
+                  <span className="text-slate-500 font-medium">Carga vs Capacidad:</span>
                   <span className="font-bold text-slate-900">
                     {Math.round(pesoTotalCargado)} kg / {capacidadCamion} kg ({porcentajeOcupacion}%)
                   </span>
@@ -131,7 +123,7 @@ export default function BayFleetView() {
               {/* Órdenes ubicadas físicamente en la bahía */}
               <div className="space-y-2 pt-1 border-t border-slate-100">
                 <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span className="font-bold">Estibas / Órdenes en Muelle:</span>
+                  <span className="font-bold">Estibas en Muelle:</span>
                   <span className="font-mono font-bold text-purple-700">{ordenesEnBahia.length} despachos</span>
                 </div>
 
@@ -140,24 +132,24 @@ export default function BayFleetView() {
                     Bahía libre para recepción de estibas
                   </p>
                 ) : (
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
                     {ordenesEnBahia.map((ord) => (
                       <div 
                         key={ord.id}
                         onClick={() => setSelectedDespachoId(ord.id)}
-                        className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-purple-50 cursor-pointer border border-slate-200/70 text-xs transition-colors"
+                        className="min-h-[44px] flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-purple-50 cursor-pointer border border-slate-200/80 text-xs transition-colors active:scale-[0.99]"
                       >
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-bold text-slate-900">
                             {ord.codigo_factura_erp || ord.codigo_orden}
                           </span>
-                          <span className="text-slate-600 truncate max-w-[140px]">
+                          <span className="text-slate-600 truncate max-w-[130px] font-medium">
                             {ord.cliente_nombre}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           <span className="font-mono font-bold text-slate-700">{ord.peso_total_kg}kg</span>
-                          <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
+                          <span className="text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
                             {ord.estado_actual}
                           </span>
                         </div>

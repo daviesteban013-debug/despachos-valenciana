@@ -2,15 +2,8 @@ import React, { useState } from 'react';
 import { useWms } from '../context/WmsContext';
 import { 
   AlertOctagon, 
-  AlertTriangle, 
   CheckCircle2, 
-  Scale, 
-  PackageX, 
-  FileWarning, 
   Undo2, 
-  ArrowRight,
-  ShieldAlert,
-  MapPin,
   Clock
 } from 'lucide-react';
 
@@ -27,25 +20,25 @@ export default function IncidentsView() {
   });
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 space-y-4">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3 space-y-4">
       
       {/* Encabezado */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-red-50 text-[#E11D24] border border-red-200">
+          <div className="p-2.5 rounded-xl bg-red-50 text-[#E11D24] border border-red-200 shrink-0">
             <AlertOctagon className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">
-                Triage de Incidencias & Retención en Muelle
+                Triage de Incidencias & Retención
               </h2>
               <span className="text-xs font-mono font-bold bg-red-600 text-white px-2 py-0.5 rounded-full animate-pulse">
                 {incidencias.length} retenidas
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Despachos bloqueados por faltantes, divergencia de peso en báscula o rotulado
+              Despachos bloqueados por faltantes, peso en báscula o rotulado
             </p>
           </div>
         </div>
@@ -53,7 +46,7 @@ export default function IncidentsView() {
         {/* Acceso a Devoluciones */}
         <button
           onClick={() => setReturnsDrawerOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 shrink-0"
+          className="min-h-[44px] flex items-center justify-center gap-1.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 shrink-0 active:scale-95"
         >
           <Undo2 className="h-4 w-4 text-amber-600" />
           <span>Logística Inversa ({devoluciones.length})</span>
@@ -66,7 +59,7 @@ export default function IncidentsView() {
           <button
             key={tipo}
             onClick={() => setActiveFilter(tipo)}
-            className={`px-3 py-1.5 rounded-xl font-bold border transition-all shrink-0 ${
+            className={`min-h-[38px] px-3.5 py-1.5 rounded-xl font-bold border transition-all shrink-0 active:scale-95 ${
               activeFilter === tipo
                 ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-sm'
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -125,7 +118,7 @@ export default function IncidentsView() {
                 <div className="bg-red-50/80 rounded-xl p-3 text-xs text-red-900 space-y-1">
                   <div className="flex items-center justify-between font-bold text-[#E11D24]">
                     <span>Causa de Retención en Muelle:</span>
-                    <span className="text-[11px] font-normal text-slate-500">
+                    <span className="text-xs font-normal text-slate-500">
                       Reportado por: {inc?.reportado_por || 'Auditor'}
                     </span>
                   </div>
@@ -134,18 +127,18 @@ export default function IncidentsView() {
                   </p>
                 </div>
 
-                {/* Botón táctil grande para resolver y liberar */}
-                <div className="flex items-center justify-end gap-2 pt-1">
+                {/* Botones de acción táctiles grandes */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-1">
                   <button
                     onClick={() => setSelectedDespachoId(ord.id)}
-                    className="min-h-[44px] px-4 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all"
+                    className="min-h-[44px] px-4 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all flex items-center justify-center active:scale-95"
                   >
                     Ver Detalle & Materiales
                   </button>
 
                   <button
                     onClick={() => setIncidentModalTarget(ord)}
-                    className="min-h-[44px] px-5 rounded-xl text-xs font-black text-white bg-[#E11D24] hover:bg-red-700 transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+                    className="min-h-[44px] px-5 rounded-xl text-xs font-black text-white bg-[#E11D24] hover:bg-red-700 transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     <span>Resolver y Liberar Despacho</span>
