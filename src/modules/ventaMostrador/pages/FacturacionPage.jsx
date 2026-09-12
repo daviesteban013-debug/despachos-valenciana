@@ -657,10 +657,11 @@ export default function FacturacionPage() {
                       {esListaSello ? (
                         <button
                           type="button"
+                          disabled={fac.sellada || fac.estado === 'ENTREGADA Y SELLADA' || fac.estado === 'Sello verificado'}
                           onClick={() => {
                             confirmarSelloFactura(fac.id);
                           }}
-                          className="w-full min-h-[48px] py-3 px-4 bg-[#E11D24] hover:bg-red-700 active:scale-95 text-white rounded-xl text-sm font-black tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
+                          className="w-full min-h-[48px] py-3 px-4 bg-[#E11D24] hover:bg-red-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none text-white rounded-xl text-sm font-black tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
                         >
                           <Stamp className="w-5 h-5" />
                           <span>Confirmar sello / Entregado</span>

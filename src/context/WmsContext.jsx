@@ -55,6 +55,16 @@ export function WmsProvider({ children }) {
   const [returnsDrawerOpen, setReturnsDrawerOpen] = useState(false);
   const [notification, setNotification] = useState(null);
 
+  // Registro inmutable de trazabilidad de movimientos de stock
+  const [trazabilidadStock, setTrazabilidadStock] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wms_valenciana_trazabilidad_stock_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   // Reloj de corte SLA (cada 5 segundos)
   const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -90,6 +100,14 @@ export function WmsProvider({ children }) {
     }
   }, [facturas]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('wms_valenciana_trazabilidad_stock_v1', JSON.stringify(trazabilidadStock));
+    } catch (e) {
+      console.warn('LocalStorage trazabilidad error', e);
+    }
+  }, [trazabilidadStock]);
+
   const showToast = (message, type = 'info') => {
     setNotification({ message, type, id: Date.now() });
     setTimeout(() => {
@@ -121,7 +139,10 @@ export function WmsProvider({ children }) {
     }
   };
 
-  // Mapeo de transiciones operativas
+  // ============================================================================
+  // PILAR 2: MÁQUINA DE ESTADOS FINITOS (FSM) DE DESPACHOS
+  // Secuencia lineal y estricta: COLA -> PICKING -> PACKING -> LISTO -> DESPACHADO
+  // ============================================================================
   const NEXT_STAGE_MAP = {
     COLA: 'PICKING',
     PICKING: 'PACKING',
@@ -129,13 +150,17 @@ export function WmsProvider({ children }) {
     LISTO: 'DESPACHADO'
   };
 
-  const advanceStage = (despachoId) => {
+  const avanzarEstadoDespacho = (despachoId, metadataOperador = 'Líder Bodega Valenciana') => {
+    let transicionExitosa = false;
     setDespachos((prev) =>
       prev.map((d) => {
         if (d.id !== despachoId) return d;
         const current = d.estado_actual;
         const next = NEXT_STAGE_MAP[current];
-        if (!next) return d;
+        if (!next) {
+          console.warn(`[FSM ERROR] No se permite avanzar desde el estado actual: [${current}]`);
+          return d;
+        }
 
         const nowIso = new Date().toISOString();
         let updatedPickingOperario = d.picking_operario;
@@ -143,20 +168,27 @@ export function WmsProvider({ children }) {
         let updatedBahia = d.bahia_asignada;
         let updatedManifest = d.manifiesto_despacho;
         let updatedHoraSalida = d.hora_salida;
+        const marcasTiempo = {};
         let nota = `Transición operativa a ${next}`;
 
         if (next === 'PICKING') {
           updatedPickingOperario = updatedPickingOperario || 'Javier Gómez (RF-01)';
+          marcasTiempo.fechaInicioEscogiendo = nowIso;
           nota = `Asignado a ${updatedPickingOperario} para recolección en estantería`;
         } else if (next === 'PACKING') {
           updatedPackingMesa = updatedPackingMesa || 'Mesa 01 (Báscula Certificada)';
+          marcasTiempo.fechaFinEscogiendo = nowIso;
+          marcasTiempo.fechaInicioEmpaque = nowIso;
           nota = `Recibido en ${updatedPackingMesa} para verificación y aforo de peso`;
         } else if (next === 'LISTO') {
           updatedBahia = updatedBahia || 'Bodega A-01';
+          marcasTiempo.fechaFinEmpaque = nowIso;
+          marcasTiempo.fechaLlegadaBodega = nowIso;
           nota = `Auditoría y báscula conformes. Trasladado a ${updatedBahia} para estiba y cargue`;
         } else if (next === 'DESPACHADO') {
           updatedManifest = `MAN-VAL-2026-09-${Math.floor(100 + Math.random() * 900)}`;
           updatedHoraSalida = nowIso;
+          marcasTiempo.fechaDespacho = nowIso;
           nota = `Cargue completado. Despachado en ruta con manifiesto ${updatedManifest}`;
         }
 
@@ -166,7 +198,7 @@ export function WmsProvider({ children }) {
             id: `h-${Date.now()}`,
             estado_anterior: current,
             estado_nuevo: next,
-            usuario_operador: 'Líder Bodega Valenciana',
+            usuario_operador: metadataOperador,
             tiempo_estancia_seg: Math.floor(Math.random() * 300) + 120,
             timestamp: nowIso,
             nota
@@ -175,9 +207,11 @@ export function WmsProvider({ children }) {
 
         playBeep(1046); // Nota aguda de éxito
         showToast(`Orden ${d.codigo_orden} avanzada a [${next}] exitosamente.`, 'success');
+        transicionExitosa = true;
 
         return {
           ...d,
+          ...marcasTiempo,
           estado_actual: next,
           picking_operario: updatedPickingOperario,
           packing_mesa: updatedPackingMesa,
@@ -188,7 +222,11 @@ export function WmsProvider({ children }) {
         };
       })
     );
+    return transicionExitosa;
   };
+
+  // Alias para mantener compatibilidad total con componentes existentes
+  const advanceStage = avanzarEstadoDespacho;
 
   // Pistoleo / Escaneo individual de ítem
   const auditItem = (despachoId, itemId) => {
@@ -232,8 +270,8 @@ export function WmsProvider({ children }) {
     );
   };
 
-  // Reportar Incidencia
-  const reportIncident = (despachoId, tipo, descripcion) => {
+  // Registrar Incidencia (Retención operativa)
+  const registrarIncidencia = (despachoId, tipo, descripcion, metadataOperador = 'Auditor de Empaque (WMS)') => {
     playBeep(440, 'sawtooth'); // Tono de alerta grave
     setDespachos((prev) =>
       prev.map((d) => {
@@ -243,7 +281,7 @@ export function WmsProvider({ children }) {
           id: `inc-${Date.now()}`,
           tipo,
           descripcion,
-          reportado_por: 'Auditor de Empaque (WMS)',
+          reportado_por: metadataOperador,
           fecha_reporte: nowIso,
           resuelta: false
         };
@@ -254,7 +292,7 @@ export function WmsProvider({ children }) {
             id: `h-${Date.now()}`,
             estado_anterior: d.estado_actual,
             estado_nuevo: 'INCIDENCIA',
-            usuario_operador: 'Auditor de Empaque',
+            usuario_operador: metadataOperador,
             tiempo_estancia_seg: 60,
             timestamp: nowIso,
             nota: `RETENCIÓN POR INCIDENCIA (${tipo}): ${descripcion}`
@@ -275,8 +313,10 @@ export function WmsProvider({ children }) {
     setIncidentModalTarget(null);
   };
 
+  const reportIncident = registrarIncidencia;
+
   // Resolver Incidencia
-  const resolveIncident = (despachoId, solucion, destino = 'PACKING') => {
+  const resolverIncidencia = (despachoId, solucion, destino = 'PACKING', metadataOperador = 'Líder Bodega Valenciana') => {
     playBeep(987);
     setDespachos((prev) =>
       prev.map((d) => {
@@ -290,7 +330,7 @@ export function WmsProvider({ children }) {
             id: `h-${Date.now()}`,
             estado_anterior: 'INCIDENCIA',
             estado_nuevo: estadoRestaurado,
-            usuario_operador: 'Líder Bodega Valenciana',
+            usuario_operador: metadataOperador,
             tiempo_estancia_seg: 180,
             timestamp: nowIso,
             nota: `INCIDENCIA RESUELTA: ${solucion}. Reincorporado a [${estadoRestaurado}]`
@@ -309,6 +349,8 @@ export function WmsProvider({ children }) {
     );
     setIncidentModalTarget(null);
   };
+
+  const resolveIncident = resolverIncidencia;
 
   // Simular inyección de nuevo pedido crítico
   const addSimulatedOrder = () => {
@@ -353,10 +395,12 @@ export function WmsProvider({ children }) {
     localStorage.removeItem('wms_valenciana_despachos_v2');
     localStorage.removeItem('wms_valenciana_inventario_v2');
     localStorage.removeItem('wms_valenciana_facturas_v2');
+    localStorage.removeItem('wms_valenciana_trazabilidad_stock_v1');
     setDespachos(INITIAL_DESPACHOS);
     setDevoluciones(INITIAL_DEVOLUCIONES);
     setInventario(INITIAL_INVENTARIO);
     setFacturas(INITIAL_FACTURAS_EMITIDAS);
+    setTrazabilidadStock([]);
     setSelectedCarrier('TODAS');
     setSelectedZone('TODAS');
     setOnlyUrgent(false);
@@ -364,43 +408,113 @@ export function WmsProvider({ children }) {
     showToast('Datos reiniciados a los valores estándar de La Valenciana FERREHOGAR.', 'info');
   };
 
-  // Dentro de la función que confirma el sello de la factura:
-  const confirmarSelloFactura = (facturaId) => {
+  // ============================================================================
+  // PILAR 1: TRANSACCIONALIDAD E IDEMPOTENCIA EN SELLO DE FACTURA
+  // ============================================================================
+  const confirmarSelloFactura = (facturaId, metadataOperador = 'Cajero 01') => {
     // 1. Obtener la factura que se está sellando
-    const factura = facturas.find(f => f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId);
-    if (!factura) return;
+    const factura = facturas.find(
+      f => f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId
+    );
 
-    // 2. Descontar las cantidades de cada ítem del inventario global
+    if (!factura) {
+      console.warn(`[SELLO FACTURA] Factura con identificador "${facturaId}" no encontrada.`);
+      return { success: false, reason: 'NOT_FOUND' };
+    }
+
+    // 2. Control de Idempotencia estricta: Si ya fue sellada, abortar ejecución duplicada
+    if (factura.sellada || factura.estado === 'ENTREGADA Y SELLADA' || factura.estado === 'Sello verificado') {
+      console.warn(`[IDEMPOTENCIA] Intento de sellado duplicado para factura #${factura.numeroFactura || factura.id}. Acción bloqueada.`);
+      return { success: false, reason: 'ALREADY_SEALED', factura };
+    }
+
+    const timestampIso = new Date().toISOString();
+    const horaLegible = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const nuevosMovimientos = [];
+
+    // 3. Deducción atómica del stock en el Catálogo Maestro
     setInventario(prevInventario => {
       return prevInventario.map(producto => {
-        // Buscar si este producto está en los ítems de la factura
-        const itemFacturado = factura.items?.find(
-          item => item.sku === producto.sku || item.nombre === producto.nombre || item.producto === producto.nombre
-        );
+        // Buscar si este producto está en los ítems de la factura (SKU primario o nombre exacto)
+        const itemFacturado = factura.items?.find(item => {
+          const skuItem = item.sku?.toUpperCase();
+          const skuProd = producto.sku?.toUpperCase();
+          if (skuItem && skuProd && skuItem === skuProd) return true;
+
+          const nomItem = (item.nombre || item.producto || '').trim().toLowerCase();
+          const nomProd = (producto.nombre || '').trim().toLowerCase();
+          return nomItem.length > 0 && nomItem === nomProd;
+        });
 
         if (itemFacturado) {
-          const nuevoStock = Math.max(0, (producto.stockTotal || producto.stock || 0) - (itemFacturado.cantidad || 0));
+          const stockActual = producto.stockTotal ?? producto.stock ?? producto.stock_total ?? 0;
+          const cantidadDescontar = Number(itemFacturado.cantidad) || 0;
+          const nuevoStock = Math.max(0, stockActual - cantidadDescontar);
+
+          nuevosMovimientos.push({
+            logId: `log-sello-${Date.now()}-${producto.sku}`,
+            tipo: 'SALIDA_VENTA_MOSTRADOR',
+            facturaId: factura.numeroFactura || factura.numero || factura.id,
+            sku: producto.sku,
+            nombreProducto: producto.nombre,
+            cantidadDescontada: cantidadDescontar,
+            stockPrevio: stockActual,
+            stockPosterior: nuevoStock,
+            operador: metadataOperador,
+            timestamp: timestampIso
+          });
+
           return {
             ...producto,
             stockTotal: nuevoStock,
-            stock: nuevoStock
+            stock: nuevoStock,
+            stock_total: nuevoStock,
+            ultimaActualizacionStock: timestampIso
           };
         }
         return producto;
       });
     });
 
-    // 3. Actualizar el estado de la factura a sellada
+    // 4. Registro inmutable en el log de auditoría
+    if (nuevosMovimientos.length > 0) {
+      setTrazabilidadStock(prev => [...nuevosMovimientos, ...prev]);
+    }
+
+    // 5. Actualizar el estado de la factura a sellada
     setFacturas(prevFacturas =>
       prevFacturas.map(f =>
         (f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId)
-          ? { ...f, estado: 'ENTREGADA Y SELLADA', sellada: true, fechaSello: new Date().toISOString() }
+          ? {
+              ...f,
+              estado: 'ENTREGADA Y SELLADA',
+              sellada: true,
+              fechaSello: timestampIso,
+              selladaAt: timestampIso,
+              fechaEntregaFinal: timestampIso,
+              operadorSello: metadataOperador,
+              selloConfirmadoPor: metadataOperador,
+              historial: [
+                ...(f.historial || []),
+                {
+                  estado: 'ENTREGADA Y SELLADA',
+                  timestamp: horaLegible,
+                  detalle: `Sello físico verificado por ${metadataOperador}. Mercancía entregada e inventario descontado con éxito.`
+                }
+              ]
+            }
           : f
       )
     );
 
     playBeep(1046);
-    showToast(`Factura ${factura.numeroFactura || factura.numero || factura.id} confirmada como [ENTREGADA Y SELLADA]. Inventario descontado.`, 'success');
+    const itemsResumen = nuevosMovimientos.map(m => `${m.cantidadDescontada} un. de SKU ${m.sku}`).join(', ');
+    showToast(
+      `Factura #${factura.numeroFactura || factura.numero || factura.id} sellada: Se descontaron ${itemsResumen || 'las unidades facturadas'}.`,
+      'success'
+    );
+
+    return { success: true, movimientos: nuevosMovimientos };
   };
 
   // Filtrado reactivo de despachos
@@ -498,11 +612,16 @@ export function WmsProvider({ children }) {
         setNotification,
         currentTime,
         kpis,
+        trazabilidadStock,
+        setTrazabilidadStock,
+        avanzarEstadoDespacho,
         advanceStage,
         auditItem,
         auditAllItems,
         updateScaleWeight,
+        registrarIncidencia,
         reportIncident,
+        resolverIncidencia,
         resolveIncident,
         addSimulatedOrder,
         resetDemoData,

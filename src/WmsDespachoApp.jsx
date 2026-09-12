@@ -1,5 +1,5 @@
 import React from 'react';
-import { WmsProvider, useWms } from './context/WmsContext';
+import { useWms } from './context/WmsContext';
 import Header from './components/Header';
 import ControlBar from './components/ControlBar';
 import MetricsCarousel from './components/MetricsCarousel';
@@ -52,9 +52,5 @@ function AppContent() {
 }
 
 export default function WmsDespachoApp() {
-  return (
-    <WmsProvider>
-      <AppContent />
-    </WmsProvider>
-  );
+  return <AppContent />;
 }

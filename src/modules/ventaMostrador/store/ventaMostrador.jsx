@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ejecutarDescuentoTransaccional } from '../../inventario/services/inventarioApi.js';
 import { INITIAL_INVENTARIO } from '../../../data/mockData.js';
+import { useWms } from '../../../context/WmsContext.jsx';
 
 const STORAGE_KEY = 'valenciana_mostrador_facturas_v1';
 const BROADCAST_CHANNEL_NAME = 'valenciana_mostrador_channel';
@@ -246,6 +247,13 @@ const INITIAL_FACTURAS = [
 const VentaMostradorContext = createContext(null);
 
 export function VentaMostradorProvider({ children }) {
+  let wms = null;
+  try {
+    wms = useWms();
+  } catch (e) {
+    // Fallback si se ejecuta fuera de WmsProvider
+  }
+
   const [facturas, setFacturas] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -264,8 +272,8 @@ export function VentaMostradorProvider({ children }) {
     return INITIAL_FACTURAS;
   });
 
-  // Estado del catálogo global e inventario de productos
-  const [inventario, setInventario] = useState(() => {
+  // Estado del catálogo global e inventario de productos (respaldado por WMS si existe)
+  const [localInventario, setLocalInventario] = useState(() => {
     try {
       const saved = localStorage.getItem('wms_valenciana_inventario_v2');
       if (saved) return JSON.parse(saved);
@@ -273,11 +281,16 @@ export function VentaMostradorProvider({ children }) {
     return INITIAL_INVENTARIO;
   });
 
+  const inventario = wms?.inventario || localInventario;
+  const setInventario = wms?.setInventario || setLocalInventario;
+
   useEffect(() => {
-    try {
-      localStorage.setItem('wms_valenciana_inventario_v2', JSON.stringify(inventario));
-    } catch (e) {}
-  }, [inventario]);
+    if (!wms) {
+      try {
+        localStorage.setItem('wms_valenciana_inventario_v2', JSON.stringify(localInventario));
+      } catch (e) {}
+    }
+  }, [localInventario, wms]);
 
   const [sedeActiva, setSedeActiva] = useState('BOG-VAL-01');
   const [ultimaAccion, setUltimaAccion] = useState(null);
@@ -479,33 +492,56 @@ export function VentaMostradorProvider({ children }) {
   }, [persistFacturas]);
 
   // 5. FACTURACIÓN: "Confirmar sello / Entregado" -> pasa a ENTREGADA Y SELLADA
-  // Dentro de la función que confirma el sello de la factura:
-  const confirmarSelloFactura = useCallback((facturaId) => {
+  const confirmarSelloFactura = useCallback((facturaId, metadataOperador = 'Cajero 01') => {
     // 1. Obtener la factura que se está sellando
     const factura = facturas.find(f => f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId);
-    if (!factura) return;
+    if (!factura) {
+      return { success: false, reason: 'NOT_FOUND' };
+    }
 
-    // 2. Descontar las cantidades de cada ítem del inventario global
-    setInventario(prevInventario => {
-      return prevInventario.map(producto => {
-        // Buscar si este producto está en los ítems de la factura
-        const itemFacturado = factura.items?.find(
-          item => item.sku === producto.sku || item.nombre === producto.nombre || item.producto === producto.nombre
-        );
+    // 2. Control estricto de Idempotencia: no permitir doble sellado ni doble descuento
+    if (factura.sellada || factura.estado === 'ENTREGADA Y SELLADA' || factura.estado === 'Sello verificado') {
+      console.warn(`[IDEMPOTENCIA MOSTRADOR] Factura ${factura.numeroFactura || factura.id} ya fue sellada.`);
+      return { success: false, reason: 'ALREADY_SEALED', factura };
+    }
 
-        if (itemFacturado) {
-          const nuevoStock = Math.max(0, (producto.stockTotal || producto.stock || 0) - (itemFacturado.cantidad || 0));
-          return {
-            ...producto,
-            stockTotal: nuevoStock,
-            stock: nuevoStock
-          };
-        }
-        return producto;
+    // 3. Si existe el contexto global WMS (SSOT), delegar descuento transaccional
+    if (wms?.confirmarSelloFactura) {
+      wms.confirmarSelloFactura(facturaId, metadataOperador);
+    } else {
+      // Descontar localmente si se ejecuta aislado
+      setInventario(prevInventario => {
+        return prevInventario.map(producto => {
+          const itemFacturado = factura.items?.find(item => {
+            const skuItem = item.sku?.toUpperCase();
+            const skuProd = producto.sku?.toUpperCase();
+            if (skuItem && skuProd && skuItem === skuProd) return true;
+
+            const nomItem = (item.nombre || item.producto || '').trim().toLowerCase();
+            const nomProd = (producto.nombre || '').trim().toLowerCase();
+            return nomItem.length > 0 && nomItem === nomProd;
+          });
+
+          if (itemFacturado) {
+            const stockActual = producto.stockTotal ?? producto.stock ?? producto.stock_total ?? 0;
+            const nuevoStock = Math.max(0, stockActual - (Number(itemFacturado.cantidad) || 0));
+            return {
+              ...producto,
+              stockTotal: nuevoStock,
+              stock: nuevoStock,
+              stock_total: nuevoStock,
+              ultimaActualizacionStock: new Date().toISOString()
+            };
+          }
+          return producto;
+        });
       });
-    });
+    }
 
-    // 3. Actualizar el estado de la factura a sellada
+    // 4. Actualizar el estado de la factura a sellada en este store
+    const timestamp = new Date().toISOString();
+    const horaLegible = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     setFacturas(prevFacturas => {
       const actualizadas = prevFacturas.map(f =>
         (f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId)
@@ -513,15 +549,17 @@ export function VentaMostradorProvider({ children }) {
               ...f,
               estado: 'ENTREGADA Y SELLADA',
               sellada: true,
-              fechaSello: new Date().toISOString(),
-              fechaEntregaFinal: new Date().toISOString(),
-              selloConfirmadoPor: 'Cajero 01',
+              fechaSello: timestamp,
+              selladaAt: timestamp,
+              fechaEntregaFinal: timestamp,
+              operadorSello: metadataOperador,
+              selloConfirmadoPor: metadataOperador,
               historial: [
                 ...(f.historial || []),
                 {
                   estado: 'ENTREGADA Y SELLADA',
-                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  detalle: 'Sello físico verificado por Cajero 01. Mercancía entregada e inventario descontado con éxito.'
+                  timestamp: horaLegible,
+                  detalle: `Sello físico verificado por ${metadataOperador}. Mercancía entregada e inventario descontado con éxito.`
                 }
               ]
             }
@@ -529,13 +567,13 @@ export function VentaMostradorProvider({ children }) {
       );
 
       persistFacturas(actualizadas, {
-        mensaje: `Factura ${factura.numeroFactura || factura.numero || factura.id} sellada: inventario descontado con éxito.`,
+        mensaje: `Factura #${factura.numeroFactura || factura.numero || factura.id} sellada: inventario descontado con éxito.`,
         tipo: 'success'
       });
       return actualizadas;
     });
 
-    // Descontar también en la persistencia local/backend de inventario de bodegas
+    // 5. Descontar también en la persistencia local/backend de inventario de bodegas
     try {
       const SECCION_A_BODEGA = {
         materiales_construccion: 1,
@@ -557,7 +595,9 @@ export function VentaMostradorProvider({ children }) {
         referenciaId: factura.numeroFactura || factura.numero || factura.id
       }).catch(() => {});
     } catch (e) {}
-  }, [facturas, persistFacturas]);
+
+    return { success: true };
+  }, [facturas, persistFacturas, wms, setInventario]);
 
   // Alias para compatibilidad operativa
   const confirmarSelloYEntregar = useCallback(async (facturaId, cajero = 'Facturación') => {

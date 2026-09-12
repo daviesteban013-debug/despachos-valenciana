@@ -133,7 +133,16 @@ export async function cambiarEstadoFactura(req, res) {
     const esPasoASello = nuevoEstado === 'entregada' || nuevoEstado === 'ENTREGADA Y SELLADA' || nuevoEstado === 'Sello verificado';
 
     if (esPasoASello) {
-      if (fac.estado !== 'lista_sello' && fac.estado !== 'ENTREGADA Y SELLADA') {
+      // Control de Idempotencia: Si ya está sellada, retornar 200 sin volver a descontar
+      if (fac.sellada || fac.estado === 'ENTREGADA Y SELLADA') {
+        return res.status(200).json({
+          mensaje: `Factura ${fac.numeroFactura} ya fue sellada previamente. Operación idempotente.`,
+          factura: fac,
+          yaSellada: true
+        });
+      }
+
+      if (fac.estado !== 'lista_sello') {
         return res.status(400).json({
           error: `Solo facturas en estado "lista_sello" pueden pasar a "entregada". Estado actual: "${fac.estado}".`
         });

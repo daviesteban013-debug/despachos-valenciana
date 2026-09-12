@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import logoValenciana from '../../../assets/logo-valenciana.jpg';
+import { useWms } from '../../../context/WmsContext';
 import { SECCIONES, getSeccionInfo } from '../../ventaMostrador/data/secciones';
 import {
   obtenerInventario,
@@ -31,6 +32,14 @@ import {
 } from 'lucide-react';
 
 export default function InventarioPage() {
+  let wms = null;
+  try {
+    wms = useWms();
+  } catch (e) {}
+
+  const inventarioWms = wms?.inventario;
+  const trazabilidadStock = wms?.trazabilidadStock || [];
+
   // Estado de rol para demostración de seguridad
   const [rolUsuario, setRolUsuario] = useState('admin'); // 'admin' | 'operativo'
 
@@ -132,16 +141,52 @@ export default function InventarioPage() {
     }
   };
 
-  // Métricas agregadas
+  // Productos enriquecidos con el inventario en tiempo real del WmsContext (SSOT)
+  const productosConStockEnVivo = useMemo(() => {
+    return productos.map((prod) => {
+      const matchWms = inventarioWms?.find(
+        (ip) => (ip.sku && ip.sku.toUpperCase() === prod.sku.toUpperCase()) ||
+                (ip.nombre && ip.nombre.trim().toLowerCase() === prod.nombre.trim().toLowerCase())
+      );
+      if (matchWms) {
+        const stockVivo = matchWms.stockTotal ?? matchWms.stock ?? matchWms.stock_total ?? 0;
+        let desglose = prod.desglose_bodegas || [];
+        if (desglose.length > 0) {
+          const delta = stockVivo - (prod.stock_total || 0);
+          if (delta !== 0) {
+            desglose = desglose.map((b, idx) => {
+              if (idx === 0 || b.cantidad > 0) {
+                return { ...b, cantidad: Math.max(0, b.cantidad + delta) };
+              }
+              return b;
+            });
+          }
+        }
+        return {
+          ...prod,
+          stock_total: stockVivo,
+          stockTotal: stockVivo,
+          stock: stockVivo,
+          desglose_bodegas: desglose
+        };
+      }
+      return prod;
+    });
+  }, [productos, inventarioWms]);
+
+  // Métricas agregadas derivadas en tiempo real
   const metricas = useMemo(() => {
-    const totalSkus = productos.length;
-    const totalUnidades = productos.reduce((acc, p) => acc + (p.stockTotal ?? p.stock ?? p.stock_total ?? 0), 0);
-    const totalValor = productos.reduce(
+    const totalSkus = productosConStockEnVivo.length;
+    const totalUnidades = productosConStockEnVivo.reduce(
+      (acc, p) => acc + (p.stockTotal ?? p.stock ?? p.stock_total ?? 0),
+      0
+    );
+    const totalValor = productosConStockEnVivo.reduce(
       (acc, p) => acc + (p.stockTotal ?? p.stock ?? p.stock_total ?? 0) * (p.precio_unitario || 0),
       0
     );
     return { totalSkus, totalUnidades, totalValor };
-  }, [productos]);
+  }, [productosConStockEnVivo]);
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-16">
@@ -374,14 +419,14 @@ export default function InventarioPage() {
                       Cargando catálogo maestro...
                     </td>
                   </tr>
-                ) : productos.length === 0 ? (
+                ) : productosConStockEnVivo.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-slate-400 font-semibold">
                       No se encontraron productos con el filtro aplicado.
                     </td>
                   </tr>
                 ) : (
-                  productos.map((prod) => {
+                  productosConStockEnVivo.map((prod) => {
                     const expandido = skuExpandido === prod.sku;
                     const sec = getSeccionInfo(prod.categoria_slug);
 
