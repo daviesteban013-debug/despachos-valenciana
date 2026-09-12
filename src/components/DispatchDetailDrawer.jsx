@@ -60,18 +60,18 @@ export default function DispatchDetailDrawer() {
         <div className="bg-[#E11D24] text-white px-4 py-3 flex items-start justify-between gap-3 shadow-sm">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-lg sm:text-xl font-black text-white">
+              <span className="font-mono text-lg sm:text-xl font-bold text-white">
                 {selectedDespacho.codigo_factura_erp || selectedDespacho.codigo_orden}
               </span>
               <span className="font-mono text-xs font-bold bg-white text-[#E11D24] px-2 py-0.5 rounded-md">
                 {selectedDespacho.codigo_orden}
               </span>
-              <span className="text-xs font-black bg-red-800 text-white px-2 py-0.5 rounded-md">
+              <span className="text-xs font-bold bg-red-800 text-white px-2 py-0.5 rounded-md">
                 {selectedDespacho.estado_actual}
               </span>
             </div>
 
-            <h2 className="text-base font-black text-white leading-tight">
+            <h2 className="text-base font-bold text-white leading-tight">
               {selectedDespacho.cliente_nombre}
             </h2>
 
@@ -140,7 +140,7 @@ export default function DispatchDetailDrawer() {
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-2">
                 <div>
                   <span className="text-xs text-slate-500 font-bold block">Progreso Pistoleo:</span>
-                  <div className="font-mono text-sm font-black text-slate-800">
+                  <div className="font-mono text-sm font-bold text-slate-800">
                     {totalAuditado} de {totalSolicitado} unidades
                   </div>
                 </div>
@@ -159,30 +159,13 @@ export default function DispatchDetailDrawer() {
                     className="flex items-center gap-1 bg-[#E11D24] hover:bg-red-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
                   >
                     <Printer className="h-4 w-4" />
-                    <span>Etiqueta QR</span>
+                    <span>Etiqueta</span>
                   </button>
                 </div>
               </div>
 
-              {/* Báscula Tolerancia ±3% */}
-              <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-mono ${
-                isToleranceOk 
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950' 
-                  : 'bg-red-50 border-red-300 text-red-950'
-              }`}>
-                <div className="flex items-center gap-2">
-                  <Scale className="h-4 w-4 shrink-0 text-slate-700" />
-                  <span className="font-semibold">Teórico: {pesoTeorico}kg | Báscula: {pesoBascula}kg</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-md font-bold text-xs ${
-                  isToleranceOk ? 'bg-emerald-200 text-emerald-900' : 'bg-red-600 text-white animate-pulse'
-                }`}>
-                  {isToleranceOk ? '✓ Tolerancia OK' : '⚠️ Divergencia'}
-                </span>
-              </div>
-
-              {/* Lista de Líneas de Pedido */}
-              <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
+              {/* Lista Detallada de SKUs */}
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white">
                 <div className="bg-slate-100 p-2.5 text-xs font-bold uppercase text-slate-600">
                   Líneas de Pedido ({selectedDespacho.items?.length || 0} SKUs)
                 </div>
@@ -192,21 +175,21 @@ export default function DispatchDetailDrawer() {
 
                     return (
                       <div 
-                        key={item.id}
-                        className={`p-3.5 flex items-center justify-between gap-2 ${
-                          isDone ? 'bg-emerald-50/40' : 'bg-white'
+                        key={item.id} 
+                        className={`p-3.5 flex items-center justify-between gap-2 transition-colors ${
+                          isDone ? 'bg-emerald-50/40' : 'hover:bg-slate-50'
                         }`}
                       >
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono text-xs font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                            <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                               {item.sku}
                             </span>
                             <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
                               {item.ubicacion_bodega}
                             </span>
                           </div>
-                          <h4 className="text-sm font-black text-slate-900">
+                          <h4 className="text-sm font-bold text-slate-900">
                             {item.descripcion_producto}
                           </h4>
                           <p className="text-xs text-slate-500 font-mono">
@@ -216,7 +199,7 @@ export default function DispatchDetailDrawer() {
 
                         <div className="flex items-center gap-2.5 shrink-0">
                           <div className="text-right font-mono text-xs">
-                            <span className={`font-black text-base ${isDone ? 'text-emerald-700' : 'text-amber-700'}`}>
+                            <span className={`font-bold text-base ${isDone ? 'text-emerald-700' : 'text-amber-700'}`}>
                               {item.cantidad_auditada || 0}
                             </span>
                             <span className="text-slate-400 font-bold">/{item.cantidad_solicitada}</span>
@@ -225,7 +208,7 @@ export default function DispatchDetailDrawer() {
                           <button
                             onClick={() => auditItem(selectedDespacho.id, item.id)}
                             disabled={isDone}
-                            className={`min-h-[44px] px-3.5 rounded-xl text-xs font-black flex items-center gap-1 transition-all ${
+                            className={`min-h-[44px] px-3.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all ${
                               isDone
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                 : 'bg-[#E11D24] text-white hover:bg-red-700 active:scale-95 shadow-sm'
@@ -244,34 +227,93 @@ export default function DispatchDetailDrawer() {
             </div>
           )}
 
-          {/* TAB 2: TRAZABILIDAD INMUTABLE */}
-          {activeTab === 'timeline' && (
+          {/* TAB 2: AFORO Y CONTROL DE TOLERANCIA DE BÁSCULA (±3%) */}
+          {activeTab === 'scale' && (
             <div className="space-y-3">
-              <div className="relative pl-5 space-y-3 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200">
-                {selectedDespacho.history?.map((step, idx) => (
-                  <div key={step.id || idx} className="relative">
-                    <div className="absolute -left-5 top-1 h-4 w-4 rounded-full bg-[#E11D24] border-2 border-white shadow-sm" />
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1 text-sm">
-                      <div className="flex items-center justify-between font-bold text-slate-800">
-                        <span>{step.estado_anterior ? `${step.estado_anterior} ➔ ` : ''}{step.estado_nuevo}</span>
-                        <span className="text-xs text-slate-400 font-mono">
-                          {new Date(step.timestamp).toLocaleTimeString('es-CO')}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600">{step.nota}</p>
-                      <span className="text-xs text-slate-400 block pt-0.5">Operador: {step.usuario_operador}</span>
-                    </div>
+              <div className={`p-4 rounded-2xl border transition-all ${
+                isToleranceOk 
+                  ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950' 
+                  : 'bg-red-50 border-red-300 text-red-950 ring-2 ring-red-400'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Scale className={`h-6 w-6 ${isToleranceOk ? 'text-emerald-600' : 'text-[#E11D24]'}`} />
+                  <div>
+                    <h4 className="font-bold text-sm">
+                      {isToleranceOk ? 'Aforo Validado Dentro de Tolerancia (±3%)' : 'ALERTA: Desviación Crítica en Báscula'}
+                    </h4>
+                    <p className="text-xs opacity-80">
+                      {isToleranceOk 
+                        ? 'El peso auditado en estación concuerda con la carga teórica.'
+                        : 'El pesaje excede el límite permitido para cargue.'}
+                    </p>
                   </div>
-                ))}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-200/60 font-mono">
+                  <div className="bg-white/80 p-2 rounded-xl border border-slate-200">
+                    <span className="text-xs text-slate-500 block">Teórico:</span>
+                    <span className="text-sm font-bold text-slate-800">{pesoTeorico.toFixed(1)} kg</span>
+                  </div>
+
+                  <div className="bg-white/80 p-2 rounded-xl border border-slate-200">
+                    <span className="text-xs text-slate-500 block">Báscula:</span>
+                    <span className={`text-base font-bold ${isToleranceOk ? 'text-emerald-700' : 'text-[#E11D24]'}`}>
+                      {pesoBascula.toFixed(1)} kg
+                    </span>
+                  </div>
+
+                  <div className="bg-white/80 p-2 rounded-xl border border-slate-200">
+                    <span className="text-xs text-slate-500 block">Diferencia:</span>
+                    <span className={`text-sm font-bold ${isToleranceOk ? 'text-emerald-700' : 'text-[#E11D24]'}`}>
+                      {diffPercent > 0 ? `+${diffPercent.toFixed(1)}%` : `${diffPercent.toFixed(1)}%`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones para Simular Báscula en Vivo */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <span className="text-xs font-bold text-slate-600 block">
+                  Simular Lectura de Báscula Industrial:
+                </span>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    onClick={() => updateScaleWeight(selectedDespacho.id, pesoTeorico)}
+                    className="p-2 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl font-bold text-emerald-800 active:scale-95"
+                  >
+                    Exacto ({pesoTeorico}kg)
+                  </button>
+                  <button
+                    onClick={() => updateScaleWeight(selectedDespacho.id, pesoTeorico * 1.02)}
+                    className="p-2 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl font-bold text-emerald-800 active:scale-95"
+                  >
+                    +2% (Dentro Margen)
+                  </button>
+                  <button
+                    onClick={() => updateScaleWeight(selectedDespacho.id, pesoTeorico * 1.35)}
+                    className="p-2 bg-white hover:bg-red-50 border border-red-200 rounded-xl font-bold text-[#E11D24] active:scale-95"
+                  >
+                    +35% (Sobrepeso)
+                  </button>
+                  <button
+                    onClick={() => updateScaleWeight(selectedDespacho.id, pesoTeorico * 0.70)}
+                    className="p-2 bg-white hover:bg-red-50 border border-red-200 rounded-xl font-bold text-[#E11D24] active:scale-95"
+                  >
+                    -30% (Faltante)
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* TAB 3: TRANSPORTE Y RUTA */}
-          {activeTab === 'route' && (
+          {/* TAB 3: ASIGNACIÓN DE FLOTA & RUTA */}
+          {activeTab === 'route' && rutaAsignada && (
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 text-sm">
               <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                <span className="font-bold text-slate-800">Ruta: {rutaAsignada.codigo_ruta}</span>
+                <div>
+                  <span className="text-xs text-slate-500 block">Ruta Asignada:</span>
+                  <strong className="text-slate-900">{rutaAsignada.codigo_ruta}</strong>
+                </div>
                 <span className="font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full text-xs">
                   {rutaAsignada.estado}
                 </span>
@@ -279,7 +321,7 @@ export default function DispatchDetailDrawer() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <span className="text-xs text-slate-500 block">Vehículo / Placa:</span>
-                  <span className="font-mono text-base font-black text-slate-900">{rutaAsignada.vehiculo.placa}</span>
+                  <span className="font-mono text-base font-bold text-slate-900">{rutaAsignada.vehiculo.placa}</span>
                   <span className="text-xs text-slate-500 block">{rutaAsignada.vehiculo.modelo}</span>
                 </div>
                 <div>
@@ -301,7 +343,7 @@ export default function DispatchDetailDrawer() {
         <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
           <button
             onClick={() => setIncidentModalTarget(selectedDespacho)}
-            className="min-h-[44px] px-3.5 bg-white hover:bg-red-50 hover:text-[#E11D24] text-slate-700 rounded-xl text-xs sm:text-sm font-bold border border-slate-300 transition-all shrink-0"
+            className="min-h-[44px] px-3.5 bg-white hover:bg-red-50 hover:text-[#E11D24] text-slate-700 rounded-xl text-xs sm:text-sm font-bold border border-slate-300 transition-all shrink-0 active:scale-95"
           >
             Reportar Novedad
           </button>
@@ -312,7 +354,7 @@ export default function DispatchDetailDrawer() {
                 advanceStage(selectedDespacho.id);
                 setSelectedDespachoId(null);
               }}
-              className="flex-1 min-h-[44px] bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
+              className="flex-1 min-h-[44px] bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
             >
               <span>Avanzar Fase Operativa</span>
               <ArrowRight className="h-4 w-4" />

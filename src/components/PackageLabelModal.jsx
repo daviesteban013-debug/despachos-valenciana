@@ -37,13 +37,14 @@ export default function PackageLabelModal() {
         <div className="bg-[#E11D24] text-white p-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Printer className="h-5 w-5" />
-            <span className="font-black text-xs uppercase tracking-wider">
+            <span className="font-bold text-xs uppercase tracking-wider">
               Etiqueta de Bulto & Remisión WMS
             </span>
           </div>
           <button
             onClick={() => setPackageLabelDespacho(null)}
-            className="p-1 rounded-lg hover:bg-red-800 text-white transition-colors"
+            className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-red-800 text-white transition-colors active:scale-95"
+            aria-label="Cerrar modal"
           >
             <X className="h-5 w-5" />
           </button>
@@ -55,24 +56,24 @@ export default function PackageLabelModal() {
           {/* Logo y Encabezado */}
           <div className="border-2 border-slate-900 p-2.5 flex items-center justify-between">
             <div className="leading-tight">
-              <span className="font-black text-sm uppercase tracking-tight block">
+              <span className="font-bold text-sm uppercase tracking-tight block">
                 La Valenciana FERREHOGAR
               </span>
-              <span className="text-[11px] text-slate-600 block font-semibold">
+              <span className="text-xs text-slate-600 block font-semibold">
                 Cúcuta • Despacho de Materiales
               </span>
             </div>
-            <div className="h-9 w-9 border-2 border-slate-900 p-1 flex items-center justify-center font-mono font-black text-xs">
+            <div className="h-9 w-9 border-2 border-slate-900 p-1 flex items-center justify-center font-mono font-bold text-xs">
               01
             </div>
           </div>
 
           {/* Factura ERP y Orden */}
           <div className="border-2 border-slate-900 p-2.5 bg-slate-50 text-center space-y-0.5">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-slate-500 block">
+            <span className="text-xs uppercase font-bold tracking-wider text-slate-500 block">
               Factura Electrónica ERP / Pedido
             </span>
-            <div className="font-mono text-2xl font-black text-slate-950 tracking-wider">
+            <div className="font-mono text-2xl font-bold text-slate-950 tracking-wider">
               {packageLabelDespacho.codigo_factura_erp || packageLabelDespacho.codigo_orden}
             </div>
             <span className="font-mono text-xs font-bold text-slate-600">
@@ -82,8 +83,8 @@ export default function PackageLabelModal() {
 
           {/* Destinatario */}
           <div className="border-2 border-slate-900 p-2.5 space-y-1 text-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">DESTINATARIO:</span>
-            <h3 className="font-black text-sm uppercase leading-tight">
+            <span className="text-xs uppercase font-bold text-slate-500 block">DESTINATARIO:</span>
+            <h3 className="font-bold text-sm uppercase leading-tight">
               {packageLabelDespacho.cliente_nombre}
             </h3>
             <p className="font-medium text-slate-700">
@@ -94,14 +95,14 @@ export default function PackageLabelModal() {
           {/* Muelle y Transportadora */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="border-2 border-slate-900 p-2 text-center">
-              <span className="text-[10px] font-bold uppercase text-slate-500 block">Bahía Carga</span>
-              <span className="font-mono text-base font-black text-purple-900 block">
+              <span className="text-xs font-bold uppercase text-slate-500 block">Bahía Carga</span>
+              <span className="font-mono text-base font-bold text-purple-900 block">
                 {packageLabelDespacho.bahia_asignada}
               </span>
             </div>
             <div className="border-2 border-slate-900 p-2 text-center">
-              <span className="text-[10px] font-bold uppercase text-slate-500 block">Flota / Guía</span>
-              <span className="text-xs font-black block mt-0.5 truncate">
+              <span className="text-xs font-bold uppercase text-slate-500 block">Flota / Guía</span>
+              <span className="text-xs font-bold block mt-0.5 truncate">
                 {packageLabelDespacho.transportadora}
               </span>
             </div>
@@ -110,21 +111,21 @@ export default function PackageLabelModal() {
           {/* Peso y Bultos */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="border-2 border-slate-900 p-2 text-center">
-              <span className="text-[10px] font-bold text-slate-500 uppercase block">Peso Báscula</span>
-              <span className="font-mono font-black text-sm">{packageLabelDespacho.peso_bascula_kg || packageLabelDespacho.peso_total_kg} kg</span>
+              <span className="text-xs font-bold text-slate-500 uppercase block">Peso Báscula</span>
+              <span className="font-mono font-bold text-sm">{packageLabelDespacho.peso_bascula_kg || packageLabelDespacho.peso_total_kg} kg</span>
             </div>
             <div className="border-2 border-slate-900 p-2 text-center">
-              <span className="text-[10px] font-bold text-slate-500 uppercase block">Total Piezas</span>
-              <span className="font-mono font-black text-sm">{totalPiezas} und</span>
+              <span className="text-xs font-bold text-slate-500 uppercase block">Total Piezas</span>
+              <span className="font-mono font-bold text-sm">{totalPiezas} und</span>
             </div>
           </div>
 
           {/* QR de Remisión */}
           <div className="border-2 border-slate-900 p-2.5 flex items-center justify-between gap-2 bg-white">
             <div className="space-y-0.5 text-xs font-mono">
-              <span className="text-[10px] font-bold text-slate-500 block">GUÍA DE REMISIÓN:</span>
-              <span className="font-black tracking-wider block text-sm">{packageLabelDespacho.numero_guia}</span>
-              <span className="text-[10px] text-emerald-700 font-bold block">✓ AUDITADO VALENCIANA</span>
+              <span className="text-xs font-bold text-slate-500 block">GUÍA DE REMISIÓN:</span>
+              <span className="font-bold tracking-wider block text-sm">{packageLabelDespacho.numero_guia}</span>
+              <span className="text-xs text-emerald-700 font-bold block">✓ AUDITADO VALENCIANA</span>
             </div>
             <div className="h-14 w-14 bg-slate-950 p-1 rounded-md flex items-center justify-center shrink-0">
               <QrCode className="h-full w-full text-white" />
@@ -137,13 +138,13 @@ export default function PackageLabelModal() {
         <div className="p-3 bg-slate-50 flex items-center justify-end gap-2 shrink-0">
           <button
             onClick={() => setPackageLabelDespacho(null)}
-            className="min-h-[44px] px-4 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100"
+            className="h-11 px-4 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 active:scale-95"
           >
             Cerrar
           </button>
           <button
             onClick={handlePrint}
-            className="min-h-[44px] px-5 bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
+            className="h-11 px-5 bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
           >
             <Printer className="h-4 w-4" />
             <span>Imprimir Etiqueta</span>

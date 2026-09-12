@@ -25,7 +25,7 @@ export default function BayFleetView() {
             <Warehouse className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
               Mapa de Bahías & Flota
             </h2>
             <p className="text-xs text-slate-500">
@@ -58,12 +58,12 @@ export default function BayFleetView() {
               {/* Encabezado Bahía */}
               <div className="flex items-start justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-10 w-10 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center font-mono font-black text-purple-900 text-sm shrink-0">
+                  <div className="h-10 w-10 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center font-mono font-bold text-purple-900 text-sm shrink-0">
                     {bay.bayCode.replace('Bahía ', '')}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-black text-slate-900 text-sm">{bay.bayCode}</h3>
+                      <h3 className="font-bold text-slate-900 text-sm">{bay.bayCode}</h3>
                       <span className="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
                         {bay.type}
                       </span>
@@ -75,7 +75,7 @@ export default function BayFleetView() {
                   </div>
                 </div>
 
-                <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
                   ruta.estado === 'EN_CURSO'
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                     : 'bg-blue-50 text-blue-700 border-blue-300'
@@ -89,7 +89,7 @@ export default function BayFleetView() {
                 <div>
                   <span className="text-xs uppercase font-bold text-slate-400 block">Vehículo / Placa</span>
                   <div className="flex items-baseline gap-1.5 mt-0.5">
-                    <span className="font-mono text-base font-black text-slate-900">{ruta.vehiculo.placa}</span>
+                    <span className="font-mono text-base font-bold text-slate-900">{ruta.vehiculo.placa}</span>
                     <span className="text-xs text-slate-500 font-bold">({ruta.vehiculo.tipo})</span>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">{ruta.vehiculo.modelo}</p>

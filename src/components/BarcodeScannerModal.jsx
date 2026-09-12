@@ -75,7 +75,7 @@ export default function BarcodeScannerModal() {
               <ScanLine className="h-5 w-5 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-sm font-black uppercase tracking-wider text-slate-100">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-100">
                 Pistola RF / Lector Láser
               </h3>
               <p className="text-xs text-slate-400">Escaneo de Códigos de Barras 1D / QR</p>
@@ -120,7 +120,7 @@ export default function BarcodeScannerModal() {
               />
               <button
                 type="submit"
-                className="bg-[#E11D24] hover:bg-red-700 text-white px-5 h-11 rounded-xl text-sm font-black transition-all shadow-sm active:scale-95 shrink-0"
+                className="bg-[#E11D24] hover:bg-red-700 text-white px-5 h-11 rounded-xl text-sm font-bold transition-all shadow-sm active:scale-95 shrink-0"
               >
                 Pistolear
               </button>
@@ -144,7 +144,7 @@ export default function BarcodeScannerModal() {
                     <Barcode className="h-5 w-5 text-slate-400 group-hover:text-red-400 transition-colors shrink-0" />
                     <span className="text-xs font-bold text-slate-200">{item.label}</span>
                   </div>
-                  <span className="font-mono text-xs font-black text-amber-400 bg-slate-900 px-2 py-1 rounded border border-slate-700 shrink-0">
+                  <span className="font-mono text-xs font-bold text-amber-400 bg-slate-900 px-2 py-1 rounded border border-slate-700 shrink-0">
                     {item.code}
                   </span>
                 </button>

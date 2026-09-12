@@ -64,7 +64,7 @@ export default function PackingStationView() {
             <PackageCheck className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
               Mesa de Packing & Aforo 1:1
             </h2>
             <p className="text-xs text-slate-500">Estación con báscula certificada y pistola RF</p>
@@ -92,7 +92,7 @@ export default function PackingStationView() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xl font-black text-slate-900">
+              <span className="font-mono text-xl font-bold text-slate-900">
                 {activeOrder.codigo_factura_erp || activeOrder.codigo_orden}
               </span>
               <span className="text-xs font-bold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-md">
@@ -136,7 +136,7 @@ export default function PackingStationView() {
             <div className="flex items-center gap-2.5">
               <Scale className={`h-5 w-5 shrink-0 ${isToleranceOk ? 'text-emerald-600' : 'text-[#E11D24]'}`} />
               <div>
-                <h4 className="text-xs font-black uppercase tracking-wider">
+                <h4 className="text-xs font-bold uppercase tracking-wider">
                   Aforo de Báscula (Tolerancia Normativa ±3%)
                 </h4>
                 <p className="text-xs opacity-80 mt-0.5">
@@ -154,11 +154,11 @@ export default function PackingStationView() {
               </div>
               <div className="text-right">
                 <span className="text-xs text-slate-500 uppercase block">Báscula:</span>
-                <span className={`text-base font-black ${isToleranceOk ? 'text-emerald-700' : 'text-[#E11D24]'}`}>
+                <span className={`text-base font-bold ${isToleranceOk ? 'text-emerald-700' : 'text-[#E11D24]'}`}>
                   {pesoBascula.toFixed(1)} kg
                 </span>
               </div>
-              <span className={`px-2 py-1 rounded-lg text-xs font-black ${
+              <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
                 isToleranceOk ? 'bg-emerald-200 text-emerald-900' : 'bg-red-600 text-white animate-pulse'
               }`}>
                 {diffPercent > 0 ? `+${diffPercent.toFixed(1)}%` : `${diffPercent.toFixed(1)}%`}
@@ -201,7 +201,7 @@ export default function PackingStationView() {
       {/* 4. LISTA DE MATERIALES DE CONSTRUCCIÓN Y PISTOLEO TÁCTIL */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-800">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
             Checklist de Materiales & Ferretería ({activeOrder.items?.length || 0} Líneas)
           </span>
           <span className="text-xs font-mono font-bold text-slate-600">
@@ -222,7 +222,7 @@ export default function PackingStationView() {
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                    <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
                       {item.sku}
                     </span>
                     <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
@@ -245,7 +245,7 @@ export default function PackingStationView() {
                 <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                   <div className="text-right font-mono">
                     <div className="text-sm">
-                      <span className={`font-black text-base ${isCompleted ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      <span className={`font-bold text-base ${isCompleted ? 'text-emerald-700' : 'text-amber-700'}`}>
                         {item.cantidad_auditada || 0}
                       </span>
                       <span className="text-slate-400 font-bold"> / {item.cantidad_solicitada}</span>
@@ -259,7 +259,7 @@ export default function PackingStationView() {
                   <button
                     onClick={() => auditItem(activeOrder.id, item.id)}
                     disabled={isCompleted}
-                    className={`min-h-[46px] px-4 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                    className={`min-h-[46px] px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                       isCompleted
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default'
                         : 'bg-[#E11D24] hover:bg-red-700 text-white shadow-md active:scale-95'
@@ -302,7 +302,7 @@ export default function PackingStationView() {
           <button
             onClick={() => advanceStage(activeOrder.id)}
             disabled={!isFullyAudited}
-            className={`flex-1 sm:flex-none min-h-[48px] px-6 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 shadow-md ${
+            className={`flex-1 sm:flex-none min-h-[48px] px-6 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-md ${
               isFullyAudited
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 active:scale-95'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'

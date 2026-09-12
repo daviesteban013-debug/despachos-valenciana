@@ -89,7 +89,46 @@ export default function KanbanBoard() {
     }
   ];
 
-  const currentActiveStage = STAGES.find((s) => s.id === activeStageTab) || STAGES[0];
+  // Pestañas específicas para móvil (Segmented Control)
+  const MOBILE_TABS = [
+    {
+      id: 'COLA',
+      title: 'Pendientes',
+      icon: Inbox,
+      count: enCola.length,
+      items: enCola
+    },
+    {
+      id: 'ALISTAMIENTO',
+      title: 'Alistamiento',
+      icon: Package,
+      count: enPicking.length + enPacking.length,
+      items: [...enPicking, ...enPacking]
+    },
+    {
+      id: 'LISTO',
+      title: 'En Bahía',
+      icon: Warehouse,
+      count: listos.length,
+      items: listos
+    },
+    {
+      id: 'DESPACHADO',
+      title: 'Despachados',
+      icon: Truck,
+      count: despachados.length,
+      items: despachados
+    },
+    {
+      id: 'INCIDENCIA',
+      title: 'Incidencias',
+      icon: AlertOctagon,
+      count: incidencias.length,
+      items: incidencias
+    }
+  ];
+
+  const currentMobileTab = MOBILE_TABS.find((t) => t.id === activeStageTab) || MOBILE_TABS[0];
 
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-2 space-y-3">
@@ -97,26 +136,26 @@ export default function KanbanBoard() {
       {/* 1. SELECTOR DE PESTAÑAS HORIZONTAL / SEGMENTED CONTROL (MOBILE-FIRST) */}
       <div className="md:hidden">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none snap-x">
-          {STAGES.map((stage) => {
-            const isSelected = activeStageTab === stage.id;
-            const Icon = stage.icon;
+          {MOBILE_TABS.map((tab) => {
+            const isSelected = activeStageTab === tab.id;
+            const Icon = tab.icon;
 
             return (
               <button
-                key={stage.id}
-                onClick={() => setActiveStageTab(stage.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all shrink-0 min-h-[44px] snap-start border ${
+                key={tab.id}
+                onClick={() => setActiveStageTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 min-h-[44px] snap-start border active:scale-95 ${
                   isSelected
                     ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-md'
                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                <span>{stage.title}</span>
-                <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-mono font-bold leading-none ${
+                <span>{tab.title}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold leading-none ${
                   isSelected ? 'bg-white text-[#E11D24]' : 'bg-slate-100 text-slate-700'
                 }`}>
-                  {stage.count}
+                  {tab.count}
                 </span>
               </button>
             );
@@ -127,7 +166,7 @@ export default function KanbanBoard() {
       {/* 2. ENCABEZADO PARA DESKTOP/TABLET: SELECTOR KANBAN VS LISTA */}
       <div className="hidden md:flex items-center justify-between border-b border-slate-200 pb-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-black uppercase tracking-wider text-slate-800">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
             Tablero de Olas de Despacho
           </h2>
           <span className="text-xs font-mono text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md font-bold">
@@ -166,19 +205,19 @@ export default function KanbanBoard() {
       {/* ======================================================================= */}
       <div className="md:hidden space-y-3">
         <div className="flex items-center justify-between text-xs text-slate-600 px-1 font-semibold">
-          <span>Mostrando: <strong className="text-slate-900">{currentActiveStage.title}</strong></span>
-          <span>{currentActiveStage.items.length} pedidos</span>
+          <span>Mostrando: <strong className="text-slate-900">{currentMobileTab.title}</strong></span>
+          <span className="font-mono font-bold">{currentMobileTab.items.length} pedidos</span>
         </div>
 
-        {currentActiveStage.items.length === 0 ? (
+        {currentMobileTab.items.length === 0 ? (
           <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center text-slate-400 space-y-1">
-            <currentActiveStage.icon className="h-8 w-8 mx-auto text-slate-300 mb-1" />
+            <currentMobileTab.icon className="h-8 w-8 mx-auto text-slate-300 mb-1" />
             <p className="text-sm font-bold text-slate-700">Sin pedidos en esta fase</p>
             <p className="text-xs text-slate-400">Selecciona otra etapa en la barra superior</p>
           </div>
         ) : (
           <div className="space-y-3 w-full">
-            {currentActiveStage.items.map((despacho) => (
+            {currentMobileTab.items.map((despacho) => (
               <DispatchCard key={despacho.id} despacho={despacho} />
             ))}
           </div>
@@ -203,16 +242,16 @@ export default function KanbanBoard() {
                   <div className={`rounded-xl border p-2 mb-2 flex items-center justify-between ${col.color}`}>
                     <div className="flex items-center gap-1.5">
                       <Icon className="h-4 w-4 shrink-0" />
-                      <span className="text-xs font-black uppercase tracking-wide">
+                      <span className="text-xs font-bold uppercase tracking-wide">
                         {col.title}
                       </span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-black font-mono ${col.badgeClass}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono ${col.badgeClass}`}>
                       {col.count}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 px-1 pb-1.5 border-b border-slate-200 mb-2 font-medium">
+                  <div className="flex items-center justify-between text-xs text-slate-500 px-1 pb-1.5 border-b border-slate-200 mb-2 font-medium">
                     <span>Carga:</span>
                     <span className="font-bold text-slate-800">{Math.round(totalKg)} kg</span>
                   </div>

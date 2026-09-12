@@ -30,7 +30,7 @@ export default function IncidentsView() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                 Triage de Incidencias & Retención
               </h2>
               <span className="text-xs font-mono font-bold bg-red-600 text-white px-2 py-0.5 rounded-full animate-pulse">
@@ -90,7 +90,7 @@ export default function IncidentsView() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-red-100 pb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-base font-black text-slate-900">
+                      <span className="font-mono text-base font-bold text-slate-900">
                         {ord.codigo_factura_erp || ord.codigo_orden}
                       </span>
                       <span className="font-bold text-xs bg-red-100 text-[#E11D24] px-2 py-0.5 rounded-md">
@@ -138,7 +138,7 @@ export default function IncidentsView() {
 
                   <button
                     onClick={() => setIncidentModalTarget(ord)}
-                    className="min-h-[44px] px-5 rounded-xl text-xs font-black text-white bg-[#E11D24] hover:bg-red-700 transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
+                    className="min-h-[44px] px-5 rounded-xl text-xs font-bold text-white bg-[#E11D24] hover:bg-red-700 transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     <span>Resolver y Liberar Despacho</span>

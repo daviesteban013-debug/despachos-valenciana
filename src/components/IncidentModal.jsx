@@ -61,7 +61,7 @@ export default function IncidentModal() {
           <div className="flex items-center gap-2.5">
             {isResolving ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
             <div>
-              <h3 className="text-sm sm:text-base font-black uppercase tracking-wide">
+              <h3 className="text-sm sm:text-base font-bold uppercase tracking-wide">
                 {isResolving ? 'Resolver Novedad & Liberar' : 'Reportar Novedad en Muelle'}
               </h3>
               <p className="text-xs opacity-90 font-medium">
@@ -72,7 +72,8 @@ export default function IncidentModal() {
 
           <button
             onClick={() => setIncidentModalTarget(null)}
-            className="p-1 rounded-lg hover:bg-black/20 text-white transition-colors"
+            className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-black/20 text-white transition-colors active:scale-95"
+            aria-label="Cerrar modal"
           >
             <X className="h-5 w-5" />
           </button>
@@ -83,7 +84,7 @@ export default function IncidentModal() {
           
           {isResolving && incidentModalTarget.incidencia_activa && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-2xl space-y-1">
-              <span className="text-xs font-black uppercase text-[#E11D24]">Causa de Retención:</span>
+              <span className="text-xs font-bold uppercase text-[#E11D24]">Causa de Retención:</span>
               <p className="text-sm text-red-900 font-bold">
                 [{incidentModalTarget.incidencia_activa.tipo}] {incidentModalTarget.incidencia_activa.descripcion}
               </p>
@@ -93,7 +94,7 @@ export default function IncidentModal() {
           {/* Selección de Tipo */}
           {!isResolving && (
             <div className="space-y-2">
-              <label className="font-black uppercase tracking-wide text-slate-700 block text-xs">
+              <label className="font-bold uppercase tracking-wide text-slate-700 block text-xs">
                 Tipo de Novedad Operativa:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -126,7 +127,7 @@ export default function IncidentModal() {
           {/* Destino tras Resolver */}
           {isResolving && (
             <div className="space-y-1.5">
-              <label className="font-black uppercase tracking-wide text-slate-700 block text-xs">
+              <label className="font-bold uppercase tracking-wide text-slate-700 block text-xs">
                 Reincorporar orden a la fase:
               </label>
               <select
@@ -143,7 +144,7 @@ export default function IncidentModal() {
 
           {/* Justificación */}
           <div className="space-y-1.5">
-            <label className="font-black uppercase tracking-wide text-slate-700 block text-xs">
+            <label className="font-bold uppercase tracking-wide text-slate-700 block text-xs">
               {isResolving ? 'Solución Aplicada en Bodega:' : 'Descripción del Problema o Divergencia:'}
             </label>
             <textarea
@@ -156,18 +157,18 @@ export default function IncidentModal() {
             />
           </div>
 
-          {/* Botones táctiles grandes (min 44px) */}
+          {/* Botones táctiles grandes (min 44px: h-11) */}
           <div className="flex items-center justify-end gap-2.5 pt-2">
             <button
               type="button"
               onClick={() => setIncidentModalTarget(null)}
-              className="min-h-[44px] px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all text-xs sm:text-sm"
+              className="h-11 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all text-xs sm:text-sm active:scale-95"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className={`min-h-[44px] px-5 rounded-xl text-white font-black transition-all shadow-md active:scale-95 flex items-center gap-1.5 text-xs sm:text-sm ${
+              className={`h-11 px-5 rounded-xl text-white font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5 text-xs sm:text-sm ${
                 isResolving 
                   ? 'bg-emerald-600 hover:bg-emerald-700' 
                   : 'bg-[#E11D24] hover:bg-red-700'
@@ -181,12 +182,11 @@ export default function IncidentModal() {
               ) : (
                 <>
                   <AlertTriangle className="h-4 w-4" />
-                  <span>Confirmar Retención en Muelle</span>
+                  <span>Confirmar Bloqueo en Muelle</span>
                 </>
               )}
             </button>
           </div>
-
         </form>
 
       </div>
