@@ -491,7 +491,9 @@ export function VentaMostradorProvider({ children }) {
     });
   }, [persistFacturas]);
 
-  // 5. FACTURACIÓN: "Confirmar sello / Entregado" -> pasa a ENTREGADA Y SELLADA
+  // 5. FACTURACIÓN: "Confirmar sello / Entregado" → pasa a ENTREGADA Y SELLADA
+  // NOTA CRÍTICA: Toda la deducción de inventario se delega al WmsContext (SSOT).
+  // Este store SOLO actualiza el estado de la factura en su array local.
   const confirmarSelloFactura = useCallback((facturaId, metadataOperador = 'Cajero 01') => {
     // 1. Obtener la factura que se está sellando
     const factura = facturas.find(f => f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId);
@@ -505,20 +507,31 @@ export function VentaMostradorProvider({ children }) {
       return { success: false, reason: 'ALREADY_SEALED', factura };
     }
 
-    // 3. Si existe el contexto global WMS (SSOT), delegar descuento transaccional
+    // 3. Delegar descuento transaccional al WmsContext (SSOT única fuente de verdad)
+    //    WmsContext.confirmarSelloFactura se encarga de:
+    //    - Normalización robusta (NFD, tildes, mayúsculas)
+    //    - Pre-validación de ítems huérfanos (rollback si no coinciden)
+    //    - Deducción atómica del inventario
+    //    - Registro de trazabilidad inmutable
+    //    - Actualización del estado de la factura en su propio array
+    let resultadoWms = { success: true };
     if (wms?.confirmarSelloFactura) {
-      wms.confirmarSelloFactura(facturaId, metadataOperador);
+      resultadoWms = wms.confirmarSelloFactura(facturaId, metadataOperador);
+      // Si el WMS abortó la transacción (ítems huérfanos, ya sellada, etc.), NO continuar
+      if (!resultadoWms?.success) {
+        return resultadoWms;
+      }
     } else {
-      // Descontar localmente si se ejecuta aislado
+      // Fallback local SOLO si NO hay WmsContext (ejecución aislada sin WmsProvider)
       setInventario(prevInventario => {
         return prevInventario.map(producto => {
+          const nomProd = (producto.nombre || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           const itemFacturado = factura.items?.find(item => {
             const skuItem = item.sku?.toUpperCase();
             const skuProd = producto.sku?.toUpperCase();
             if (skuItem && skuProd && skuItem === skuProd) return true;
 
-            const nomItem = (item.nombre || item.producto || '').trim().toLowerCase();
-            const nomProd = (producto.nombre || '').trim().toLowerCase();
+            const nomItem = (item.nombre || item.producto || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             return nomItem.length > 0 && nomItem === nomProd;
           });
 
@@ -538,7 +551,7 @@ export function VentaMostradorProvider({ children }) {
       });
     }
 
-    // 4. Actualizar el estado de la factura a sellada en este store
+    // 4. Actualizar el estado de la factura a sellada en este store local (sincronización de UI)
     const timestamp = new Date().toISOString();
     const horaLegible = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -573,7 +586,7 @@ export function VentaMostradorProvider({ children }) {
       return actualizadas;
     });
 
-    // 5. Descontar también en la persistencia local/backend de inventario de bodegas
+    // 5. Backend sync (no-critical, fire-and-forget)
     try {
       const SECCION_A_BODEGA = {
         materiales_construccion: 1,

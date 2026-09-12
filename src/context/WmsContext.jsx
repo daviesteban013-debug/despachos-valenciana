@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   INITIAL_DESPACHOS, 
   INITIAL_DEVOLUCIONES, 
@@ -22,9 +22,25 @@ export function WmsProvider({ children }) {
   });
 
   // Catálogo maestro e inventario operativo con stock global
+  // MIGRACIÓN: Si el cache tiene un catálogo obsoleto (mini-mock de 6 SKUs),
+  // se descarta y se carga el catálogo completo de 350 SKUs.
   const [inventario, setInventario] = useState(() => {
-    const saved = localStorage.getItem('wms_valenciana_inventario_v2');
-    return saved ? JSON.parse(saved) : INITIAL_INVENTARIO;
+    try {
+      const saved = localStorage.getItem('wms_valenciana_inventario_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Guardia de migración: si el cache tiene menos del 50% de SKUs esperados,
+        // es un catálogo obsoleto — forzar carga del catálogo completo
+        if (Array.isArray(parsed) && parsed.length >= INITIAL_INVENTARIO.length * 0.5) {
+          return parsed;
+        }
+        console.warn(`[WMS-MIGRACIÓN] Cache de inventario obsoleto (${parsed.length} SKUs vs ${INITIAL_INVENTARIO.length} esperados). Cargando catálogo completo.`);
+        localStorage.removeItem('wms_valenciana_inventario_v2');
+      }
+    } catch (e) {
+      console.warn('[WMS-MIGRACIÓN] Error leyendo cache de inventario, usando catálogo fresco.', e);
+    }
+    return INITIAL_INVENTARIO;
   });
 
   // Facturas emitidas y control de sello
@@ -64,6 +80,37 @@ export function WmsProvider({ children }) {
       return [];
     }
   });
+
+  // ============================================================================
+  // SSOT: HELPER DE NORMALIZACIÓN Y SELECTORES DERIVADOS MEMOIZADOS
+  // ============================================================================
+
+  // Normalización insensible a tildes, espacios, mayúsculas para matching robusto
+  const normalizarCadena = useCallback((str) => {
+    return (str || '')
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }, []);
+
+  // Métricas globales derivadas del inventario central (SSOT)
+  const metricasInventario = useMemo(() => {
+    const totalUnidades = inventario.reduce(
+      (acc, item) => acc + Number(item.stockActual ?? item.stockTotal ?? item.stock ?? 0),
+      0
+    );
+    const totalSkus = inventario.length;
+    const valorizacionTotal = inventario.reduce(
+      (acc, item) => {
+        const cant = Number(item.stockActual ?? item.stockTotal ?? item.stock ?? 0);
+        const precio = Number(item.precio_unitario ?? item.precioUnitario ?? item.precio ?? 0);
+        return acc + (cant * precio);
+      },
+      0
+    );
+    return { totalUnidades, totalSkus, valorizacionTotal };
+  }, [inventario]);
 
   // Reloj de corte SLA (cada 5 segundos)
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -410,78 +457,110 @@ export function WmsProvider({ children }) {
 
   // ============================================================================
   // PILAR 1: TRANSACCIONALIDAD E IDEMPOTENCIA EN SELLO DE FACTURA
+  // Protocolo: Pre-validación completa → Deducción atómica → Auditoría inmutable
   // ============================================================================
-  const confirmarSelloFactura = (facturaId, metadataOperador = 'Cajero 01') => {
+  const confirmarSelloFactura = useCallback((facturaId, metadataOperador = 'Cajero 01') => {
     // 1. Obtener la factura que se está sellando
     const factura = facturas.find(
       f => f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId
     );
 
     if (!factura) {
-      console.warn(`[SELLO FACTURA] Factura con identificador "${facturaId}" no encontrada.`);
-      return { success: false, reason: 'NOT_FOUND' };
+      console.error(`[WMS-TRANSACCIÓN] Factura no encontrada: ${facturaId}`);
+      return { success: false, reason: 'NOT_FOUND', error: 'Factura no encontrada en el sistema.' };
     }
 
-    // 2. Control de Idempotencia estricta: Si ya fue sellada, abortar ejecución duplicada
+    // 2. Guardia de Idempotencia estricta (prevenir doble descuento accidental)
     if (factura.sellada || factura.estado === 'ENTREGADA Y SELLADA' || factura.estado === 'Sello verificado') {
-      console.warn(`[IDEMPOTENCIA] Intento de sellado duplicado para factura #${factura.numeroFactura || factura.id}. Acción bloqueada.`);
-      return { success: false, reason: 'ALREADY_SEALED', factura };
+      console.warn(`[WMS-IDEMPOTENCIA] Factura ya sellada previamente: ${factura.numeroFactura || factura.id}. Acción bloqueada.`);
+      return { success: false, reason: 'ALREADY_SEALED', error: 'Esta factura ya fue entregada, sellada y descontada previamente.' };
     }
 
+    // 3. Pre-verificación: Mapear TODOS los ítems facturados contra el catálogo con normalizarCadena
+    const mapaConciliacion = (factura.items || []).map(item => {
+      const producto = inventario.find(prod => {
+        // Prioridad 1: Match por SKU (más confiable)
+        const skuMatch = item.sku && prod.sku &&
+          normalizarCadena(prod.sku) === normalizarCadena(item.sku);
+        if (skuMatch) return true;
+
+        // Prioridad 2: Match por nombre exacto normalizado
+        const nomItem = normalizarCadena(item.nombre || item.producto);
+        const nomProd = normalizarCadena(prod.nombre);
+        if (nomItem.length > 0 && nomItem === nomProd) return true;
+
+        // Prioridad 3: Match parcial (uno contiene al otro)
+        if (nomItem.length > 5 && nomProd.length > 5) {
+          return nomProd.includes(nomItem) || nomItem.includes(nomProd);
+        }
+
+        return false;
+      });
+
+      return { itemFacturado: item, productoEnCatalogo: producto };
+    });
+
+    // Validar ítems huérfanos: si algún ítem no se localizó, ABORTAR toda la transacción
+    const itemsHuerfanos = mapaConciliacion.filter(m => !m.productoEnCatalogo);
+    if (itemsHuerfanos.length > 0) {
+      const detalleError = itemsHuerfanos.map(h => h.itemFacturado.nombre || h.itemFacturado.sku).join(', ');
+      console.error(`[WMS-ROLLBACK] Transacción abortada. Ítems huérfanos: ${detalleError}`);
+      return {
+        success: false,
+        reason: 'ORPHAN_ITEMS',
+        error: `No se pudo reconciliar con el catálogo: [${detalleError}]. Transacción abortada para proteger el stock.`
+      };
+    }
+
+    // 4. Transacción Exitosa: Deducción Atómica en una sola actualización de estado
     const timestampIso = new Date().toISOString();
     const horaLegible = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const nuevosMovimientos = [];
 
-    // 3. Deducción atómica del stock en el Catálogo Maestro
     setInventario(prevInventario => {
-      return prevInventario.map(producto => {
-        // Buscar si este producto está en los ítems de la factura (SKU primario o nombre exacto)
-        const itemFacturado = factura.items?.find(item => {
-          const skuItem = item.sku?.toUpperCase();
-          const skuProd = producto.sku?.toUpperCase();
-          if (skuItem && skuProd && skuItem === skuProd) return true;
+      return prevInventario.map(prod => {
+        const conciliado = mapaConciliacion.find(m =>
+          m.productoEnCatalogo && m.productoEnCatalogo.sku === prod.sku
+        );
 
-          const nomItem = (item.nombre || item.producto || '').trim().toLowerCase();
-          const nomProd = (producto.nombre || '').trim().toLowerCase();
-          return nomItem.length > 0 && nomItem === nomProd;
-        });
-
-        if (itemFacturado) {
-          const stockActual = producto.stockTotal ?? producto.stock ?? producto.stock_total ?? 0;
-          const cantidadDescontar = Number(itemFacturado.cantidad) || 0;
-          const nuevoStock = Math.max(0, stockActual - cantidadDescontar);
+        if (conciliado) {
+          const cantidadDescontar = Number(conciliado.itemFacturado.cantidad) || 0;
+          const stockAnterior = Number(prod.stockActual ?? prod.stockTotal ?? prod.stock ?? 0);
+          const stockNuevo = Math.max(0, stockAnterior - cantidadDescontar);
 
           nuevosMovimientos.push({
-            logId: `log-sello-${Date.now()}-${producto.sku}`,
+            logId: `log-sello-${Date.now()}-${prod.sku}`,
             tipo: 'SALIDA_VENTA_MOSTRADOR',
             facturaId: factura.numeroFactura || factura.numero || factura.id,
-            sku: producto.sku,
-            nombreProducto: producto.nombre,
+            sku: prod.sku,
+            nombreProducto: prod.nombre,
             cantidadDescontada: cantidadDescontar,
-            stockPrevio: stockActual,
-            stockPosterior: nuevoStock,
+            stockPrevio: stockAnterior,
+            stockPosterior: stockNuevo,
             operador: metadataOperador,
             timestamp: timestampIso
           });
 
           return {
-            ...producto,
-            stockTotal: nuevoStock,
-            stock: nuevoStock,
-            stock_total: nuevoStock,
-            ultimaActualizacionStock: timestampIso
+            ...prod,
+            stockTotal: stockNuevo,
+            stock: stockNuevo,
+            stock_total: stockNuevo,
+            stockActual: stockNuevo,
+            ultimaActualizacionStock: timestampIso,
+            ultimaSalida: timestampIso
           };
         }
-        return producto;
+        return prod;
       });
     });
 
-    // 4. Registro inmutable en el log de auditoría
+    // 5. Registro inmutable en el log de auditoría
     if (nuevosMovimientos.length > 0) {
       setTrazabilidadStock(prev => [...nuevosMovimientos, ...prev]);
     }
 
-    // 5. Actualizar el estado de la factura a sellada
+    // 6. Actualizar el estado de la factura a sellada
     setFacturas(prevFacturas =>
       prevFacturas.map(f =>
         (f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId)
@@ -514,8 +593,8 @@ export function WmsProvider({ children }) {
       'success'
     );
 
-    return { success: true, movimientos: nuevosMovimientos };
-  };
+    return { success: true, movimientos: nuevosMovimientos, itemsAfectados: nuevosMovimientos.length };
+  }, [facturas, inventario, normalizarCadena]);
 
   // Filtrado reactivo de despachos
   const filteredDespachos = despachos.filter((d) => {
@@ -551,8 +630,8 @@ export function WmsProvider({ children }) {
     enBahia: despachos.filter((d) => d.estado_actual === 'LISTO').length,
     despachados: despachos.filter((d) => d.estado_actual === 'DESPACHADO').length,
     incidencias: despachos.filter((d) => d.estado_actual === 'INCIDENCIA').length,
-    unidadesEnBodega: inventario.reduce((acc, p) => acc + (p.stockTotal || p.stock || 0), 0),
-    unidades_en_bodega: inventario.reduce((acc, p) => acc + (p.stockTotal || p.stock || 0), 0),
+    unidadesEnBodega: metricasInventario.totalUnidades,
+    unidades_en_bodega: metricasInventario.totalUnidades,
     alertasCorteProximo: despachos.filter((d) => {
       if (d.estado_actual === 'DESPACHADO' || d.estado_actual === 'INCIDENCIA') return false;
       const diffMins = (new Date(d.horario_corte).getTime() - currentTime) / 60000;
@@ -624,6 +703,8 @@ export function WmsProvider({ children }) {
         resolverIncidencia,
         resolveIncident,
         addSimulatedOrder,
+        metricasInventario,
+        normalizarCadena,
         resetDemoData,
         showToast,
         playBeep
