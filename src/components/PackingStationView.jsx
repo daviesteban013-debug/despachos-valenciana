@@ -38,7 +38,7 @@ export default function PackingStationView() {
       <div className="max-w-4xl mx-auto px-4 py-12 text-center text-slate-500">
         <PackageCheck className="h-12 w-12 mx-auto text-slate-300 mb-3" />
         <h3 className="text-base font-bold text-slate-700">No hay órdenes en proceso de empaque</h3>
-        <p className="text-xs">Todas las órdenes han sido auditadas y trasladadas a bahía de cargue.</p>
+        <p className="text-xs">Todas las órdenes han sido auditadas y trasladadas a bodega de cargue.</p>
       </div>
     );
   }
@@ -64,8 +64,8 @@ export default function PackingStationView() {
             <PackageCheck className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              Mesa de Packing & Aforo 1:1
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+              Estación de Empacando & Aforo 1:1
             </h2>
             <p className="text-xs text-slate-500">Estación con báscula certificada y pistola RF</p>
           </div>
@@ -284,11 +284,11 @@ export default function PackingStationView() {
         </div>
       </div>
 
-      {/* 5. ACCIÓN FINAL DE PACKING */}
+      {/* 5. ACCIÓN FINAL DE EMPACANDO */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-xs text-slate-600">
-          <span>Bahía asignada para cargue: </span>
-          <strong className="text-purple-700 font-mono text-sm">{activeOrder.bahia_asignada}</strong>
+          <span>Bodega asignada para cargue: </span>
+          <strong className="text-purple-700 font-mono text-sm">{activeOrder.bahia_asignada?.replace(/bah[ií]a/gi, 'Bodega')}</strong>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -308,7 +308,7 @@ export default function PackingStationView() {
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
           >
-            <span>Confirmar Listo en Bahía</span>
+            <span>Confirmar Listo en Bodega</span>
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

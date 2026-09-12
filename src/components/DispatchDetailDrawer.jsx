@@ -78,7 +78,7 @@ export default function DispatchDetailDrawer() {
             <p className="text-xs text-red-100 font-medium flex items-center gap-2">
               <span>{selectedDespacho.zona_entrega}</span>
               <span>•</span>
-              <span className="font-bold text-yellow-200">{selectedDespacho.bahia_asignada}</span>
+              <span className="font-bold text-yellow-200">{selectedDespacho.bahia_asignada?.replace(/bah[ií]a/gi, 'Bodega')}</span>
             </p>
           </div>
 

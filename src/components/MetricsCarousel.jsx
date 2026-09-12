@@ -30,7 +30,7 @@ export default function MetricsCarousel() {
 
           <div className="flex items-center gap-1 shrink-0">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-slate-500">En Bahía:</span>
+            <span className="text-slate-500">En Bodega:</span>
             <span className="font-bold text-emerald-700">{kpis.enBahia}</span>
           </div>
 
@@ -77,7 +77,7 @@ export default function MetricsCarousel() {
 
             <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center justify-between">
               <div>
-                <span className="text-emerald-800 block text-xs font-medium">Listo en Bahía</span>
+                <span className="text-emerald-800 block text-xs font-medium">Listo en Bodega</span>
                 <span className="text-lg font-bold text-emerald-700">{kpis.enBahia}</span>
               </div>
               <Warehouse className="h-5 w-5 text-emerald-600" />

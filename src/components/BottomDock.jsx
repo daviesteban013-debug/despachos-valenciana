@@ -49,7 +49,7 @@ export default function BottomDock() {
               ? 'text-[#E11D24] font-bold bg-red-50 sm:bg-transparent'
               : 'text-slate-500 hover:text-slate-800 font-medium'
           }`}
-          aria-label="Mesa de Packing"
+          aria-label="Estación de Empacando"
         >
           <div className="relative">
             <PackageCheck className="h-5 w-5" />
@@ -59,7 +59,7 @@ export default function BottomDock() {
               </span>
             )}
           </div>
-          <span className="text-xs hidden sm:inline">Packing</span>
+          <span className="text-xs hidden sm:inline">Empacando</span>
         </button>
 
         {/* BOTÓN PRINCIPAL DESTACADO: PISTOLA RF / LECTOR DE CÓDIGOS DE BARRA */}
@@ -82,7 +82,7 @@ export default function BottomDock() {
               ? 'text-[#E11D24] font-bold bg-red-50 sm:bg-transparent'
               : 'text-slate-500 hover:text-slate-800 font-medium'
           }`}
-          aria-label="Bahías de Carga"
+          aria-label="Bodegas de Carga"
         >
           <div className="relative">
             <Truck className="h-5 w-5" />
@@ -92,7 +92,7 @@ export default function BottomDock() {
               </span>
             )}
           </div>
-          <span className="text-xs hidden sm:inline">Bahías</span>
+          <span className="text-xs hidden sm:inline">Bodegas</span>
         </button>
 
         {/* Tab 4: Incidencias */}

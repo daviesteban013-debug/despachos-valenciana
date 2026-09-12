@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useWms } from '../context/WmsContext';
 import DispatchCard from './DispatchCard';
 import { 
@@ -14,11 +14,10 @@ import {
 
 export default function KanbanBoard() {
   const { filteredDespachos, wavesViewMode, setWavesViewMode } = useWms();
-
-  // En móvil (< 768px) seleccionamos una pestaña a la vez para una lista vertical limpia
   const [activeStageTab, setActiveStageTab] = useState('COLA');
+  const scrollContainerRef = useRef(null);
 
-  // Segmentación por fases
+  // Segmentación por fases con nueva nomenclatura
   const enCola = filteredDespachos
     .filter((d) => d.estado_actual === 'COLA')
     .sort((a, b) => {
@@ -26,16 +25,16 @@ export default function KanbanBoard() {
       return new Date(a.horario_corte) - new Date(b.horario_corte);
     });
 
-  const enPicking = filteredDespachos.filter((d) => d.estado_actual === 'PICKING');
-  const enPacking = filteredDespachos.filter((d) => d.estado_actual === 'PACKING');
-  const listos = filteredDespachos.filter((d) => d.estado_actual === 'LISTO');
+  const enEscogiendo = filteredDespachos.filter((d) => d.estado_actual === 'PICKING');
+  const enEmpacando = filteredDespachos.filter((d) => d.estado_actual === 'PACKING');
+  const enBodega = filteredDespachos.filter((d) => d.estado_actual === 'LISTO');
   const despachados = filteredDespachos.filter((d) => d.estado_actual === 'DESPACHADO');
   const incidencias = filteredDespachos.filter((d) => d.estado_actual === 'INCIDENCIA');
 
   const STAGES = [
     {
       id: 'COLA',
-      title: 'En Cola',
+      title: 'EN COLA',
       icon: Inbox,
       count: enCola.length,
       items: enCola,
@@ -44,34 +43,34 @@ export default function KanbanBoard() {
     },
     {
       id: 'PICKING',
-      title: 'En Picking',
+      title: 'EN ESCOGIENDO',
       icon: UserCheck,
-      count: enPicking.length,
-      items: enPicking,
+      count: enEscogiendo.length,
+      items: enEscogiendo,
       color: 'border-purple-300 bg-purple-50 text-purple-900',
       badgeClass: 'bg-purple-600 text-white'
     },
     {
       id: 'PACKING',
-      title: 'En Packing',
+      title: 'EN EMPACANDO',
       icon: Package,
-      count: enPacking.length,
-      items: enPacking,
+      count: enEmpacando.length,
+      items: enEmpacando,
       color: 'border-amber-300 bg-amber-50 text-amber-900',
       badgeClass: 'bg-amber-600 text-white'
     },
     {
       id: 'LISTO',
-      title: 'En Bahía',
+      title: 'EN BODEGA',
       icon: Warehouse,
-      count: listos.length,
-      items: listos,
+      count: enBodega.length,
+      items: enBodega,
       color: 'border-emerald-300 bg-emerald-50 text-emerald-900',
       badgeClass: 'bg-emerald-600 text-white'
     },
     {
       id: 'DESPACHADO',
-      title: 'Despachados',
+      title: 'DESPACHADOS',
       icon: Truck,
       count: despachados.length,
       items: despachados,
@@ -80,7 +79,7 @@ export default function KanbanBoard() {
     },
     {
       id: 'INCIDENCIA',
-      title: 'Incidencias',
+      title: 'INCIDENCIAS',
       icon: AlertOctagon,
       count: incidencias.length,
       items: incidencias,
@@ -89,70 +88,38 @@ export default function KanbanBoard() {
     }
   ];
 
-  // Pestañas específicas para móvil (Segmented Control)
-  const MOBILE_TABS = [
-    {
-      id: 'COLA',
-      title: 'Pendientes',
-      icon: Inbox,
-      count: enCola.length,
-      items: enCola
-    },
-    {
-      id: 'ALISTAMIENTO',
-      title: 'Alistamiento',
-      icon: Package,
-      count: enPicking.length + enPacking.length,
-      items: [...enPicking, ...enPacking]
-    },
-    {
-      id: 'LISTO',
-      title: 'En Bahía',
-      icon: Warehouse,
-      count: listos.length,
-      items: listos
-    },
-    {
-      id: 'DESPACHADO',
-      title: 'Despachados',
-      icon: Truck,
-      count: despachados.length,
-      items: despachados
-    },
-    {
-      id: 'INCIDENCIA',
-      title: 'Incidencias',
-      icon: AlertOctagon,
-      count: incidencias.length,
-      items: incidencias
+  // Desplazamiento suave de columna al hacer tap en una pestaña
+  const scrollToStage = (stageId) => {
+    setActiveStageTab(stageId);
+    const element = document.getElementById(`kanban-col-${stageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
-  ];
-
-  const currentMobileTab = MOBILE_TABS.find((t) => t.id === activeStageTab) || MOBILE_TABS[0];
+  };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-2 space-y-3">
+    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-2 space-y-3">
       
-      {/* 1. SELECTOR DE PESTAÑAS HORIZONTAL / SEGMENTED CONTROL (MOBILE-FIRST) */}
-      <div className="md:hidden">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none snap-x">
-          {MOBILE_TABS.map((tab) => {
+      {/* 1. SELECTOR DE PESTAÑAS RÁPIDAS (SEGMENTED CONTROL CON CONTEO) */}
+      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none snap-x">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {STAGES.map((tab) => {
             const isSelected = activeStageTab === tab.id;
             const Icon = tab.icon;
 
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveStageTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 min-h-[44px] snap-start border active:scale-95 ${
+                onClick={() => scrollToStage(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 min-h-[40px] snap-start border active:scale-95 ${
                   isSelected
                     ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-md'
                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-3.5 w-3.5 shrink-0" />
                 <span>{tab.title}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold leading-none ${
+                <span className={`px-1.5 py-0.2 rounded-full text-xs font-mono font-bold leading-none ${
                   isSelected ? 'bg-white text-[#E11D24]' : 'bg-slate-100 text-slate-700'
                 }`}>
                   {tab.count}
@@ -161,125 +128,95 @@ export default function KanbanBoard() {
             );
           })}
         </div>
-      </div>
 
-      {/* 2. ENCABEZADO PARA DESKTOP/TABLET: SELECTOR KANBAN VS LISTA */}
-      <div className="hidden md:flex items-center justify-between border-b border-slate-200 pb-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
-            Tablero de Olas de Despacho
-          </h2>
-          <span className="text-xs font-mono text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md font-bold">
-            {filteredDespachos.length} pedidos
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
+        {/* Modo Tablero vs Lista */}
+        <div className="hidden md:flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm shrink-0">
           <button
             onClick={() => setWavesViewMode('kanban')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
               wavesViewMode === 'kanban'
                 ? 'bg-[#E11D24] text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <LayoutGrid className="h-3.5 w-3.5" />
-            <span>Columnas Kanban</span>
+            <span>Tablero</span>
           </button>
           <button
             onClick={() => setWavesViewMode('list')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
               wavesViewMode === 'list'
                 ? 'bg-[#E11D24] text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <ListFilter className="h-3.5 w-3.5" />
-            <span>Lista Rápida</span>
+            <span>Lista</span>
           </button>
         </div>
       </div>
 
-      {/* ======================================================================= */}
-      {/* VISTA MÓVIL (< 768px): LISTA VERTICAL LIMPIA DE UNA SOLA COLUMNA        */}
-      {/* ======================================================================= */}
-      <div className="md:hidden space-y-3">
-        <div className="flex items-center justify-between text-xs text-slate-600 px-1 font-semibold">
-          <span>Mostrando: <strong className="text-slate-900">{currentMobileTab.title}</strong></span>
-          <span className="font-mono font-bold">{currentMobileTab.items.length} pedidos</span>
-        </div>
+      {/* 2. CONTENEDOR GENERAL DE LAS 6 COLUMNAS KANBAN (SIN COMPRESIÓN HORIZONTAL) */}
+      {wavesViewMode === 'kanban' ? (
+        <div 
+          ref={scrollContainerRef}
+          className="flex gap-4 overflow-x-auto pb-6 pt-2 px-2 snap-x"
+        >
+          {STAGES.map((col) => {
+            const Icon = col.icon;
+            const totalKg = col.items.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);
 
-        {currentMobileTab.items.length === 0 ? (
-          <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center text-slate-400 space-y-1">
-            <currentMobileTab.icon className="h-8 w-8 mx-auto text-slate-300 mb-1" />
-            <p className="text-sm font-bold text-slate-700">Sin pedidos en esta fase</p>
-            <p className="text-xs text-slate-400">Selecciona otra etapa en la barra superior</p>
-          </div>
-        ) : (
-          <div className="space-y-3 w-full">
-            {currentMobileTab.items.map((despacho) => (
-              <DispatchCard key={despacho.id} despacho={despacho} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ======================================================================= */}
-      {/* VISTA TABLET/DESKTOP (>= 768px): KANBAN CON COLUMNAS O LISTA             */}
-      {/* ======================================================================= */}
-      <div className="hidden md:block">
-        {wavesViewMode === 'kanban' ? (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 items-start overflow-x-auto pb-4">
-            {STAGES.map((col) => {
-              const Icon = col.icon;
-              const totalKg = col.items.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);
-
-              return (
-                <div
-                  key={col.id}
-                  className="flex flex-col rounded-2xl bg-slate-50 border border-slate-200 p-2.5 min-h-[580px] shadow-sm"
-                >
-                  <div className={`rounded-xl border p-2 mb-2 flex items-center justify-between ${col.color}`}>
-                    <div className="flex items-center gap-1.5">
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="text-xs font-bold uppercase tracking-wide">
-                        {col.title}
-                      </span>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono ${col.badgeClass}`}>
-                      {col.count}
+            return (
+              <div
+                key={col.id}
+                id={`kanban-col-${col.id}`}
+                className="w-72 min-w-[288px] flex-shrink-0 bg-slate-50/80 rounded-2xl border border-slate-200 p-3 flex flex-col snap-start shadow-sm"
+              >
+                {/* Cabecera de Columna */}
+                <div className={`rounded-xl border p-2.5 mb-2.5 flex items-center justify-between ${col.color}`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-bold uppercase tracking-wide truncate">
+                      {col.title}
                     </span>
                   </div>
-
-                  <div className="flex items-center justify-between text-xs text-slate-500 px-1 pb-1.5 border-b border-slate-200 mb-2 font-medium">
-                    <span>Carga:</span>
-                    <span className="font-bold text-slate-800">{Math.round(totalKg)} kg</span>
-                  </div>
-
-                  <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[calc(100vh-270px)] pr-0.5">
-                    {col.items.length === 0 ? (
-                      <div className="h-32 border border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center p-3 text-center text-slate-400">
-                        <p className="text-xs font-bold">Sin órdenes</p>
-                      </div>
-                    ) : (
-                      col.items.map((despacho) => (
-                        <DispatchCard key={despacho.id} despacho={despacho} />
-                      ))
-                    )}
-                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono shrink-0 ${col.badgeClass}`}>
+                    {col.count}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          /* Vista Lista en Desktop */
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filteredDespachos.map((despacho) => (
-              <DispatchCard key={despacho.id} despacho={despacho} />
-            ))}
-          </div>
-        )}
-      </div>
+
+                {/* Subcabecera: Peso acumulado */}
+                <div className="flex items-center justify-between text-xs text-slate-500 px-1 pb-2 border-b border-slate-200 mb-2.5 font-medium">
+                  <span>Carga Total:</span>
+                  <span className="font-bold text-slate-800">{Math.round(totalKg)} kg</span>
+                </div>
+
+                {/* Contenedor interno donde se mapean las tarjetas con padding para el scrollbar */}
+                <div className="overflow-y-auto max-h-[calc(100vh-220px)] pr-1.5 flex flex-col gap-3 flex-1">
+                  {col.items.length === 0 ? (
+                    <div className="h-36 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center p-3 text-center text-slate-400 space-y-1">
+                      <col.icon className="h-6 w-6 text-slate-300" />
+                      <p className="text-xs font-bold text-slate-500">Sin órdenes</p>
+                      <p className="text-xs text-slate-400">No hay pedidos en esta fase</p>
+                    </div>
+                  ) : (
+                    col.items.map((despacho) => (
+                      <DispatchCard key={despacho.id} despacho={despacho} />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Vista de Lista */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {filteredDespachos.map((despacho) => (
+            <DispatchCard key={despacho.id} despacho={despacho} />
+          ))}
+        </div>
+      )}
 
     </div>
   );

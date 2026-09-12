@@ -122,7 +122,7 @@ export function WmsProvider({ children }) {
           updatedPackingMesa = updatedPackingMesa || 'Mesa 01 (Báscula Certificada)';
           nota = `Recibido en ${updatedPackingMesa} para verificación y aforo de peso`;
         } else if (next === 'LISTO') {
-          updatedBahia = updatedBahia || 'Bahía A-01';
+          updatedBahia = updatedBahia || 'Bodega A-01';
           nota = `Auditoría y báscula conformes. Trasladado a ${updatedBahia} para estiba y cargue`;
         } else if (next === 'DESPACHADO') {
           updatedManifest = `MAN-VAL-2026-09-${Math.floor(100 + Math.random() * 900)}`;
@@ -297,7 +297,7 @@ export function WmsProvider({ children }) {
       estado_actual: 'COLA',
       prioridad: 1, // Urgente
       horario_corte: new Date(Date.now() + 19 * 60000).toISOString(), // 19 minutos restante
-      bahia_asignada: 'Bahía A-01',
+      bahia_asignada: 'Bodega A-01',
       numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
       peso_total_kg: 172.0,
       peso_bascula_kg: 172.0,

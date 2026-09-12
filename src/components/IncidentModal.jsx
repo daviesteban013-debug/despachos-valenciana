@@ -135,9 +135,9 @@ export default function IncidentModal() {
                 onChange={(e) => setDestinationStage(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
               >
-                <option value="PACKING">En Packing (Reauditar y aforar báscula)</option>
-                <option value="PICKING">En Picking (Completar sustituto en rack)</option>
-                <option value="LISTO">Listo en Bahía (Liberación directa a camión)</option>
+                <option value="PACKING">En Empacando (Reauditar y aforar báscula)</option>
+                <option value="PICKING">En Escogiendo (Completar sustituto en rack)</option>
+                <option value="LISTO">En Bodega (Liberación directa a camión)</option>
               </select>
             </div>
           )}

@@ -13,7 +13,7 @@ export default function PackageLabelModal() {
 
   const handlePrint = () => {
     playBeep(1200);
-    showToast(`Enviado a Impresora Térmica Zebra (${packageLabelDespacho.bahia_asignada})`, 'success');
+    showToast(`Enviado a Impresora Térmica Zebra (${packageLabelDespacho.bahia_asignada?.replace(/bah[ií]a/gi, 'Bodega')})`, 'success');
     window.print();
   };
 
@@ -95,9 +95,9 @@ export default function PackageLabelModal() {
           {/* Muelle y Transportadora */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="border-2 border-slate-900 p-2 text-center">
-              <span className="text-xs font-bold uppercase text-slate-500 block">Bahía Carga</span>
+              <span className="text-xs font-bold uppercase text-slate-500 block">Bodega Carga</span>
               <span className="font-mono text-base font-bold text-purple-900 block">
-                {packageLabelDespacho.bahia_asignada}
+                {packageLabelDespacho.bahia_asignada?.replace(/bah[ií]a/gi, 'Bodega')}
               </span>
             </div>
             <div className="border-2 border-slate-900 p-2 text-center">

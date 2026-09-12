@@ -25,7 +25,7 @@ export const MOCK_VEHICULOS_RUTAS = [
       cedula: '1.090.458.120',
       telefono: '+57 312 458 9021'
     },
-    bahia_default: 'Bahía A-01',
+    bahia_default: 'Bodega A-01',
     estado: 'EN_CURSO'
   },
   {
@@ -43,7 +43,7 @@ export const MOCK_VEHICULOS_RUTAS = [
       cedula: '88.245.190',
       telefono: '+57 315 782 3341'
     },
-    bahia_default: 'Bahía A-02',
+    bahia_default: 'Bodega A-02',
     estado: 'PLANEADA'
   },
   {
@@ -61,7 +61,7 @@ export const MOCK_VEHICULOS_RUTAS = [
       cedula: '13.489.120',
       telefono: '+57 320 119 4480'
     },
-    bahia_default: 'Bahía B-01',
+    bahia_default: 'Bodega B-01',
     estado: 'PLANEADA'
   },
   {
@@ -79,7 +79,7 @@ export const MOCK_VEHICULOS_RUTAS = [
       cedula: '1.093.812.301',
       telefono: '+57 310 992 5167'
     },
-    bahia_default: 'Bahía B-03',
+    bahia_default: 'Bodega B-03',
     estado: 'EN_CURSO'
   }
 ];
@@ -103,7 +103,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'COLA',
     prioridad: 1, // Urgente
     horario_corte: addMinutes(24), // 24m -> ¡Alerta Roja parpadeante!
-    bahia_asignada: 'Bahía A-01',
+    bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0918',
     peso_total_kg: 324.5,
     peso_bascula_kg: 325.1, // Tolerancia OK (+0.18%)
@@ -132,7 +132,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'COLA',
     prioridad: 2, // Normal
     horario_corte: addMinutes(68), // 68m -> Ámbar
-    bahia_asignada: 'Bahía B-01',
+    bahia_asignada: 'Bodega B-01',
     numero_guia: 'GUIA-COO-448190',
     peso_total_kg: 186.0,
     peso_bascula_kg: 187.5, // Tolerancia OK
@@ -160,7 +160,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'COLA',
     prioridad: 3, // Consolidado
     horario_corte: addMinutes(190), // Verde
-    bahia_asignada: 'Bahía A-02',
+    bahia_asignada: 'Bodega A-02',
     numero_guia: 'GUIA-VAL-0922',
     peso_total_kg: 42.0,
     peso_bascula_kg: 42.0,
@@ -176,7 +176,7 @@ export const INITIAL_DESPACHOS = [
     ]
   },
 
-  // 2. EN PICKING
+  // 2. EN ESCOGIENDO
   {
     id: 'dsp-104',
     codigo_orden: 'PVSW-6299',
@@ -190,7 +190,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'PICKING',
     prioridad: 1, // Urgente
     horario_corte: addMinutes(38),
-    bahia_asignada: 'Bahía A-01',
+    bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0915',
     peso_total_kg: 114.2,
     peso_bascula_kg: 114.2,
@@ -220,7 +220,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'PICKING',
     prioridad: 2,
     horario_corte: addMinutes(115),
-    bahia_asignada: 'Bahía B-01',
+    bahia_asignada: 'Bodega B-01',
     numero_guia: 'GUIA-TCC-992014',
     peso_total_kg: 260.0,
     peso_bascula_kg: 260.0,
@@ -236,7 +236,7 @@ export const INITIAL_DESPACHOS = [
     ]
   },
 
-  // 3. EN PACKING
+  // 3. EN EMPACANDO
   {
     id: 'dsp-106',
     codigo_orden: 'PVSW-6288',
@@ -250,7 +250,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'PACKING',
     prioridad: 1, // Urgente
     horario_corte: addMinutes(18), // 18m -> ¡Urgente Crítico!
-    bahia_asignada: 'Bahía B-03',
+    bahia_asignada: 'Bodega B-03',
     numero_guia: 'GUIA-VAL-0909',
     peso_total_kg: 28.5,
     peso_bascula_kg: 28.6, // Báscula OK (+0.35%)
@@ -280,7 +280,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'PACKING',
     prioridad: 2,
     horario_corte: addMinutes(75),
-    bahia_asignada: 'Bahía A-02',
+    bahia_asignada: 'Bodega A-02',
     numero_guia: 'GUIA-VAL-0912',
     peso_total_kg: 51.0,
     peso_bascula_kg: 51.2,
@@ -295,7 +295,7 @@ export const INITIAL_DESPACHOS = [
     ]
   },
 
-  // 4. LISTO EN BAHÍA
+  // 4. LISTO EN BODEGA
   {
     id: 'dsp-108',
     codigo_orden: 'PVSW-6270',
@@ -309,7 +309,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'LISTO',
     prioridad: 1, // Urgente listo
     horario_corte: addMinutes(45),
-    bahia_asignada: 'Bahía A-01',
+    bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0899',
     peso_total_kg: 650.0,
     peso_bascula_kg: 651.5,
@@ -321,7 +321,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-18', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P08-E02-N1', peso_unitario_kg: 5.9, unidad: 'UND' }
     ],
     history: [
-      { id: 'h-110', estado_anterior: 'PACKING', estado_nuevo: 'LISTO', usuario_operador: 'Sandra Torres (Líder Packing)', tiempo_estancia_seg: 920, timestamp: subMinutes(28), nota: 'Auditoría 100% conforme. Paletizado y ubicado en Bahía A-01' }
+      { id: 'h-110', estado_anterior: 'PACKING', estado_nuevo: 'LISTO', usuario_operador: 'Sandra Torres (Líder Empacando)', tiempo_estancia_seg: 920, timestamp: subMinutes(28), nota: 'Auditoría 100% conforme. Paletizado y ubicado en Bodega A-01' }
     ]
   },
   {
@@ -337,7 +337,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'LISTO',
     prioridad: 2,
     horario_corte: addMinutes(95),
-    bahia_asignada: 'Bahía B-01',
+    bahia_asignada: 'Bodega B-01',
     numero_guia: 'GUIA-COO-448102',
     peso_total_kg: 95.0,
     peso_bascula_kg: 95.0,
@@ -366,7 +366,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'DESPACHADO',
     prioridad: 1,
     horario_corte: subMinutes(40),
-    bahia_asignada: 'Bahía A-01',
+    bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0880',
     manifiesto_despacho: 'MAN-VAL-2026-09-082',
     hora_salida: subMinutes(35),
@@ -397,7 +397,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'INCIDENCIA',
     prioridad: 1, // Urgente retenida
     horario_corte: addMinutes(12), // En 12 minutos
-    bahia_asignada: 'Bahía Retención R-01',
+    bahia_asignada: 'Bodega Retención R-01',
     numero_guia: 'GUIA-VAL-0919',
     peso_total_kg: 18.0,
     peso_bascula_kg: 24.2, // Divergencia de báscula grave (+34.4%)
@@ -432,7 +432,7 @@ export const INITIAL_DESPACHOS = [
     estado_actual: 'INCIDENCIA',
     prioridad: 2,
     horario_corte: addMinutes(50),
-    bahia_asignada: 'Bahía Retención R-02',
+    bahia_asignada: 'Bodega Retención R-02',
     numero_guia: 'GUIA-SER-881290',
     peso_total_kg: 150.0,
     peso_bascula_kg: 100.0, // Faltante de 1 bulto (-33%)

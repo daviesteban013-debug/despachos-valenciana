@@ -9,10 +9,10 @@ export default function BayFleetView() {
   const { despachos, rutasVehiculos, setSelectedDespachoId } = useWms();
 
   const BAYS_CONFIG = [
-    { bayCode: 'Bahía A-01', rutaId: 'rt-101', type: 'Muelle Principal' },
-    { bayCode: 'Bahía A-02', rutaId: 'rt-102', type: 'Muelle Mediano' },
-    { bayCode: 'Bahía B-01', rutaId: 'rt-103', type: 'Muelle Carga Pesada' },
-    { bayCode: 'Bahía B-03', rutaId: 'rt-104', type: 'Muelle Express Moto' }
+    { bayCode: 'Bodega A-01', rutaId: 'rt-101', type: 'Muelle Principal' },
+    { bayCode: 'Bodega A-02', rutaId: 'rt-102', type: 'Muelle Mediano' },
+    { bayCode: 'Bodega B-01', rutaId: 'rt-103', type: 'Muelle Carga Pesada' },
+    { bayCode: 'Bodega B-03', rutaId: 'rt-104', type: 'Muelle Express Moto' }
   ];
 
   return (
@@ -26,7 +26,7 @@ export default function BayFleetView() {
           </div>
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
-              Mapa de Bahías & Flota
+              Mapa de Bodegas & Flota
             </h2>
             <p className="text-xs text-slate-500">
               Control físico de estibas listas, cubicaje y despacho
@@ -35,18 +35,19 @@ export default function BayFleetView() {
         </div>
       </div>
 
-      {/* Grilla de Bahías Físicas */}
+      {/* Grilla de Bodegas Físicas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {BAYS_CONFIG.map((bay) => {
           const ruta = rutasVehiculos.find((r) => r.id === bay.rutaId);
           if (!ruta) return null;
 
-          // Despachos ubicados en esta bahía (en estado LISTO o PACKING)
-          const ordenesEnBahia = despachos.filter(
-            (d) => d.bahia_asignada === bay.bayCode && (d.estado_actual === 'LISTO' || d.estado_actual === 'PACKING')
-          );
+          // Despachos ubicados en esta bodega (en estado LISTO o PACKING)
+          const ordenesEnBodega = despachos.filter((d) => {
+            const assigned = d.bahia_asignada ? d.bahia_asignada.replace(/bah[ií]a/gi, 'Bodega') : '';
+            return assigned === bay.bayCode && (d.estado_actual === 'LISTO' || d.estado_actual === 'PACKING');
+          });
 
-          const pesoTotalCargado = ordenesEnBahia.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);
+          const pesoTotalCargado = ordenesEnBodega.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);
           const capacidadCamion = ruta.vehiculo.capacidad_kg || 5000;
           const porcentajeOcupacion = Math.min(100, Math.round((pesoTotalCargado / capacidadCamion) * 100));
 
@@ -55,11 +56,11 @@ export default function BayFleetView() {
               key={bay.bayCode}
               className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3.5 hover:border-purple-300 transition-all"
             >
-              {/* Encabezado Bahía */}
+              {/* Encabezado Bodega */}
               <div className="flex items-start justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2.5">
                   <div className="h-10 w-10 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center font-mono font-bold text-purple-900 text-sm shrink-0">
-                    {bay.bayCode.replace('Bahía ', '')}
+                    {bay.bayCode.replace('Bodega ', '').replace('Bahía ', '')}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -120,20 +121,20 @@ export default function BayFleetView() {
                 </div>
               </div>
 
-              {/* Órdenes ubicadas físicamente en la bahía */}
+              {/* Órdenes ubicadas físicamente en la bodega */}
               <div className="space-y-2 pt-1 border-t border-slate-100">
                 <div className="flex items-center justify-between text-xs text-slate-600">
                   <span className="font-bold">Estibas en Muelle:</span>
-                  <span className="font-mono font-bold text-purple-700">{ordenesEnBahia.length} despachos</span>
+                  <span className="font-mono font-bold text-purple-700">{ordenesEnBodega.length} despachos</span>
                 </div>
 
-                {ordenesEnBahia.length === 0 ? (
+                {ordenesEnBodega.length === 0 ? (
                   <p className="text-xs text-slate-400 italic py-2 text-center bg-slate-50 rounded-lg">
-                    Bahía libre para recepción de estibas
+                    Bodega libre para recepción de estibas
                   </p>
                 ) : (
                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                    {ordenesEnBahia.map((ord) => (
+                    {ordenesEnBodega.map((ord) => (
                       <div 
                         key={ord.id}
                         onClick={() => setSelectedDespachoId(ord.id)}
