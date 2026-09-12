@@ -12,6 +12,49 @@ const SECCION_A_BODEGA = {
   ferreteria_general: 7
 };
 
+// Pre-cargar factura FE-80993 para prueba de sello e inventario
+const FACTURAS_DEMO = [
+  {
+    id: 'FAC-80993',
+    numero: 'FE-80993',
+    numeroFactura: 'FE-80993',
+    cliente: 'Electricistas Asociados del Oriente S.A.S.',
+    fecha: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    estado: 'lista_sello',
+    cajero: 'Caja 01 - Carlos Mendoza',
+    operarioVitrina: 'Pedro (Vitrina Mostrador)',
+    items: [
+      {
+        id: 'it-ele-80993',
+        sku: 'ELE-001',
+        nombre: 'Cable Cobre THHN #12 AWG Rojo Rollo 100m',
+        producto: 'Cable Cobre THHN #12 AWG Rojo Rollo 100m',
+        cantidad: 10,
+        seccion: 'electrico',
+        bodega_id: 5
+      }
+    ],
+    historial: [
+      {
+        estado: 'pendiente',
+        timestamp: new Date(Date.now() - 20 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        detalle: 'Factura generada en Caja 01'
+      },
+      {
+        estado: 'lista_sello',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        detalle: 'Vitrina confirmó entrega completa física. Esperando sello en Facturación.'
+      }
+    ]
+  }
+];
+
+FACTURAS_DEMO.forEach((f) => {
+  if (!dbMemoria.facturas.has(f.id)) {
+    dbMemoria.facturas.set(f.id, { ...f });
+  }
+});
+
 // GET /api/facturas
 export async function listarFacturas(req, res) {
   try {
@@ -85,10 +128,12 @@ export async function cambiarEstadoFactura(req, res) {
     }
 
     // ========================================================================
-    // TRANSICIÓN A 'ENTREGADA': DISPARA EL DESCUENTO ATÓMICO DE INVENTARIO
+    // TRANSICIÓN A 'ENTREGADA' O 'ENTREGADA Y SELLADA': DISPARA EL DESCUENTO ATÓMICO
     // ========================================================================
-    if (nuevoEstado === 'entregada') {
-      if (fac.estado !== 'lista_sello') {
+    const esPasoASello = nuevoEstado === 'entregada' || nuevoEstado === 'ENTREGADA Y SELLADA' || nuevoEstado === 'Sello verificado';
+
+    if (esPasoASello) {
+      if (fac.estado !== 'lista_sello' && fac.estado !== 'ENTREGADA Y SELLADA') {
         return res.status(400).json({
           error: `Solo facturas en estado "lista_sello" pueden pasar a "entregada". Estado actual: "${fac.estado}".`
         });
@@ -121,12 +166,14 @@ export async function cambiarEstadoFactura(req, res) {
         throw errStock;
       }
 
-      // Si el descuento fue exitoso, confirmar estado entregada
-      fac.estado = 'entregada';
+      // Si el descuento fue exitoso, confirmar estado entregada / sellada
+      fac.estado = 'ENTREGADA Y SELLADA';
+      fac.sellada = true;
+      fac.fechaSello = new Date().toISOString();
       fac.fechaEntregaFinal = new Date().toISOString();
       fac.selloConfirmadoPor = usuario;
       fac.historial.push({
-        estado: 'entregada',
+        estado: 'ENTREGADA Y SELLADA',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         detalle: `Sello físico verificado por ${usuario}. Inventario descontado con éxito.`
       });

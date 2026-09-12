@@ -170,5 +170,19 @@ export const ESTADOS_META = {
     borderClass: 'border-l-4 border-l-emerald-600',
     cardBorder: 'border-emerald-400 bg-emerald-50/20',
     descripcion: 'Sello físico verificado; inventario descontado por cantidad original'
+  },
+  'ENTREGADA Y SELLADA': {
+    label: 'Entregada y Sellada',
+    badgeClass: 'bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold',
+    borderClass: 'border-l-4 border-l-emerald-600',
+    cardBorder: 'border-emerald-400 bg-emerald-50/20',
+    descripcion: 'Sello físico verificado; inventario descontado por cantidad original'
+  },
+  'Sello verificado': {
+    label: 'Sello Verificado',
+    badgeClass: 'bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold',
+    borderClass: 'border-l-4 border-l-emerald-600',
+    cardBorder: 'border-emerald-400 bg-emerald-50/20',
+    descripcion: 'Sello físico verificado; inventario descontado por cantidad original'
   }
 };

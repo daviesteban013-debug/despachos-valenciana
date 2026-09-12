@@ -21,7 +21,10 @@ import {
 export default function FacturacionPage() {
   const {
     facturas,
+    inventario,
+    totalUnidadesBodega,
     crearFactura,
+    confirmarSelloFactura,
     confirmarSelloYEntregar
   } = useVentaMostrador();
 
@@ -122,9 +125,13 @@ export default function FacturacionPage() {
   const totalTodas = facturas.length;
   const totalPendientes = facturas.filter((f) => f.estado === 'pendiente').length;
   const totalEnVitrina = facturas.filter((f) => f.estado === 'en_vitrina').length;
-  const totalListaSello = facturas.filter((f) => f.estado === 'lista_sello').length;
+  const totalListaSello = facturas.filter((f) => f.estado === 'lista_sello' || f.estado === 'LISTA_SELLO').length;
   const totalFaltantes = facturas.filter((f) => f.estado === 'faltante').length;
-  const totalEntregadas = facturas.filter((f) => f.estado === 'entregada').length;
+  const totalEntregadas = facturas.filter((f) => f.estado === 'entregada' || f.estado === 'ENTREGADA Y SELLADA' || f.estado === 'Sello verificado' || f.sellada).length;
+
+  // Stock en vivo de ELE-001
+  const prodELE = inventario?.find((p) => p.sku === 'ELE-001');
+  const stockELE001 = prodELE ? (prodELE.stockTotal ?? prodELE.stock ?? 0) : 0;
 
   // Facturas congeladas por faltante (visibles aparte)
   const facturasFaltantes = facturas.filter((f) => f.estado === 'faltante');
@@ -132,6 +139,12 @@ export default function FacturacionPage() {
   // Facturas para el tablero general (excluyendo o incluyendo según filtro)
   const facturasFiltradas = facturas.filter((f) => {
     if (filtroEstado === 'todos') return true;
+    if (filtroEstado === 'entregada') {
+      return f.estado === 'entregada' || f.estado === 'ENTREGADA Y SELLADA' || f.estado === 'Sello verificado' || f.sellada;
+    }
+    if (filtroEstado === 'lista_sello') {
+      return f.estado === 'lista_sello' || f.estado === 'LISTA_SELLO';
+    }
     return f.estado === filtroEstado;
   });
 
@@ -458,6 +471,32 @@ export default function FacturacionPage() {
         {/* SECCIÓN 3: BANDEJA DE FACTURAS EMITIDAS Y CONTROL DE SELLO */}
         {/* ========================================================================= */}
         <section className="space-y-4">
+          {/* KPI Global de Unidades en Bodega y Stock en Vivo */}
+          <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl">
+                <Boxes className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  Unidades en Bodega (Catálogo Global)
+                </div>
+                <div className="text-2xl font-black text-white">
+                  {(totalUnidadesBodega || 0).toLocaleString('es-CO')} <span className="text-xs font-normal text-slate-400">unidades disponibles</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 bg-slate-800/90 px-3.5 py-2 rounded-xl border border-slate-700 text-xs">
+              <span className="text-slate-300 font-medium">SKU ELE-001 (Cable THHN):</span>
+              <span className={`font-mono font-black px-2.5 py-1 rounded text-sm ${
+                stockELE001 <= 30 ? 'bg-amber-500/20 text-amber-300 border border-amber-400/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+              }`}>
+                {stockELE001} un.
+              </span>
+            </div>
+          </div>
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -532,8 +571,8 @@ export default function FacturacionPage() {
             ) : (
               facturasFiltradas.map((fac) => {
                 const metaEstado = ESTADOS_META[fac.estado] || ESTADOS_META.pendiente;
-                const esListaSello = fac.estado === 'lista_sello';
-                const esEntregada = fac.estado === 'entregada';
+                const esListaSello = fac.estado === 'lista_sello' || fac.estado === 'LISTA_SELLO';
+                const esEntregada = fac.estado === 'entregada' || fac.estado === 'ENTREGADA Y SELLADA' || fac.estado === 'Sello verificado' || fac.sellada;
 
                 // Agrupar conteo de secciones de esta factura
                 const seccionesUnicas = Array.from(new Set(fac.items.map((i) => i.seccion)));
@@ -618,12 +657,8 @@ export default function FacturacionPage() {
                       {esListaSello ? (
                         <button
                           type="button"
-                          onClick={async () => {
-                            try {
-                              await confirmarSelloYEntregar(fac.id, 'Cajero 01');
-                            } catch (err) {
-                              alert(`⚠️ BLOQUEO DE INVENTARIO:\n${err.message}\n\nLa transacción fue abortada (Todo o Nada). La factura permanece en LISTA PARA SELLO.`);
-                            }
+                          onClick={() => {
+                            confirmarSelloFactura(fac.id);
                           }}
                           className="w-full min-h-[48px] py-3 px-4 bg-[#E11D24] hover:bg-red-700 active:scale-95 text-white rounded-xl text-sm font-black tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
                         >

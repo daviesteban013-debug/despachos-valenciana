@@ -5,7 +5,7 @@ import { useVentaMostrador } from '../store/ventaMostrador';
 import { Building2, RotateCcw, ExternalLink, ArrowLeft, ShieldCheck } from 'lucide-react';
 
 export default function MostradorHeader({ tituloModulo, subModulo, otraRuta, nombreOtraRuta }) {
-  const { sedeActiva, setSedeActiva, reiniciarDatos, facturas } = useVentaMostrador();
+  const { sedeActiva, setSedeActiva, reiniciarDatos, facturas, totalUnidadesBodega } = useVentaMostrador();
 
   const conteoPendientes = facturas.filter((f) => f.estado === 'pendiente').length;
   const conteoVitrina = facturas.filter((f) => f.estado === 'en_vitrina').length;
@@ -48,6 +48,9 @@ export default function MostradorHeader({ tituloModulo, subModulo, otraRuta, nom
 
         {/* 2. Mini-resumen de conteos operativos de fondo */}
         <div className="hidden lg:flex items-center gap-2 text-xs font-semibold">
+          <span className="px-2.5 py-1 rounded-full bg-slate-900 text-white border border-slate-700 font-bold">
+            Unidades en Bodega: <b className="text-emerald-400 font-black">{totalUnidadesBodega || 0}</b>
+          </span>
           <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
             Pendientes: <b className="text-slate-900">{conteoPendientes}</b>
           </span>

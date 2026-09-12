@@ -51,6 +51,8 @@ export async function listarInventario(req, res) {
       resultado.push({
         ...prod,
         stock_total: stockTotal,
+        stockTotal: stockTotal,
+        stock: stockTotal,
         desglose_bodegas: desgloseBodegas
       });
     }

@@ -135,9 +135,9 @@ export default function InventarioPage() {
   // Métricas agregadas
   const metricas = useMemo(() => {
     const totalSkus = productos.length;
-    const totalUnidades = productos.reduce((acc, p) => acc + (p.stock_total || 0), 0);
+    const totalUnidades = productos.reduce((acc, p) => acc + (p.stockTotal ?? p.stock ?? p.stock_total ?? 0), 0);
     const totalValor = productos.reduce(
-      (acc, p) => acc + (p.stock_total || 0) * (p.precio_unitario || 0),
+      (acc, p) => acc + (p.stockTotal ?? p.stock ?? p.stock_total ?? 0) * (p.precio_unitario || 0),
       0
     );
     return { totalSkus, totalUnidades, totalValor };

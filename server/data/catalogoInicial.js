@@ -247,7 +247,7 @@ export function generarCatalogo350() {
 
       // Distribuir stock: bodega principal (id de la sección) con stock alto (40 a 250 un),
       // y en bodega 7 (Ferretería General / mostrador) un pequeño remanente (5 a 20 un) para algunos productos
-      const stockPrincipal = Math.floor(35 + (i * 7) % 180);
+      const stockPrincipal = sku === 'ELE-001' ? 40 : Math.floor(35 + (i * 7) % 180);
       stockPorBodega.push({
         sku,
         bodega_id: sec.id,

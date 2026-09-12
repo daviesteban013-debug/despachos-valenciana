@@ -66,9 +66,12 @@ export async function obtenerInventario({ seccion = 'todas', buscar = '', sku = 
       cantidad: mapaStock.get(`${prod.sku}__${b.id}`) || 0
     }));
 
+    const stockTotal = desgloseBodegas.reduce((acc, b) => acc + b.cantidad, 0);
     productos.push({
       ...prod,
-      stock_total: desgloseBodegas.reduce((acc, b) => acc + b.cantidad, 0),
+      stock_total: stockTotal,
+      stockTotal: stockTotal,
+      stock: stockTotal,
       desglose_bodegas: desgloseBodegas
     });
   }

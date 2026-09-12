@@ -484,3 +484,160 @@ export const INITIAL_DEVOLUCIONES = [
     fecha_registro: subMinutes(70)
   }
 ];
+
+// ============================================================================
+// CATÁLOGO E INVENTARIO INICIAL CON STOCK PARA EL CONTROL DE SELLO
+// ============================================================================
+export const INITIAL_INVENTARIO = [
+  {
+    id: 1,
+    sku: 'ELE-001',
+    nombre: 'Cable Cobre THHN #12 AWG Rojo Rollo 100m',
+    descripcion: 'Conductor de cobre 99.9% aislamiento PVC 90°C Centelsa',
+    categoria_slug: 'electrico',
+    seccion: 'electrico',
+    unidad_medida: 'ROLLO',
+    precio_unitario: 189000,
+    stockTotal: 40,
+    stock: 40,
+    stock_total: 40
+  },
+  {
+    id: 2,
+    sku: 'MAT-001',
+    nombre: 'Cemento Gris 50kg Argos Tipo UG',
+    descripcion: 'Cemento de uso general para mampostería y losas',
+    categoria_slug: 'materiales_construccion',
+    seccion: 'materiales_construccion',
+    unidad_medida: 'BULTO',
+    precio_unitario: 34500,
+    stockTotal: 150,
+    stock: 150,
+    stock_total: 150
+  },
+  {
+    id: 3,
+    sku: 'PIN-001',
+    nombre: 'Esmalte Sintético Pintulux Rojo Bandera Galón',
+    descripcion: 'Pintura alquídica brillante de alta resistencia',
+    categoria_slug: 'pinturas',
+    seccion: 'pinturas',
+    unidad_medida: 'GALON',
+    precio_unitario: 72900,
+    stockTotal: 80,
+    stock: 80,
+    stock_total: 80
+  },
+  {
+    id: 4,
+    sku: 'HER-001',
+    nombre: 'Taladro Percutor 1/2" 650W DeWalt DWD024',
+    descripcion: 'Taladro percutor industrial con mandril metálico',
+    categoria_slug: 'herramienta_electrica',
+    seccion: 'herramienta_electrica',
+    unidad_medida: 'UNIDAD',
+    precio_unitario: 329000,
+    stockTotal: 25,
+    stock: 25,
+    stock_total: 25
+  },
+  {
+    id: 5,
+    sku: 'PLO-001',
+    nombre: 'Tubo PVC Presión 1/2" RDE 9 x 6m Pavco',
+    descripcion: 'Tubería rígida para conducción de agua potable',
+    categoria_slug: 'plomeria',
+    seccion: 'plomeria',
+    unidad_medida: 'METRO',
+    precio_unitario: 22800,
+    stockTotal: 110,
+    stock: 110,
+    stock_total: 110
+  },
+  {
+    id: 6,
+    sku: 'FER-001',
+    nombre: 'Cerradura Sobreponer Derecha Yale 101',
+    descripcion: 'Cerradura clásica de máxima seguridad',
+    categoria_slug: 'ferreteria_general',
+    seccion: 'ferreteria_general',
+    unidad_medida: 'UNIDAD',
+    precio_unitario: 89000,
+    stockTotal: 65,
+    stock: 65,
+    stock_total: 65
+  }
+];
+
+// ============================================================================
+// BANDEJA INICIAL DE FACTURAS EMITIDAS (CON FE-80993 PARA VALIDACIÓN DE SELLO)
+// ============================================================================
+export const INITIAL_FACTURAS_EMITIDAS = [
+  {
+    id: 'FAC-80993',
+    numero: 'FE-80993',
+    numeroFactura: 'FE-80993',
+    cliente: 'Electricistas Asociados del Oriente S.A.S.',
+    fecha: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    estado: 'lista_sello',
+    cajero: 'Caja 01 - Carlos Mendoza',
+    operarioVitrina: 'Pedro (Vitrina Mostrador)',
+    items: [
+      {
+        id: 'it-ele-80993',
+        sku: 'ELE-001',
+        nombre: 'Cable Cobre THHN #12 AWG Rojo Rollo 100m',
+        producto: 'Cable Cobre THHN #12 AWG Rojo Rollo 100m',
+        cantidad: 10,
+        seccion: 'electrico'
+      }
+    ],
+    historial: [
+      {
+        estado: 'pendiente',
+        timestamp: new Date(Date.now() - 20 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        detalle: 'Factura generada en Caja 01'
+      },
+      {
+        estado: 'lista_sello',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        detalle: 'Vitrina confirmó entrega completa física. Esperando confirmación de sello en Facturación.'
+      }
+    ]
+  },
+  {
+    id: 'FAC-80291',
+    numero: 'FE-80291',
+    numeroFactura: 'FE-80291',
+    cliente: 'Constructora Bolívar S.A.S.',
+    fecha: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+    estado: 'pendiente',
+    cajero: 'Caja 01 - Carlos Mendoza',
+    items: [
+      {
+        id: 'it-1',
+        sku: 'MAT-001',
+        nombre: 'Cemento Gris 50kg Argos Tipo UG',
+        producto: 'Cemento Gris 50kg Argos Tipo UG',
+        cantidad: 8,
+        seccion: 'materiales_construccion'
+      },
+      {
+        id: 'it-2',
+        sku: 'PIN-001',
+        nombre: 'Esmalte Sintético Pintulux Rojo Galón',
+        producto: 'Esmalte Sintético Pintulux Rojo Galón',
+        cantidad: 2,
+        seccion: 'pinturas'
+      }
+    ],
+    historial: [
+      {
+        estado: 'pendiente',
+        timestamp: new Date(Date.now() - 12 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        detalle: 'Factura generada en Caja 01'
+      }
+    ]
+  }
+];
+

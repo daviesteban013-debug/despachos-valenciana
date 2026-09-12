@@ -3,7 +3,9 @@ import {
   INITIAL_DESPACHOS, 
   INITIAL_DEVOLUCIONES, 
   MOCK_VEHICULOS_RUTAS, 
-  MOCK_BODEGAS 
+  MOCK_BODEGAS,
+  INITIAL_INVENTARIO,
+  INITIAL_FACTURAS_EMITIDAS
 } from '../data/mockData';
 
 const WmsContext = createContext(null);
@@ -17,6 +19,18 @@ export function WmsProvider({ children }) {
   const [devoluciones, setDevoluciones] = useState(() => {
     const saved = localStorage.getItem('wms_valenciana_devoluciones_v2');
     return saved ? JSON.parse(saved) : INITIAL_DEVOLUCIONES;
+  });
+
+  // Catálogo maestro e inventario operativo con stock global
+  const [inventario, setInventario] = useState(() => {
+    const saved = localStorage.getItem('wms_valenciana_inventario_v2');
+    return saved ? JSON.parse(saved) : INITIAL_INVENTARIO;
+  });
+
+  // Facturas emitidas y control de sello
+  const [facturas, setFacturas] = useState(() => {
+    const saved = localStorage.getItem('wms_valenciana_facturas_v2');
+    return saved ? JSON.parse(saved) : INITIAL_FACTURAS_EMITIDAS;
   });
 
   // Navegación Bottom Dock: 'waves' | 'packing' | 'bays' | 'incidents'
@@ -59,6 +73,22 @@ export function WmsProvider({ children }) {
       console.warn('LocalStorage error', e);
     }
   }, [despachos]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('wms_valenciana_inventario_v2', JSON.stringify(inventario));
+    } catch (e) {
+      console.warn('LocalStorage inventario error', e);
+    }
+  }, [inventario]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('wms_valenciana_facturas_v2', JSON.stringify(facturas));
+    } catch (e) {
+      console.warn('LocalStorage facturas error', e);
+    }
+  }, [facturas]);
 
   const showToast = (message, type = 'info') => {
     setNotification({ message, type, id: Date.now() });
@@ -321,13 +351,56 @@ export function WmsProvider({ children }) {
 
   const resetDemoData = () => {
     localStorage.removeItem('wms_valenciana_despachos_v2');
+    localStorage.removeItem('wms_valenciana_inventario_v2');
+    localStorage.removeItem('wms_valenciana_facturas_v2');
     setDespachos(INITIAL_DESPACHOS);
     setDevoluciones(INITIAL_DEVOLUCIONES);
+    setInventario(INITIAL_INVENTARIO);
+    setFacturas(INITIAL_FACTURAS_EMITIDAS);
     setSelectedCarrier('TODAS');
     setSelectedZone('TODAS');
     setOnlyUrgent(false);
     setSearchQuery('');
     showToast('Datos reiniciados a los valores estándar de La Valenciana FERREHOGAR.', 'info');
+  };
+
+  // Dentro de la función que confirma el sello de la factura:
+  const confirmarSelloFactura = (facturaId) => {
+    // 1. Obtener la factura que se está sellando
+    const factura = facturas.find(f => f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId);
+    if (!factura) return;
+
+    // 2. Descontar las cantidades de cada ítem del inventario global
+    setInventario(prevInventario => {
+      return prevInventario.map(producto => {
+        // Buscar si este producto está en los ítems de la factura
+        const itemFacturado = factura.items?.find(
+          item => item.sku === producto.sku || item.nombre === producto.nombre || item.producto === producto.nombre
+        );
+
+        if (itemFacturado) {
+          const nuevoStock = Math.max(0, (producto.stockTotal || producto.stock || 0) - (itemFacturado.cantidad || 0));
+          return {
+            ...producto,
+            stockTotal: nuevoStock,
+            stock: nuevoStock
+          };
+        }
+        return producto;
+      });
+    });
+
+    // 3. Actualizar el estado de la factura a sellada
+    setFacturas(prevFacturas =>
+      prevFacturas.map(f =>
+        (f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId)
+          ? { ...f, estado: 'ENTREGADA Y SELLADA', sellada: true, fechaSello: new Date().toISOString() }
+          : f
+      )
+    );
+
+    playBeep(1046);
+    showToast(`Factura ${factura.numeroFactura || factura.numero || factura.id} confirmada como [ENTREGADA Y SELLADA]. Inventario descontado.`, 'success');
   };
 
   // Filtrado reactivo de despachos
@@ -364,6 +437,8 @@ export function WmsProvider({ children }) {
     enBahia: despachos.filter((d) => d.estado_actual === 'LISTO').length,
     despachados: despachos.filter((d) => d.estado_actual === 'DESPACHADO').length,
     incidencias: despachos.filter((d) => d.estado_actual === 'INCIDENCIA').length,
+    unidadesEnBodega: inventario.reduce((acc, p) => acc + (p.stockTotal || p.stock || 0), 0),
+    unidades_en_bodega: inventario.reduce((acc, p) => acc + (p.stockTotal || p.stock || 0), 0),
     alertasCorteProximo: despachos.filter((d) => {
       if (d.estado_actual === 'DESPACHADO' || d.estado_actual === 'INCIDENCIA') return false;
       const diffMins = (new Date(d.horario_corte).getTime() - currentTime) / 60000;
@@ -386,6 +461,11 @@ export function WmsProvider({ children }) {
         despachos,
         filteredDespachos,
         devoluciones,
+        inventario,
+        setInventario,
+        facturas,
+        setFacturas,
+        confirmarSelloFactura,
         bodegas: MOCK_BODEGAS,
         rutasVehiculos: MOCK_VEHICULOS_RUTAS,
         activeBodega,
