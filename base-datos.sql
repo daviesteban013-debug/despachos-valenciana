@@ -208,3 +208,86 @@ CREATE TRIGGER trg_despacho_estado_audit
 AFTER INSERT OR UPDATE OF estado_actual ON despachos
 FOR EACH ROW
 EXECUTE FUNCTION fn_audit_despacho_transicion();
+
+-- ----------------------------------------------------------------------------
+-- 10. MÓDULO DE GESTIÓN DE INVENTARIO MULTI-BODEGA Y CONCILIACIÓN ERP
+-- ----------------------------------------------------------------------------
+
+-- Tabla maestra de bodegas / secciones físicas
+CREATE TABLE IF NOT EXISTS bodegas (
+    id SMALLINT PRIMARY KEY,
+    codigo VARCHAR(20) NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    seccion_slug VARCHAR(50) NOT NULL UNIQUE,
+    ubicacion_fisica TEXT NOT NULL,
+    activa BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- Catálogo maestro de productos (datos que no varían por bodega)
+CREATE TABLE IF NOT EXISTS productos (
+    sku VARCHAR(40) PRIMARY KEY,
+    codigo_barras VARCHAR(50),
+    nombre VARCHAR(200) NOT NULL,
+    descripcion TEXT,
+    categoria_slug VARCHAR(50) NOT NULL,
+    unidad_medida VARCHAR(20) NOT NULL DEFAULT 'UNIDAD',
+    peso_unitario_kg NUMERIC(8,2) DEFAULT 0.00,
+    precio_unitario NUMERIC(14,2) DEFAULT 0.00,
+    es_codigo_interno BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Stock real por producto y bodega (CHECK cantidad >= 0 como defensa estricta)
+CREATE TABLE IF NOT EXISTS inventario_por_bodega (
+    id              BIGSERIAL PRIMARY KEY,
+    sku             VARCHAR(40) NOT NULL REFERENCES productos(sku) ON DELETE CASCADE,
+    bodega_id       SMALLINT NOT NULL REFERENCES bodegas(id),
+    cantidad        INT NOT NULL DEFAULT 0 CHECK (cantidad >= 0),
+    actualizado_en  TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_inventario_sku_bodega UNIQUE (sku, bodega_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventario_sku ON inventario_por_bodega(sku);
+CREATE INDEX IF NOT EXISTS idx_inventario_bodega ON inventario_por_bodega(bodega_id);
+
+-- Log de corridas de importación desde Excel/ERP
+CREATE TABLE IF NOT EXISTS importaciones_inventario (
+    id BIGSERIAL PRIMARY KEY,
+    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    archivo VARCHAR(255) NOT NULL,
+    total_filas INT NOT NULL DEFAULT 0,
+    productos_nuevos INT NOT NULL DEFAULT 0,
+    productos_actualizados INT NOT NULL DEFAULT 0,
+    diferencias_detectadas INT NOT NULL DEFAULT 0,
+    estado VARCHAR(50) NOT NULL DEFAULT 'COMPLETADO',
+    usuario_admin VARCHAR(100) NOT NULL DEFAULT 'admin'
+);
+
+-- Tabla de conciliación de diferencias (revisión obligatoria por rol admin)
+CREATE TABLE IF NOT EXISTS diferencias_inventario (
+    id BIGSERIAL PRIMARY KEY,
+    importacion_id BIGINT NOT NULL REFERENCES importaciones_inventario(id) ON DELETE CASCADE,
+    sku VARCHAR(40) NOT NULL REFERENCES productos(sku),
+    bodega_id SMALLINT NOT NULL REFERENCES bodegas(id),
+    cantidad_sistema INT NOT NULL,
+    cantidad_excel INT NOT NULL,
+    diferencia INT NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'aplicada', 'descartada')),
+    resuelto_por VARCHAR(100),
+    resuelto_en TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_diferencias_pendientes ON diferencias_inventario(importacion_id, estado) WHERE estado = 'pendiente';
+
+-- Seed de las 7 bodegas/secciones oficiales fijas
+INSERT INTO bodegas (id, codigo, nombre, seccion_slug, ubicacion_fisica) VALUES
+(1, 'BOD-MAT', 'Materiales de Construcción', 'materiales_construccion', 'Nave A - Patios y Silos'),
+(2, 'BOD-PIN', 'Pinturas', 'pinturas', 'Pasillo 4 - Tintometría'),
+(3, 'BOD-HER', 'Herramienta Eléctrica', 'herramienta_electrica', 'Vitrina Central de Seguridad'),
+(4, 'BOD-PLO', 'Plomería', 'plomeria', 'Pasillo 8 - Tuberías y Grifería'),
+(5, 'BOD-ELE', 'Eléctrico', 'electrico', 'Pasillo 6 - Cables y Tableros'),
+(6, 'BOD-JAR', 'Jardín y Exteriores', 'jardin_exteriores', 'Área Exterior - Vivero y Cercas'),
+(7, 'BOD-FER', 'Ferretería General', 'ferreteria_general', 'Pasillo 1 y 2 - Mostrador Central')
+ON CONFLICT (id) DO NOTHING;
+
