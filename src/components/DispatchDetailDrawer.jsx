@@ -348,17 +348,23 @@ export default function DispatchDetailDrawer() {
             Reportar Novedad
           </button>
 
-          {selectedDespacho.estado_actual !== 'DESPACHADO' && (
+          {selectedDespacho.estado_actual !== 'DESPACHADO' ? (
             <button
               onClick={() => {
-                advanceStage(selectedDespacho.id);
+                advanceStage(selectedDespacho.id, selectedDespacho.vehiculo_placa || 'WRO-482');
                 setSelectedDespachoId(null);
               }}
               className="flex-1 min-h-[44px] bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
             >
-              <span>Avanzar Fase Operativa</span>
+              <Truck className="h-4 w-4" />
+              <span>Despachar ({selectedDespacho.vehiculo_placa || 'WRO-482'})</span>
               <ArrowRight className="h-4 w-4" />
             </button>
+          ) : (
+            <div className="flex-1 flex items-center justify-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-100 py-2.5 rounded-xl">
+              <Check className="h-4 w-4" />
+              <span>Orden Despachada</span>
+            </div>
           )}
         </div>
 

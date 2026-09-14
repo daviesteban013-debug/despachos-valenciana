@@ -17,7 +17,11 @@ import {
 } from './controllers/facturasController.js';
 import {
   listarDespachos,
-  cambiarEstadoDespacho
+  cambiarEstadoDespacho,
+  reintentarSincronizacionOneDrive,
+  gestionarIncidenciaDespacho,
+  exportarPlantillaExcel,
+  cargarPlantillaReferenciaController
 } from './controllers/wmsController.js';
 
 dotenv.config();
@@ -72,10 +76,14 @@ app.post('/api/facturas', crearFactura);
 app.patch('/api/facturas/:id/estado', cambiarEstadoFactura);
 
 // ----------------------------------------------------------------------------
-// RUTAS DE WMS DESPACHO A DOMICILIO
+// RUTAS DE WMS DESPACHO A DOMICILIO (MODELO SIMPLIFICADO 2 ESTADOS + ONEDRIVE)
 // ----------------------------------------------------------------------------
 app.get('/api/despachos', listarDespachos);
+app.get('/api/despachos/exportar-plantilla', exportarPlantillaExcel);
 app.patch('/api/despachos/:id/estado', cambiarEstadoDespacho);
+app.post('/api/despachos/:id/reintentar-onedrive', reintentarSincronizacionOneDrive);
+app.post('/api/despachos/:id/incidencia', gestionarIncidenciaDespacho);
+app.post('/api/despachos/cargar-plantilla-referencia', upload.single('archivo'), cargarPlantillaReferenciaController);
 
 // Middleware para manejo de errores
 app.use((err, req, res, next) => {

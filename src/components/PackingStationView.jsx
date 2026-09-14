@@ -22,9 +22,9 @@ export default function PackingStationView() {
     setIncidentModalTarget
   } = useWms();
 
-  // Órdenes candidatas para packing (PACKING o PICKING)
+  // Órdenes candidatas para packing (estado PENDIENTE)
   const packingOrders = despachos.filter(
-    (d) => d.estado_actual === 'PACKING' || d.estado_actual === 'PICKING'
+    (d) => d.estado_actual === 'PENDIENTE'
   );
 
   const [selectedOrderId, setSelectedOrderId] = useState(

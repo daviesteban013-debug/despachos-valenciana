@@ -1,222 +1,267 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useWms } from '../context/WmsContext';
 import DispatchCard from './DispatchCard';
 import { 
   Inbox, 
-  UserCheck, 
-  Package, 
-  Warehouse, 
   Truck, 
-  AlertOctagon, 
+  AlertTriangle, 
+  FileSpreadsheet, 
+  Download, 
+  RefreshCw, 
   LayoutGrid, 
-  ListFilter 
+  Columns2,
+  CheckCircle,
+  Clock
 } from 'lucide-react';
 
 export default function KanbanBoard() {
-  const { filteredDespachos, wavesViewMode, setWavesViewMode } = useWms();
-  const [activeStageTab, setActiveStageTab] = useState('COLA');
-  const scrollContainerRef = useRef(null);
+  const { 
+    filteredDespachos, 
+    kpis, 
+    exportarCopiaExcel,
+    reintentarSyncOneDrive
+  } = useWms();
 
-  // Segmentación por fases con nueva nomenclatura
-  const enCola = filteredDespachos
-    .filter((d) => d.estado_actual === 'COLA')
+  // 'pendientes' | 'despachados' | 'ambas'
+  const [activeTab, setActiveTab] = useState('pendientes');
+  const [soloConIncidencia, setSoloConIncidencia] = useState(false);
+  const [exportando, setExportando] = useState(false);
+  const [reintentandoTodos, setReintentandoTodos] = useState(false);
+
+  // Segmentación en los 2 estados
+  const pendientes = filteredDespachos
+    .filter((d) => d.estado_actual === 'PENDIENTE')
+    .filter((d) => (soloConIncidencia ? Boolean(d.incidencia_activa) : true))
     .sort((a, b) => {
       if (a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
       return new Date(a.horario_corte) - new Date(b.horario_corte);
     });
 
-  const enEscogiendo = filteredDespachos.filter((d) => d.estado_actual === 'PICKING');
-  const enEmpacando = filteredDespachos.filter((d) => d.estado_actual === 'PACKING');
-  const enBodega = filteredDespachos.filter((d) => d.estado_actual === 'LISTO');
-  const despachados = filteredDespachos.filter((d) => d.estado_actual === 'DESPACHADO');
-  const incidencias = filteredDespachos.filter((d) => d.estado_actual === 'INCIDENCIA');
+  const despachados = filteredDespachos
+    .filter((d) => d.estado_actual === 'DESPACHADO')
+    .filter((d) => (soloConIncidencia ? Boolean(d.incidencia_activa) : true))
+    .sort((a, b) => {
+      const timeA = a.hora_salida ? new Date(a.hora_salida).getTime() : 0;
+      const timeB = b.hora_salida ? new Date(b.hora_salida).getTime() : 0;
+      return timeB - timeA;
+    });
 
-  const STAGES = [
-    {
-      id: 'COLA',
-      title: 'EN COLA',
-      icon: Inbox,
-      count: enCola.length,
-      items: enCola,
-      color: 'border-blue-300 bg-blue-50 text-blue-900',
-      badgeClass: 'bg-blue-600 text-white'
-    },
-    {
-      id: 'PICKING',
-      title: 'EN ESCOGIENDO',
-      icon: UserCheck,
-      count: enEscogiendo.length,
-      items: enEscogiendo,
-      color: 'border-purple-300 bg-purple-50 text-purple-900',
-      badgeClass: 'bg-purple-600 text-white'
-    },
-    {
-      id: 'PACKING',
-      title: 'EN EMPACANDO',
-      icon: Package,
-      count: enEmpacando.length,
-      items: enEmpacando,
-      color: 'border-amber-300 bg-amber-50 text-amber-900',
-      badgeClass: 'bg-amber-600 text-white'
-    },
-    {
-      id: 'LISTO',
-      title: 'EN BODEGA',
-      icon: Warehouse,
-      count: enBodega.length,
-      items: enBodega,
-      color: 'border-emerald-300 bg-emerald-50 text-emerald-900',
-      badgeClass: 'bg-emerald-600 text-white'
-    },
-    {
-      id: 'DESPACHADO',
-      title: 'DESPACHADOS',
-      icon: Truck,
-      count: despachados.length,
-      items: despachados,
-      color: 'border-slate-300 bg-slate-100 text-slate-800',
-      badgeClass: 'bg-slate-600 text-white'
-    },
-    {
-      id: 'INCIDENCIA',
-      title: 'INCIDENCIAS',
-      icon: AlertOctagon,
-      count: incidencias.length,
-      items: incidencias,
-      color: 'border-red-300 bg-red-50 text-[#E11D24]',
-      badgeClass: 'bg-[#E11D24] text-white animate-pulse'
-    }
-  ];
+  const cargaPendienteKg = pendientes.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);
+  const cargaDespachadaKg = despachados.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);
 
-  // Desplazamiento suave de columna al hacer tap en una pestaña
-  const scrollToStage = (stageId) => {
-    setActiveStageTab(stageId);
-    const element = document.getElementById(`kanban-col-${stageId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  const despachosConSyncPendiente = despachados.filter(
+    (d) => d.sync_onedrive?.estado === 'PENDIENTE'
+  );
+
+  const handleExportarExcel = async () => {
+    setExportando(true);
+    await exportarCopiaExcel();
+    setExportando(false);
+  };
+
+  const handleReintentarTodos = async () => {
+    setReintentandoTodos(true);
+    for (const d of despachosConSyncPendiente) {
+      await reintentarSyncOneDrive(d.id);
     }
+    setReintentandoTodos(false);
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-2 space-y-3">
+    <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-2 space-y-3">
       
-      {/* 1. SELECTOR DE PESTAÑAS RÁPIDAS (SEGMENTED CONTROL CON CONTEO) */}
-      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none snap-x">
-        <div className="flex items-center gap-1.5 shrink-0">
-          {STAGES.map((tab) => {
-            const isSelected = activeStageTab === tab.id;
-            const Icon = tab.icon;
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => scrollToStage(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 min-h-[40px] snap-start border active:scale-95 ${
-                  isSelected
-                    ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-md'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span>{tab.title}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-xs font-mono font-bold leading-none ${
-                  isSelected ? 'bg-white text-[#E11D24]' : 'bg-slate-100 text-slate-700'
-                }`}>
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Modo Tablero vs Lista */}
-        <div className="hidden md:flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm shrink-0">
+      {/* 1. BARRA SUPERIOR DE CONTROL: PESTAÑAS 2 ESTADOS + FILTRO NOVEDADES + EXPORTAR EXCEL */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white border border-slate-200 p-2 rounded-2xl shadow-sm">
+        
+        {/* Selector Segmentado de Estados (Mobile First) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
           <button
-            onClick={() => setWavesViewMode('kanban')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-              wavesViewMode === 'kanban'
-                ? 'bg-[#E11D24] text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+            onClick={() => setActiveTab('pendientes')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 active:scale-95 ${
+              activeTab === 'pendientes'
+                ? 'bg-[#E11D24] text-white shadow-md'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            <span>Tablero</span>
+            <Inbox className="h-4 w-4" />
+            <span>Pendientes</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold leading-none ${
+              activeTab === 'pendientes' ? 'bg-white text-[#E11D24]' : 'bg-slate-200 text-slate-800'
+            }`}>
+              {kpis.pendientesTotal}
+            </span>
           </button>
+
           <button
-            onClick={() => setWavesViewMode('list')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-              wavesViewMode === 'list'
-                ? 'bg-[#E11D24] text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+            onClick={() => setActiveTab('despachados')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 active:scale-95 ${
+              activeTab === 'despachados'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            <ListFilter className="h-3.5 w-3.5" />
-            <span>Lista</span>
+            <Truck className="h-4 w-4" />
+            <span>Despachados</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold leading-none ${
+              activeTab === 'despachados' ? 'bg-white text-emerald-700' : 'bg-slate-200 text-slate-800'
+            }`}>
+              {kpis.despachadosTotal}
+            </span>
+          </button>
+
+          {/* Opción ver ambos (pantallas grandes) */}
+          <button
+            onClick={() => setActiveTab('ambas')}
+            className={`hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 active:scale-95 ${
+              activeTab === 'ambas'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <Columns2 className="h-4 w-4" />
+            <span>Ver Ambos</span>
           </button>
         </div>
+
+        {/* Acciones Rápidas: Filtro Incidencias + Botón Exportar Copia */}
+        <div className="flex items-center gap-2">
+          {/* Toggle Novedades */}
+          <button
+            onClick={() => setSoloConIncidencia(!soloConIncidencia)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 shrink-0 ${
+              soloConIncidencia
+                ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <AlertTriangle className={`h-4 w-4 ${soloConIncidencia ? 'text-amber-600' : 'text-slate-400'}`} />
+            <span>Con Novedad</span>
+            {kpis.conIncidencia > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-amber-500 text-white">
+                {kpis.conIncidencia}
+              </span>
+            )}
+          </button>
+
+          {/* Botón Principal: Exportar Copia Excel */}
+          <button
+            onClick={handleExportarExcel}
+            disabled={exportando}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold shadow-sm transition-all active:scale-95 shrink-0"
+            title="Descargar copia del archivo Excel con las 4 hojas de vehículos"
+          >
+            <Download className={`h-4 w-4 ${exportando ? 'animate-bounce' : ''}`} />
+            <span>{exportando ? 'Generando...' : 'Exportar copia Excel'}</span>
+          </button>
+        </div>
+
       </div>
 
-      {/* 2. CONTENEDOR GENERAL DE LAS 6 COLUMNAS KANBAN (SIN COMPRESIÓN HORIZONTAL) */}
-      {wavesViewMode === 'kanban' ? (
-        <div 
-          ref={scrollContainerRef}
-          className="flex gap-4 overflow-x-auto pb-6 pt-2 px-2 snap-x"
-        >
-          {STAGES.map((col) => {
-            const Icon = col.icon;
-            const totalKg = col.items.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);
-
-            return (
-              <div
-                key={col.id}
-                id={`kanban-col-${col.id}`}
-                className="w-72 min-w-[288px] flex-shrink-0 bg-slate-50/80 rounded-2xl border border-slate-200 p-3 flex flex-col snap-start shadow-sm"
-              >
-                {/* Cabecera de Columna */}
-                <div className={`rounded-xl border p-2.5 mb-2.5 flex items-center justify-between ${col.color}`}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="text-xs font-bold uppercase tracking-wide truncate">
-                      {col.title}
-                    </span>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono shrink-0 ${col.badgeClass}`}>
-                    {col.count}
-                  </span>
-                </div>
-
-                {/* Subcabecera: Peso acumulado */}
-                <div className="flex items-center justify-between text-xs text-slate-500 px-1 pb-2 border-b border-slate-200 mb-2.5 font-medium">
-                  <span>Carga Total:</span>
-                  <span className="font-bold text-slate-800">{Math.round(totalKg)} kg</span>
-                </div>
-
-                {/* Contenedor interno donde se mapean las tarjetas con padding para el scrollbar */}
-                <div className="overflow-y-auto max-h-[calc(100vh-220px)] pr-1.5 flex flex-col gap-3 flex-1">
-                  {col.items.length === 0 ? (
-                    <div className="h-36 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center p-3 text-center text-slate-400 space-y-1">
-                      <col.icon className="h-6 w-6 text-slate-300" />
-                      <p className="text-xs font-bold text-slate-500">Sin órdenes</p>
-                      <p className="text-xs text-slate-400">No hay pedidos en esta fase</p>
-                    </div>
-                  ) : (
-                    col.items.map((despacho) => (
-                      <DispatchCard key={despacho.id} despacho={despacho} />
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* Vista de Lista */
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {filteredDespachos.map((despacho) => (
-            <DispatchCard key={despacho.id} despacho={despacho} />
-          ))}
+      {/* 2. BANNER DE ALERTA: SINCRONIZACIONES PENDIENTES CON ONEDRIVE (NO SILENCIOSO) */}
+      {despachosConSyncPendiente.length > 0 && (
+        <div className="bg-red-50 border border-red-300 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 animate-pulse" />
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-red-950">
+                {despachosConSyncPendiente.length} {despachosConSyncPendiente.length === 1 ? 'orden despachada tiene' : 'órdenes despachadas tienen'} sincronización pendiente con la plantilla de OneDrive
+              </p>
+              <p className="text-[11px] text-red-800">
+                Las órdenes salieron de bodega pero falta asentar su fila en la hoja de Excel.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleReintentarTodos}
+            disabled={reintentandoTodos}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shrink-0 active:scale-95"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${reintentandoTodos ? 'animate-spin' : ''}`} />
+            <span>{reintentandoTodos ? 'Sincronizando...' : 'Reintentar pendientes'}</span>
+          </button>
         </div>
       )}
+
+      {/* 3. VISTA DE ÓRDENES: 2 PANELES / COLUMNAS */}
+      <div className={`grid gap-4 ${
+        activeTab === 'ambas' 
+          ? 'grid-cols-1 lg:grid-cols-2' 
+          : 'grid-cols-1'
+      }`}>
+
+        {/* PANEL A: PENDIENTES */}
+        {(activeTab === 'pendientes' || activeTab === 'ambas') && (
+          <div className="bg-slate-50/80 rounded-2xl border border-slate-200 p-3 flex flex-col shadow-sm space-y-3">
+            {/* Cabecera de Columna */}
+            <div className="flex items-center justify-between bg-red-50 border border-red-200 text-red-950 p-2.5 rounded-xl">
+              <div className="flex items-center gap-2">
+                <Inbox className="h-4 w-4 text-[#E11D24]" />
+                <span className="text-xs font-bold uppercase tracking-wider">Órdenes Pendientes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-600 hidden sm:inline">
+                  Carga: <strong className="text-slate-900">{Math.round(cargaPendienteKg)} kg</strong>
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-[#E11D24] text-white">
+                  {pendientes.length}
+                </span>
+              </div>
+            </div>
+
+            {/* Listado de tarjetas de pendientes */}
+            <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-230px)] pr-1">
+              {pendientes.length === 0 ? (
+                <div className="h-44 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-4 text-center space-y-1.5">
+                  <CheckCircle className="h-8 w-8 text-emerald-500" />
+                  <p className="text-sm font-bold text-slate-700">Sin órdenes pendientes</p>
+                  <p className="text-xs text-slate-500">Todo el flujo de despacho se encuentra al día.</p>
+                </div>
+              ) : (
+                pendientes.map((despacho) => (
+                  <DispatchCard key={despacho.id} despacho={despacho} />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* PANEL B: DESPACHADOS */}
+        {(activeTab === 'despachados' || activeTab === 'ambas') && (
+          <div className="bg-slate-50/80 rounded-2xl border border-slate-200 p-3 flex flex-col shadow-sm space-y-3">
+            {/* Cabecera de Columna */}
+            <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-950 p-2.5 rounded-xl">
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-emerald-700" />
+                <span className="text-xs font-bold uppercase tracking-wider">Despachados (Historial)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-600 hidden sm:inline">
+                  Carga: <strong className="text-slate-900">{Math.round(cargaDespachadaKg)} kg</strong>
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-emerald-700 text-white">
+                  {despachados.length}
+                </span>
+              </div>
+            </div>
+
+            {/* Listado de tarjetas de despachados */}
+            <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-230px)] pr-1">
+              {despachados.length === 0 ? (
+                <div className="h-44 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-4 text-center space-y-1.5">
+                  <Clock className="h-8 w-8 text-slate-400" />
+                  <p className="text-sm font-bold text-slate-700">Aún no hay despachos hoy</p>
+                  <p className="text-xs text-slate-500">Los pedidos despachados en vehículos aparecerán aquí.</p>
+                </div>
+              ) : (
+                despachados.map((despacho) => (
+                  <DispatchCard key={despacho.id} despacho={despacho} />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+      </div>
 
     </div>
   );

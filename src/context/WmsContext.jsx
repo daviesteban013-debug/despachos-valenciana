@@ -5,15 +5,58 @@ import {
   MOCK_VEHICULOS_RUTAS, 
   MOCK_BODEGAS,
   INITIAL_INVENTARIO,
-  INITIAL_FACTURAS_EMITIDAS
+  INITIAL_FACTURAS_EMITIDAS,
+  PLACAS_FLOTA_FIJA
 } from '../data/mockData';
 
 const WmsContext = createContext(null);
 
 export function WmsProvider({ children }) {
   const [despachos, setDespachos] = useState(() => {
-    const saved = localStorage.getItem('wms_valenciana_despachos_v2');
-    return saved ? JSON.parse(saved) : INITIAL_DESPACHOS;
+    try {
+      const savedV3 = localStorage.getItem('wms_valenciana_despachos_v3');
+      if (savedV3) {
+        return JSON.parse(savedV3);
+      }
+      const savedV2 = localStorage.getItem('wms_valenciana_despachos_v2');
+      if (savedV2) {
+        const parsed = JSON.parse(savedV2);
+        const migrados = parsed.map((d) => {
+          let estado = d.estado_actual;
+          let incidencia = d.incidencia_activa || null;
+          if (['COLA', 'PICKING', 'PACKING', 'LISTO'].includes(estado)) {
+            estado = 'PENDIENTE';
+          } else if (estado === 'INCIDENCIA') {
+            estado = 'PENDIENTE';
+            if (!incidencia) {
+              incidencia = {
+                id: `inc-${Date.now()}`,
+                tipo: 'RETENCION_PREVIA',
+                descripcion: 'Novedad migrada del sistema anterior',
+                fecha_reporte: new Date().toISOString()
+              };
+            }
+          }
+          const placa = d.vehiculo_placa && PLACAS_FLOTA_FIJA.includes(d.vehiculo_placa)
+            ? d.vehiculo_placa
+            : 'WRO-482';
+
+          return {
+            ...d,
+            estado_actual: estado === 'DESPACHADO' ? 'DESPACHADO' : 'PENDIENTE',
+            vehiculo_placa: placa,
+            incidencia_activa: incidencia,
+            sync_onedrive: d.sync_onedrive || (estado === 'DESPACHADO' ? { estado: 'SINCRONIZADO', placa } : null)
+          };
+        });
+        localStorage.setItem('wms_valenciana_despachos_v3', JSON.stringify(migrados));
+        localStorage.removeItem('wms_valenciana_despachos_v2');
+        return migrados;
+      }
+    } catch (e) {
+      console.warn('Error leyendo localStorage despachos:', e);
+    }
+    return INITIAL_DESPACHOS;
   });
 
   const [devoluciones, setDevoluciones] = useState(() => {
@@ -122,10 +165,10 @@ export function WmsProvider({ children }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Persistencia local
+  // Persistencia local v3 (2 estados)
   useEffect(() => {
     try {
-      localStorage.setItem('wms_valenciana_despachos_v2', JSON.stringify(despachos));
+      localStorage.setItem('wms_valenciana_despachos_v3', JSON.stringify(despachos));
     } catch (e) {
       console.warn('LocalStorage error', e);
     }
@@ -187,217 +230,246 @@ export function WmsProvider({ children }) {
   };
 
   // ============================================================================
-  // PILAR 2: MÁQUINA DE ESTADOS FINITOS (FSM) DE DESPACHOS
-  // Secuencia lineal y estricta: COLA -> PICKING -> PACKING -> LISTO -> DESPACHADO
+  // MODELO WMS DE 2 ESTADOS (PENDIENTE / DESPACHADO) + AUTOMATIZACIÓN ONEDRIVE
   // ============================================================================
-  const NEXT_STAGE_MAP = {
-    COLA: 'PICKING',
-    PICKING: 'PACKING',
-    PACKING: 'LISTO',
-    LISTO: 'DESPACHADO'
+
+  // Asignar vehículo validando contra las 4 placas fijas
+  const asignarVehiculo = (despachoId, placa) => {
+    const placaNormalizada = (placa || '').trim().toUpperCase();
+    if (!PLACAS_FLOTA_FIJA.includes(placaNormalizada)) {
+      showToast(`Placa no permitida: "${placa}". Placas válidas: ${PLACAS_FLOTA_FIJA.join(', ')}`, 'warning');
+      return;
+    }
+
+    setDespachos(prev =>
+      prev.map(d => (d.id === despachoId ? { ...d, vehiculo_placa: placaNormalizada } : d))
+    );
+    showToast(`Vehículo [${placaNormalizada}] asignado a la orden.`, 'info');
   };
 
-  const avanzarEstadoDespacho = (despachoId, metadataOperador = 'Líder Bodega Valenciana') => {
-    let transicionExitosa = false;
-    setDespachos((prev) =>
-      prev.map((d) => {
+  // Acción principal: "Despachar" (PENDIENTE -> DESPACHADO + Guardado en plantilla Excel de OneDrive)
+  const despacharOrden = async (despachoId, vehiculoPlacaOverride = null, metadataOperador = 'Líder Bodega Valenciana') => {
+    const targetDespacho = despachos.find(d => d.id === despachoId);
+    if (!targetDespacho) return false;
+
+    const placaFinal = (vehiculoPlacaOverride || targetDespacho.vehiculo_placa || '').trim().toUpperCase();
+
+    if (!placaFinal || !PLACAS_FLOTA_FIJA.includes(placaFinal)) {
+      playBeep(440, 'sawtooth');
+      showToast(`Debe seleccionar una de las 4 placas fijas (${PLACAS_FLOTA_FIJA.join(', ')}) para despachar.`, 'warning');
+      return false;
+    }
+
+    const nowIso = new Date().toISOString();
+
+    // 1. Actualización optimista inmediata en UI (no bloquea el flujo físico de la bodega)
+    setDespachos(prev =>
+      prev.map(d => {
         if (d.id !== despachoId) return d;
-        const current = d.estado_actual;
-        const next = NEXT_STAGE_MAP[current];
-        if (!next) {
-          console.warn(`[FSM ERROR] No se permite avanzar desde el estado actual: [${current}]`);
-          return d;
-        }
-
-        const nowIso = new Date().toISOString();
-        let updatedPickingOperario = d.picking_operario;
-        let updatedPackingMesa = d.packing_mesa;
-        let updatedBahia = d.bahia_asignada;
-        let updatedManifest = d.manifiesto_despacho;
-        let updatedHoraSalida = d.hora_salida;
-        const marcasTiempo = {};
-        let nota = `Transición operativa a ${next}`;
-
-        if (next === 'PICKING') {
-          updatedPickingOperario = updatedPickingOperario || 'Javier Gómez (RF-01)';
-          marcasTiempo.fechaInicioEscogiendo = nowIso;
-          nota = `Asignado a ${updatedPickingOperario} para recolección en estantería`;
-        } else if (next === 'PACKING') {
-          updatedPackingMesa = updatedPackingMesa || 'Mesa 01 (Báscula Certificada)';
-          marcasTiempo.fechaFinEscogiendo = nowIso;
-          marcasTiempo.fechaInicioEmpaque = nowIso;
-          nota = `Recibido en ${updatedPackingMesa} para verificación y aforo de peso`;
-        } else if (next === 'LISTO') {
-          updatedBahia = updatedBahia || 'Bodega A-01';
-          marcasTiempo.fechaFinEmpaque = nowIso;
-          marcasTiempo.fechaLlegadaBodega = nowIso;
-          nota = `Auditoría y báscula conformes. Trasladado a ${updatedBahia} para estiba y cargue`;
-        } else if (next === 'DESPACHADO') {
-          updatedManifest = `MAN-VAL-2026-09-${Math.floor(100 + Math.random() * 900)}`;
-          updatedHoraSalida = nowIso;
-          marcasTiempo.fechaDespacho = nowIso;
-          nota = `Cargue completado. Despachado en ruta con manifiesto ${updatedManifest}`;
-        }
-
         const newHistory = [
           ...(d.history || []),
           {
             id: `h-${Date.now()}`,
-            estado_anterior: current,
-            estado_nuevo: next,
+            estado_anterior: d.estado_actual,
+            estado_nuevo: 'DESPACHADO',
             usuario_operador: metadataOperador,
-            tiempo_estancia_seg: Math.floor(Math.random() * 300) + 120,
             timestamp: nowIso,
-            nota
+            nota: `Orden despachada en vehículo [${placaFinal}]. Registro automático a OneDrive iniciado.`
           }
         ];
 
-        playBeep(1046); // Nota aguda de éxito
-        showToast(`Orden ${d.codigo_orden} avanzada a [${next}] exitosamente.`, 'success');
-        transicionExitosa = true;
-
         return {
           ...d,
-          ...marcasTiempo,
-          estado_actual: next,
-          picking_operario: updatedPickingOperario,
-          packing_mesa: updatedPackingMesa,
-          bahia_asignada: updatedBahia,
-          manifiesto_despacho: updatedManifest,
-          hora_salida: updatedHoraSalida,
+          estado_actual: 'DESPACHADO',
+          vehiculo_placa: placaFinal,
+          hora_salida: nowIso,
+          despachado_por: metadataOperador,
+          sync_onedrive: {
+            estado: 'SINCRONIZANDO',
+            placa: placaFinal,
+            fecha: nowIso,
+            error: null
+          },
           history: newHistory
         };
       })
     );
-    return transicionExitosa;
+
+    playBeep(1046);
+    showToast(`Orden ${targetDespacho.codigo_orden} despachada en ${placaFinal}.`, 'success');
+
+    // 2. Disparo de guardado automático en la hoja de esa placa en OneDrive
+    try {
+      const response = await fetch(`/api/despachos/${despachoId}/estado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nuevoEstado: 'DESPACHADO',
+          vehiculoPlaca: placaFinal,
+          usuario: metadataOperador
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.syncExcel?.estado === 'SINCRONIZADO') {
+        setDespachos(prev =>
+          prev.map(d => (d.id === despachoId ? { ...d, sync_onedrive: data.syncExcel } : d))
+        );
+        showToast(`Fila registrada en hoja [${placaFinal}] de OneDrive.`, 'success');
+      } else {
+        const syncError = data.syncExcel || {
+          estado: 'PENDIENTE',
+          error: data.error || 'Error al conectar con OneDrive',
+          placa: placaFinal,
+          intentos: 1,
+          ultimo_intento: nowIso
+        };
+        setDespachos(prev =>
+          prev.map(d => (d.id === despachoId ? { ...d, sync_onedrive: syncError } : d))
+        );
+        showToast(`Orden despachada en bodega, pero pendiente de sincronizar en Excel: ${syncError.error}`, 'warning');
+      }
+    } catch (err) {
+      console.warn('Error en llamada a backend para sync OneDrive:', err);
+      setDespachos(prev =>
+        prev.map(d => {
+          if (d.id !== despachoId) return d;
+          return {
+            ...d,
+            sync_onedrive: {
+              estado: 'PENDIENTE',
+              error: err.message || 'Servidor backend no disponible',
+              placa: placaFinal,
+              intentos: 1,
+              ultimo_intento: nowIso
+            }
+          };
+        })
+      );
+      showToast(`Despacho registrado. Sincronización en cola pendiente por red.`, 'warning');
+    }
+
+    return true;
   };
 
-  // Alias para mantener compatibilidad total con componentes existentes
-  const advanceStage = avanzarEstadoDespacho;
+  // Reintentar sincronización de orden fallida
+  const reintentarSyncOneDrive = async (despachoId) => {
+    const d = despachos.find(item => item.id === despachoId);
+    if (!d) return;
 
-  // Pistoleo / Escaneo individual de ítem
+    showToast(`Reintentando sincronización de ${d.codigo_orden} con OneDrive...`, 'info');
+
+    try {
+      const response = await fetch(`/api/despachos/${despachoId}/reintentar-onedrive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setDespachos(prev =>
+          prev.map(item => (item.id === despachoId ? { ...item, sync_onedrive: data.syncExcel } : item))
+        );
+        playBeep(1046);
+        showToast(`✅ Sincronizado exitosamente en plantilla Excel (${d.vehiculo_placa}).`, 'success');
+      } else {
+        setDespachos(prev =>
+          prev.map(item => (item.id === despachoId ? { ...item, sync_onedrive: data.syncExcel } : item))
+        );
+        playBeep(440, 'sawtooth');
+        showToast(`Fallo al sincronizar: ${data.error}`, 'warning');
+      }
+    } catch (e) {
+      playBeep(440, 'sawtooth');
+      showToast(`Error al reintentar: ${e.message}`, 'warning');
+    }
+  };
+
+  // Descargar bajo demanda una copia física del archivo Excel con las 4 hojas
+  const exportarCopiaExcel = async () => {
+    showToast('Generando copia de la plantilla Excel de vehículos...', 'info');
+    try {
+      const response = await fetch('/api/despachos/exportar-plantilla');
+      if (!response.ok) {
+        throw new Error(`Error en servidor (${response.status})`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Plantilla_Despachos_Valenciana_${new Date().toISOString().substring(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('Copia de la plantilla descargada exitosamente.', 'success');
+    } catch (e) {
+      showToast(`Error al descargar plantilla: ${e.message}`, 'warning');
+    }
+  };
+
+  // Restaurar a PENDIENTE (en caso de error operacional en muelle)
+  const restaurarAPendiente = (despachoId) => {
+    setDespachos(prev =>
+      prev.map(d => {
+        if (d.id !== despachoId) return d;
+        return {
+          ...d,
+          estado_actual: 'PENDIENTE',
+          hora_salida: null,
+          sync_onedrive: null
+        };
+      })
+    );
+    showToast(`Orden devuelta a PENDIENTE.`, 'info');
+  };
+
+  // Aliases para compatibilidad con vistas existentes
+  const advanceStage = despacharOrden;
+  const avanzarEstadoDespacho = despacharOrden;
+
+  // Auditar ítem individual (+1)
   const auditItem = (despachoId, itemId) => {
-    playBeep(1200); // Beep de escáner láser
+    playBeep(1200);
     setDespachos((prev) =>
       prev.map((d) => {
         if (d.id !== despachoId) return d;
-        const updatedItems = (d.items || []).map((it) => {
+        const updatedItems = d.items?.map((it) => {
           if (it.id !== itemId) return it;
-          const newQty = Math.min(it.cantidad_solicitada, (it.cantidad_auditada || 0) + 1);
-          return { ...it, cantidad_auditada: newQty };
+          const current = it.cantidad_auditada || 0;
+          return {
+            ...it,
+            cantidad_auditada: Math.min(it.cantidad_solicitada, current + 1)
+          };
         });
         return { ...d, items: updatedItems };
       })
     );
   };
 
-  // Pistoleo masivo (Auditoría 100% de la orden)
+  // Auditar todos los ítems de una orden
   const auditAllItems = (despachoId) => {
-    playBeep(1320);
+    playBeep(1046);
     setDespachos((prev) =>
       prev.map((d) => {
         if (d.id !== despachoId) return d;
-        const updatedItems = (d.items || []).map((it) => ({
+        const updatedItems = d.items?.map((it) => ({
           ...it,
           cantidad_auditada: it.cantidad_solicitada
         }));
-        showToast(`Pistoleo completado: 100% de ítems verificados para ${d.codigo_orden}`, 'success');
         return { ...d, items: updatedItems };
       })
     );
+    showToast('Todos los ítems han sido auditados con éxito.', 'info');
   };
 
-  // Ajuste de peso en báscula (para simular aforo)
+  // Actualizar peso de báscula
   const updateScaleWeight = (despachoId, newWeight) => {
     setDespachos((prev) =>
-      prev.map((d) => {
-        if (d.id !== despachoId) return d;
-        return { ...d, peso_bascula_kg: Number(newWeight) };
-      })
+      prev.map((d) => (d.id === despachoId ? { ...d, peso_bascula_kg: Number(newWeight) } : d))
     );
   };
-
-  // Registrar Incidencia (Retención operativa)
-  const registrarIncidencia = (despachoId, tipo, descripcion, metadataOperador = 'Auditor de Empaque (WMS)') => {
-    playBeep(440, 'sawtooth'); // Tono de alerta grave
-    setDespachos((prev) =>
-      prev.map((d) => {
-        if (d.id !== despachoId) return d;
-        const nowIso = new Date().toISOString();
-        const nuevaIncidencia = {
-          id: `inc-${Date.now()}`,
-          tipo,
-          descripcion,
-          reportado_por: metadataOperador,
-          fecha_reporte: nowIso,
-          resuelta: false
-        };
-
-        const newHistory = [
-          ...(d.history || []),
-          {
-            id: `h-${Date.now()}`,
-            estado_anterior: d.estado_actual,
-            estado_nuevo: 'INCIDENCIA',
-            usuario_operador: metadataOperador,
-            tiempo_estancia_seg: 60,
-            timestamp: nowIso,
-            nota: `RETENCIÓN POR INCIDENCIA (${tipo}): ${descripcion}`
-          }
-        ];
-
-        showToast(`⚠️ Orden ${d.codigo_orden} retenida por [${tipo}].`, 'warning');
-
-        return {
-          ...d,
-          estado_actual: 'INCIDENCIA',
-          estado_previo_incidencia: d.estado_actual,
-          incidencia_activa: nuevaIncidencia,
-          history: newHistory
-        };
-      })
-    );
-    setIncidentModalTarget(null);
-  };
-
-  const reportIncident = registrarIncidencia;
-
-  // Resolver Incidencia
-  const resolverIncidencia = (despachoId, solucion, destino = 'PACKING', metadataOperador = 'Líder Bodega Valenciana') => {
-    playBeep(987);
-    setDespachos((prev) =>
-      prev.map((d) => {
-        if (d.id !== despachoId) return d;
-        const nowIso = new Date().toISOString();
-        const estadoRestaurado = d.estado_previo_incidencia || destino;
-
-        const newHistory = [
-          ...(d.history || []),
-          {
-            id: `h-${Date.now()}`,
-            estado_anterior: 'INCIDENCIA',
-            estado_nuevo: estadoRestaurado,
-            usuario_operador: metadataOperador,
-            tiempo_estancia_seg: 180,
-            timestamp: nowIso,
-            nota: `INCIDENCIA RESUELTA: ${solucion}. Reincorporado a [${estadoRestaurado}]`
-          }
-        ];
-
-        showToast(`✅ Novedad resuelta en ${d.codigo_orden}. Reingresada a [${estadoRestaurado}].`, 'success');
-
-        return {
-          ...d,
-          estado_actual: estadoRestaurado,
-          incidencia_activa: null,
-          history: newHistory
-        };
-      })
-    );
-    setIncidentModalTarget(null);
-  };
-
-  const resolveIncident = resolverIncidencia;
 
   // Simular inyección de nuevo pedido crítico
   const addSimulatedOrder = () => {
@@ -413,32 +485,34 @@ export function WmsProvider({ children }) {
       bodega_origen_id: activeBodega,
       transportadora: 'Flota Propia',
       ruta_id: 'rt-101',
-      estado_actual: 'COLA',
+      vehiculo_placa: 'WRO-482',
+      estado_actual: 'PENDIENTE',
       prioridad: 1, // Urgente
-      horario_corte: new Date(Date.now() + 19 * 60000).toISOString(), // 19 minutos restante
+      horario_corte: new Date(Date.now() + 19 * 60000).toISOString(),
       bahia_asignada: 'Bodega A-01',
       numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
       peso_total_kg: 172.0,
       peso_bascula_kg: 172.0,
       valor_total: 4280000,
-      picking_operario: null,
-      packing_mesa: null,
+      incidencia_activa: null,
+      sync_onedrive: null,
       items: [
-        { id: `it-sim-1`, sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 0, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' },
-        { id: `it-sim-2`, sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 3, cantidad_auditada: 0, ubicacion_bodega: 'P08-E02-N1', peso_unitario_kg: 5.9, unidad: 'UND' },
-        { id: `it-sim-3`, sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 1, cantidad_auditada: 0, ubicacion_bodega: 'P04-E02-N1', peso_unitario_kg: 5.1, unidad: 'GAL' }
+        { id: `it-sim-1`, sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' },
+        { id: `it-sim-2`, sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P08-E02-N1', peso_unitario_kg: 5.9, unidad: 'UND' },
+        { id: `it-sim-3`, sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 1, cantidad_auditada: 1, ubicacion_bodega: 'P04-E02-N1', peso_unitario_kg: 5.1, unidad: 'GAL' }
       ],
       history: [
-        { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: 'Pedido express ferretería para despacho en ruta 1' }
+        { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: 'Pedido express ferretería programado para WRO-482' }
       ]
     };
 
     setDespachos((prev) => [newOrder, ...prev]);
     playBeep(880, 'triangle');
-    showToast(`⚡ Nuevo pedido crítico: ${newOrder.codigo_orden} (Corte en 19 min)`, 'warning');
+    showToast(`⚡ Nuevo pedido crítico: ${newOrder.codigo_orden} (Asignado a WRO-482)`, 'warning');
   };
 
   const resetDemoData = () => {
+    localStorage.removeItem('wms_valenciana_despachos_v3');
     localStorage.removeItem('wms_valenciana_despachos_v2');
     localStorage.removeItem('wms_valenciana_inventario_v2');
     localStorage.removeItem('wms_valenciana_facturas_v2');
@@ -452,8 +526,100 @@ export function WmsProvider({ children }) {
     setSelectedZone('TODAS');
     setOnlyUrgent(false);
     setSearchQuery('');
-    showToast('Datos reiniciados a los valores estándar de La Valenciana FERREHOGAR.', 'info');
+    showToast('Datos reiniciados al modelo de 2 estados de La Valenciana FERREHOGAR.', 'info');
   };
+
+  // ============================================================================
+  // GESTIÓN DE INCIDENCIAS (BANDERA INDEPENDIENTE - NO ALTERA EL ESTADO DE FLUJO)
+  // ============================================================================
+  const registrarIncidencia = async (despachoId, tipo, descripcion, metadataOperador = 'Auditor Bodega') => {
+    playBeep(440, 'sawtooth');
+    const nowIso = new Date().toISOString();
+    const nuevaIncidencia = {
+      tipo,
+      descripcion,
+      reportado_por: metadataOperador,
+      timestamp: nowIso
+    };
+
+    setDespachos(prev =>
+      prev.map(d => {
+        if (d.id !== despachoId) return d;
+        const newHistory = [
+          ...(d.history || []),
+          {
+            id: `h-inc-${Date.now()}`,
+            estado_anterior: d.estado_actual,
+            estado_nuevo: d.estado_actual,
+            usuario_operador: metadataOperador,
+            tiempo_estancia_seg: 0,
+            timestamp: nowIso,
+            nota: `NOVEDAD REPORTADA (${tipo}): ${descripcion}`
+          }
+        ];
+        return {
+          ...d,
+          incidencia_activa: nuevaIncidencia,
+          history: newHistory
+        };
+      })
+    );
+    setIncidentModalTarget(null);
+    showToast(`Novedad registrada en la orden: [${tipo}]`, 'warning');
+
+    try {
+      await fetch(`/api/despachos/${despachoId}/incidencia`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'REGISTRAR', tipo, descripcion, reportado_por: metadataOperador })
+      });
+    } catch (e) {
+      // Offline fallback
+    }
+  };
+
+  const resolverIncidencia = async (despachoId, solucion = '', metadataOperador = 'Líder Bodega') => {
+    playBeep(987);
+    const nowIso = new Date().toISOString();
+
+    setDespachos(prev =>
+      prev.map(d => {
+        if (d.id !== despachoId) return d;
+        const newHistory = [
+          ...(d.history || []),
+          {
+            id: `h-res-${Date.now()}`,
+            estado_anterior: d.estado_actual,
+            estado_nuevo: d.estado_actual,
+            usuario_operador: metadataOperador,
+            tiempo_estancia_seg: 0,
+            timestamp: nowIso,
+            nota: `NOVEDAD RESUELTA: ${solucion || 'Aclarada y liberada en muelle'}`
+          }
+        ];
+        return {
+          ...d,
+          incidencia_activa: null,
+          history: newHistory
+        };
+      })
+    );
+    setIncidentModalTarget(null);
+    showToast(`Novedad resuelta y despejada de la orden.`, 'success');
+
+    try {
+      await fetch(`/api/despachos/${despachoId}/incidencia`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'RESOLVER', solucion, reportado_por: metadataOperador })
+      });
+    } catch (e) {
+      // Offline fallback
+    }
+  };
+
+  const reportIncident = registrarIncidencia;
+  const resolveIncident = resolverIncidencia;
 
   // ============================================================================
   // PILAR 1: TRANSACCIONALIDAD E IDEMPOTENCIA EN SELLO DE FACTURA
@@ -621,19 +787,19 @@ export function WmsProvider({ children }) {
     return true;
   });
 
-  // Métricas calculadas para la barra superior
+  // Métricas calculadas para la barra superior y control de 2 estados
   const kpis = {
-    pendientesHoy: despachos.filter((d) => d.estado_actual !== 'DESPACHADO').length,
-    enCola: despachos.filter((d) => d.estado_actual === 'COLA').length,
-    enPicking: despachos.filter((d) => d.estado_actual === 'PICKING').length,
-    enPacking: despachos.filter((d) => d.estado_actual === 'PACKING').length,
-    enBahia: despachos.filter((d) => d.estado_actual === 'LISTO').length,
+    pendientesTotal: despachos.filter((d) => d.estado_actual === 'PENDIENTE').length,
+    pendientesHoy: despachos.filter((d) => d.estado_actual === 'PENDIENTE').length,
+    despachadosTotal: despachos.filter((d) => d.estado_actual === 'DESPACHADO').length,
     despachados: despachos.filter((d) => d.estado_actual === 'DESPACHADO').length,
-    incidencias: despachos.filter((d) => d.estado_actual === 'INCIDENCIA').length,
+    conIncidencia: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
+    incidencias: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
+    pendientesSyncExcel: despachos.filter((d) => d.estado_actual === 'DESPACHADO' && d.sync_onedrive?.estado === 'PENDIENTE').length,
     unidadesEnBodega: metricasInventario.totalUnidades,
     unidades_en_bodega: metricasInventario.totalUnidades,
     alertasCorteProximo: despachos.filter((d) => {
-      if (d.estado_actual === 'DESPACHADO' || d.estado_actual === 'INCIDENCIA') return false;
+      if (d.estado_actual === 'DESPACHADO') return false;
       const diffMins = (new Date(d.horario_corte).getTime() - currentTime) / 60000;
       return diffMins > 0 && diffMins <= 30;
     }).length,
@@ -661,6 +827,7 @@ export function WmsProvider({ children }) {
         confirmarSelloFactura,
         bodegas: MOCK_BODEGAS,
         rutasVehiculos: MOCK_VEHICULOS_RUTAS,
+        placasFlotaFija: PLACAS_FLOTA_FIJA,
         activeBodega,
         setActiveBodega,
         activeTurno,
@@ -693,6 +860,11 @@ export function WmsProvider({ children }) {
         kpis,
         trazabilidadStock,
         setTrazabilidadStock,
+        despacharOrden,
+        asignarVehiculo,
+        reintentarSyncOneDrive,
+        exportarCopiaExcel,
+        restaurarAPendiente,
         avanzarEstadoDespacho,
         advanceStage,
         auditItem,

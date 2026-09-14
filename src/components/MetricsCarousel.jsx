@@ -30,9 +30,20 @@ export default function MetricsCarousel() {
 
           <div className="flex items-center gap-1 shrink-0">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-slate-500">En Bodega:</span>
-            <span className="font-bold text-emerald-700">{kpis.enBahia}</span>
+            <span className="text-slate-500">Despachados:</span>
+            <span className="font-bold text-emerald-700">{kpis.despachados}</span>
           </div>
+
+          {kpis.conIncidencia > 0 && (
+            <>
+              <span className="text-slate-300">•</span>
+              <div className="flex items-center gap-1 shrink-0 text-amber-700 font-bold">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="text-amber-800">Incidencias:</span>
+                <span>{kpis.conIncidencia}</span>
+              </div>
+            </>
+          )}
 
           {kpis.alertasCorteProximo > 0 && (
             <>
@@ -77,25 +88,25 @@ export default function MetricsCarousel() {
 
             <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center justify-between">
               <div>
-                <span className="text-emerald-800 block text-xs font-medium">Listo en Bodega</span>
-                <span className="text-lg font-bold text-emerald-700">{kpis.enBahia}</span>
+                <span className="text-emerald-800 block text-xs font-medium">Despachados</span>
+                <span className="text-lg font-bold text-emerald-700">{kpis.despachados}</span>
               </div>
               <Warehouse className="h-5 w-5 text-emerald-600" />
             </div>
 
             <div className={`p-2.5 rounded-xl border flex items-center justify-between ${
-              kpis.alertasCorteProximo > 0 ? 'bg-red-50 border-red-300 text-red-900' : 'bg-slate-50 border-slate-200'
+              kpis.conIncidencia > 0 ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-slate-50 border-slate-200'
             }`}>
               <div>
-                <span className="block text-xs font-medium">Corte &lt; 30 min</span>
-                <span className="text-lg font-bold text-[#E11D24]">{kpis.alertasCorteProximo}</span>
+                <span className="block text-xs font-medium">Con Incidencia</span>
+                <span className="text-lg font-bold text-amber-600">{kpis.conIncidencia}</span>
               </div>
-              <Clock className="h-5 w-5 text-[#E11D24]" />
+              <Clock className="h-5 w-5 text-amber-500" />
             </div>
 
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
               <div>
-                <span className="text-slate-500 block text-xs font-medium">Cumplimiento</span>
+                <span className="text-slate-500 block text-xs font-medium">Cumplimiento SLA</span>
                 <span className="text-lg font-bold text-slate-900">{kpis.eficienciaSla}%</span>
               </div>
               <Timer className="h-5 w-5 text-slate-600" />

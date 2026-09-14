@@ -12,7 +12,8 @@ export default function IncidentsView() {
 
   const [activeFilter, setActiveFilter] = useState('ALL');
 
-  const incidencias = despachos.filter((d) => d.estado_actual === 'INCIDENCIA');
+  // En el modelo de 2 estados, la incidencia es una bandera/nota activa sobre cualquier orden
+  const incidencias = despachos.filter((d) => Boolean(d.incidencia_activa));
 
   const filteredIncidencias = incidencias.filter((d) => {
     if (activeFilter === 'ALL') return true;

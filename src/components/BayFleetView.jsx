@@ -41,10 +41,10 @@ export default function BayFleetView() {
           const ruta = rutasVehiculos.find((r) => r.id === bay.rutaId);
           if (!ruta) return null;
 
-          // Despachos ubicados en esta bodega (en estado LISTO o PACKING)
+          // Despachos ubicados en esta bodega (en estado PENDIENTE)
           const ordenesEnBodega = despachos.filter((d) => {
             const assigned = d.bahia_asignada ? d.bahia_asignada.replace(/bah[ií]a/gi, 'Bodega') : '';
-            return assigned === bay.bayCode && (d.estado_actual === 'LISTO' || d.estado_actual === 'PACKING');
+            return assigned === bay.bayCode && d.estado_actual === 'PENDIENTE';
           });
 
           const pesoTotalCargado = ordenesEnBodega.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);

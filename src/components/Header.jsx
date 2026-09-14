@@ -26,7 +26,7 @@ export default function Header() {
             FERREHOGAR
           </span>
           <span className="text-xs font-semibold text-red-600 tracking-wider uppercase leading-none">
-            WMS Despachos
+            Logistica Despachos
           </span>
         </div>
       </div>

@@ -148,83 +148,65 @@ function testLogicaWmsContext() {
 // -----------------------------------------------------------------------------
 // TEST 3: MÁQUINA DE ESTADOS FINITOS (FSM) DE DESPACHOS
 // -----------------------------------------------------------------------------
+// TEST 3: MODELO SIMPLIFICADO DE 2 ESTADOS (PENDIENTE -> DESPACHADO)
+// -----------------------------------------------------------------------------
 function testFsmDespachos() {
-  console.log('\n▶ TEST 3: Máquina de Estados Finitos (FSM) de Despachos...');
-
-  const NEXT_STAGE_MAP = {
-    COLA: 'PICKING',
-    PICKING: 'PACKING',
-    PACKING: 'LISTO',
-    LISTO: 'DESPACHADO'
-  };
+  console.log('\n▶ TEST 3: Modelo Simplificado WMS (2 Estados: PENDIENTE -> DESPACHADO)...');
 
   let despacho = {
     id: 'dsp-test-01',
     codigo_orden: 'PVSW-TEST',
-    estado_actual: 'COLA',
+    codigo_factura_erp: 'FE-80297',
+    estado_actual: 'PENDIENTE',
+    vehiculo_placa: 'WRO-482',
+    incidencia_activa: null,
     history: []
   };
 
-  const avanzar = (d, metadataOperador = 'Líder') => {
+  const avanzar = (d, vehiculoPlaca, metadataOperador = 'Líder WMS') => {
     const current = d.estado_actual;
-    const next = NEXT_STAGE_MAP[current];
-    if (!next) return { success: false, reason: 'INVALID_TRANSITION', despacho: d };
+    if (current !== 'PENDIENTE') {
+      return { success: false, reason: 'INVALID_TRANSITION', despacho: d };
+    }
+
+    if (!vehiculoPlaca) {
+      return { success: false, reason: 'VEHICLE_REQUIRED', despacho: d };
+    }
 
     const now = new Date().toISOString();
-    const timestamps = {};
-    if (next === 'PICKING') timestamps.fechaInicioEscogiendo = now;
-    if (next === 'PACKING') { timestamps.fechaFinEscogiendo = now; timestamps.fechaInicioEmpaque = now; }
-    if (next === 'LISTO') { timestamps.fechaFinEmpaque = now; timestamps.fechaLlegadaBodega = now; }
-    if (next === 'DESPACHADO') timestamps.fechaDespacho = now;
-
     return {
       success: true,
       despacho: {
         ...d,
-        ...timestamps,
-        estado_actual: next,
-        history: [...d.history, { anterior: current, nuevo: next, operador: metadataOperador, now }]
+        estado_actual: 'DESPACHADO',
+        vehiculo_placa: vehiculoPlaca,
+        fechaDespacho: now,
+        hora_salida: now,
+        history: [...d.history, { anterior: current, nuevo: 'DESPACHADO', operador: metadataOperador, now }]
       }
     };
   };
 
-  // 1. COLA -> PICKING
-  let res = avanzar(despacho);
-  assert.strictEqual(res.success, true);
-  assert.strictEqual(res.despacho.estado_actual, 'PICKING');
-  assert(res.despacho.fechaInicioEscogiendo, 'Debe registrar fechaInicioEscogiendo');
-  despacho = res.despacho;
-  console.log('  ✓ Transición COLA -> PICKING válida con fechaInicioEscogiendo.');
+  // 1. Despacho sin vehículo debe requerir placa
+  let resSinVehiculo = avanzar(despacho, null);
+  assert.strictEqual(resSinVehiculo.success, false);
+  assert.strictEqual(resSinVehiculo.reason, 'VEHICLE_REQUIRED');
+  console.log('  ✓ Despacho bloqueado si no hay vehículo asignado.');
 
-  // 2. PICKING -> PACKING
-  res = avanzar(despacho);
-  assert.strictEqual(res.success, true);
-  assert.strictEqual(res.despacho.estado_actual, 'PACKING');
-  assert(res.despacho.fechaFinEscogiendo && res.despacho.fechaInicioEmpaque);
-  despacho = res.despacho;
-  console.log('  ✓ Transición PICKING -> PACKING válida con marcas de tiempo.');
-
-  // 3. PACKING -> LISTO
-  res = avanzar(despacho);
-  assert.strictEqual(res.success, true);
-  assert.strictEqual(res.despacho.estado_actual, 'LISTO');
-  assert(res.despacho.fechaFinEmpaque && res.despacho.fechaLlegadaBodega);
-  despacho = res.despacho;
-  console.log('  ✓ Transición PACKING -> LISTO válida.');
-
-  // 4. LISTO -> DESPACHADO
-  res = avanzar(despacho);
+  // 2. PENDIENTE -> DESPACHADO con vehículo
+  let res = avanzar(despacho, 'WRO-482');
   assert.strictEqual(res.success, true);
   assert.strictEqual(res.despacho.estado_actual, 'DESPACHADO');
-  assert(res.despacho.fechaDespacho);
+  assert.strictEqual(res.despacho.vehiculo_placa, 'WRO-482');
+  assert(res.despacho.fechaDespacho, 'Debe registrar fechaDespacho');
   despacho = res.despacho;
-  console.log('  ✓ Transición LISTO -> DESPACHADO válida con fechaDespacho.');
+  console.log('  ✓ Transición PENDIENTE -> DESPACHADO completada exitosamente.');
 
-  // 5. Intento de avanzar más allá de DESPACHADO (debe ser rechazado)
-  res = avanzar(despacho);
+  // 3. Intento de avanzar más allá de DESPACHADO (debe ser rechazado)
+  res = avanzar(despacho, 'WRO-482');
   assert.strictEqual(res.success, false, 'No se puede avanzar más allá del estado terminal DESPACHADO');
   assert.strictEqual(res.reason, 'INVALID_TRANSITION');
-  console.log('  ✓ Estado terminal DESPACHADO protegido contra transiciones.');
+  console.log('  ✓ Estado terminal DESPACHADO protegido contra transiciones secundarias.');
 }
 
 // Ejecutar todos los tests

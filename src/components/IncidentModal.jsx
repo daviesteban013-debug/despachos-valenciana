@@ -21,20 +21,19 @@ export default function IncidentModal() {
 
   if (!incidentModalTarget) return null;
 
-  const isResolving = incidentModalTarget.estado_actual === 'INCIDENCIA';
+  const isResolving = Boolean(incidentModalTarget.incidencia_activa);
 
   const [selectedType, setSelectedType] = useState('DIVERGENCIA_PESO');
   const [description, setDescription] = useState(
-    isResolving ? 'Se verificó físicamente el producto y se regularizó la discrepancia con el supervisor de bodega.' : ''
+    isResolving ? 'Se verificó físicamente el producto y se regularizó la novedad con el supervisor de bodega.' : ''
   );
-  const [destinationStage, setDestinationStage] = useState('PACKING');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!description.trim()) return;
 
     if (isResolving) {
-      resolveIncident(incidentModalTarget.id, description, destinationStage);
+      resolveIncident(incidentModalTarget.id, description);
     } else {
       reportIncident(incidentModalTarget.id, selectedType, description);
     }
@@ -121,24 +120,6 @@ export default function IncidentModal() {
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          {/* Destino tras Resolver */}
-          {isResolving && (
-            <div className="space-y-1.5">
-              <label className="font-bold uppercase tracking-wide text-slate-700 block text-xs">
-                Reincorporar orden a la fase:
-              </label>
-              <select
-                value={destinationStage}
-                onChange={(e) => setDestinationStage(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
-              >
-                <option value="PACKING">En Empacando (Reauditar y aforar báscula)</option>
-                <option value="PICKING">En Escogiendo (Completar sustituto en rack)</option>
-                <option value="LISTO">En Bodega (Liberación directa a camión)</option>
-              </select>
             </div>
           )}
 
