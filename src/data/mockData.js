@@ -6,9 +6,11 @@
 export const PLACAS_FLOTA_FIJA = ['WRO-482', 'STZ-910', 'ENV-301', 'MC-441'];
 
 export const MOCK_BODEGAS = [
+  { id: '00', codigo: '00', nombre: '00 - Patio Materiales Pesados (Atalaya)', direccion: 'Atalaya, Cúcuta', capacidad_bahias: 6 },
   { id: '01', codigo: '01', nombre: '01 - Principal (Cúcuta Centro)', direccion: 'Av. 5 #10-45 Centro', capacidad_bahias: 8 },
   { id: '02', codigo: '02', nombre: '02 - Almacén Central (Zona Franca)', direccion: 'Km 8 Vía Aeropuerto', capacidad_bahias: 12 },
-  { id: '00', codigo: '00', nombre: '00 - Patio Materiales Pesados (Atalaya)', direccion: 'Anillo Vial Occidental Km 2', capacidad_bahias: 6 }
+  { id: '03', codigo: '03', nombre: '03 - Bodega Los Patios', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 6 },
+  { id: '04', codigo: '04', nombre: '04 - Bodega El Zulia', direccion: 'El Zulia, N. de Santander', capacidad_bahias: 4 }
 ];
 
 export const MOCK_VEHICULOS_RUTAS = [
@@ -104,18 +106,15 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'WRO-482',
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
-    horario_corte: addMinutes(24), // 24m -> Alerta Roja
     bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0918',
-    peso_total_kg: 324.5,
-    peso_bascula_kg: 325.1,
     valor_total: 5840000,
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
-      { id: 'it-1', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' },
-      { id: 'it-2', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 4, cantidad_auditada: 4, ubicacion_bodega: 'P08-E02-N1', peso_unitario_kg: 5.9, unidad: 'UND' },
-      { id: 'it-3', sku: 'SKU-DIS-COR', descripcion_producto: 'Caja Discos Corte Metal 4.5" DeWalt (x10)', cantidad_solicitada: 2, cantidad_auditada: 2, ubicacion_bodega: 'P02-E01-N4', peso_unitario_kg: 0.45, unidad: 'UND' }
+      { id: 'it-1', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' },
+      { id: 'it-2', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 4, cantidad_auditada: 4, ubicacion_bodega: 'P08-E02-N1', unidad: 'UND' },
+      { id: 'it-3', sku: 'SKU-DIS-COR', descripcion_producto: 'Caja Discos Corte Metal 4.5" DeWalt (x10)', cantidad_solicitada: 2, cantidad_auditada: 2, ubicacion_bodega: 'P02-E01-N4', unidad: 'UND' }
     ],
     history: [
       { id: 'h-101', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 180, timestamp: subMinutes(30), nota: 'Pedido comercial aprobado con despacho en Camión NHR WRO-482' }
@@ -134,17 +133,14 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'ENV-301',
     estado_actual: 'PENDIENTE',
     prioridad: 2, // Normal
-    horario_corte: addMinutes(68),
     bahia_asignada: 'Bodega B-01',
     numero_guia: 'GUIA-VAL-448190',
-    peso_total_kg: 186.0,
-    peso_bascula_kg: 187.5,
     valor_total: 7920000,
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
-      { id: 'it-4', sku: 'SKU-IMP-COR', descripcion_producto: 'Manto Asfáltico Fibra Vidrio 3mm x 10m', cantidad_solicitada: 5, cantidad_auditada: 5, ubicacion_bodega: 'P06-E03-N2', peso_unitario_kg: 34.0, unidad: 'ROL' },
-      { id: 'it-5', sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P04-E02-N1', peso_unitario_kg: 5.1, unidad: 'GAL' }
+      { id: 'it-4', sku: 'SKU-IMP-COR', descripcion_producto: 'Manto Asfáltico Fibra Vidrio 3mm x 10m', cantidad_solicitada: 5, cantidad_auditada: 5, ubicacion_bodega: 'P06-E03-N2', unidad: 'ROL' },
+      { id: 'it-5', sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P04-E02-N1', unidad: 'GAL' }
     ],
     history: [
       { id: 'h-102', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 300, timestamp: subMinutes(45), nota: 'Factura crédito radicada para Hino Dutro ENV-301' }
@@ -163,17 +159,14 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'STZ-910',
     estado_actual: 'PENDIENTE',
     prioridad: 3, // Consolidado
-    horario_corte: addMinutes(190),
     bahia_asignada: 'Bodega A-02',
     numero_guia: 'GUIA-VAL-0922',
-    peso_total_kg: 42.0,
-    peso_bascula_kg: 42.0,
     valor_total: 2450000,
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
-      { id: 'it-6', sku: 'SKU-CER-YAL', descripcion_producto: 'Cerradura Sobreponer Yale Clásica Derecha 110', cantidad_solicitada: 15, cantidad_auditada: 15, ubicacion_bodega: 'P02-E04-N3', peso_unitario_kg: 1.2, unidad: 'UND' },
-      { id: 'it-7', sku: 'SKU-LLV-STE', descripcion_producto: 'Juego Llaves Boca Fija Stanley 8-24mm', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P02-E03-N2', peso_unitario_kg: 2.8, unidad: 'JGO' }
+      { id: 'it-6', sku: 'SKU-CER-YAL', descripcion_producto: 'Cerradura Sobreponer Yale Clásica Derecha 110', cantidad_solicitada: 15, cantidad_auditada: 15, ubicacion_bodega: 'P02-E04-N3', unidad: 'UND' },
+      { id: 'it-7', sku: 'SKU-LLV-STE', descripcion_producto: 'Juego Llaves Boca Fija Stanley 8-24mm', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P02-E03-N2', unidad: 'JGO' }
     ],
     history: [
       { id: 'h-103', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 120, timestamp: subMinutes(20), nota: 'Pedido consolidado programado en D-Max STZ-910' }
@@ -192,18 +185,15 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'WRO-482',
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
-    horario_corte: addMinutes(38),
     bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0915',
-    peso_total_kg: 114.2,
-    peso_bascula_kg: 114.2,
     valor_total: 8650000,
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
-      { id: 'it-8', sku: 'SKU-TAL-DEW', descripcion_producto: 'Taladro Percutor Inalámbrico 20V Max DeWalt DCD778', cantidad_solicitada: 4, cantidad_auditada: 4, ubicacion_bodega: 'P01-E03-N2', peso_unitario_kg: 2.4, unidad: 'UND' },
-      { id: 'it-9', sku: 'SKU-TUB-PVC', descripcion_producto: 'Tubo PVC Sanitario 3" x 3m Pavco', cantidad_solicitada: 25, cantidad_auditada: 25, ubicacion_bodega: 'P05-E05-N1', peso_unitario_kg: 3.8, unidad: 'UND' },
-      { id: 'it-10', sku: 'SKU-GRI-CNA', descripcion_producto: 'Grifería Lavamanos Cuello Cisne Grival', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P03-E02-N3', peso_unitario_kg: 1.1, unidad: 'UND' }
+      { id: 'it-8', sku: 'SKU-TAL-DEW', descripcion_producto: 'Taladro Percutor Inalámbrico 20V Max DeWalt DCD778', cantidad_solicitada: 4, cantidad_auditada: 4, ubicacion_bodega: 'P01-E03-N2', unidad: 'UND' },
+      { id: 'it-9', sku: 'SKU-TUB-PVC', descripcion_producto: 'Tubo PVC Sanitario 3" x 3m Pavco', cantidad_solicitada: 25, cantidad_auditada: 25, ubicacion_bodega: 'P05-E05-N1', unidad: 'UND' },
+      { id: 'it-10', sku: 'SKU-GRI-CNA', descripcion_producto: 'Grifería Lavamanos Cuello Cisne Grival', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P03-E02-N3', unidad: 'UND' }
     ],
     history: [
       { id: 'h-104', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP', tiempo_estancia_seg: 600, timestamp: subMinutes(80), nota: 'Listo para cargue en muelle' }
@@ -222,17 +212,14 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'ENV-301',
     estado_actual: 'PENDIENTE',
     prioridad: 2,
-    horario_corte: addMinutes(115),
     bahia_asignada: 'Bodega B-01',
     numero_guia: 'GUIA-VAL-992014',
-    peso_total_kg: 260.0,
-    peso_bascula_kg: 260.0,
     valor_total: 4120000,
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
-      { id: 'it-11', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 5, cantidad_auditada: 5, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' },
-      { id: 'it-12', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 2, cantidad_auditada: 2, ubicacion_bodega: 'P08-E02-N1', peso_unitario_kg: 5.9, unidad: 'UND' }
+      { id: 'it-11', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 5, cantidad_auditada: 5, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' },
+      { id: 'it-12', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 2, cantidad_auditada: 2, ubicacion_bodega: 'P08-E02-N1', unidad: 'UND' }
     ],
     history: [
       { id: 'h-106', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Bodega Central', tiempo_estancia_seg: 420, timestamp: subMinutes(18), nota: 'Estiba lista en bahía de cargue' }
@@ -251,18 +238,15 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'MC-441',
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
-    horario_corte: addMinutes(18), // 18m -> Alerta Roja
     bahia_asignada: 'Bodega B-03',
     numero_guia: 'GUIA-VAL-0909',
-    peso_total_kg: 28.5,
-    peso_bascula_kg: 28.6,
     valor_total: 3890000,
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
-      { id: 'it-13', sku: 'SKU-TAL-DEW', descripcion_producto: 'Taladro Percutor Inalámbrico 20V Max DeWalt DCD778', cantidad_solicitada: 2, cantidad_auditada: 2, ubicacion_bodega: 'P01-E03-N2', peso_unitario_kg: 2.4, unidad: 'UND' },
-      { id: 'it-14', sku: 'SKU-CER-YAL', descripcion_producto: 'Cerradura Sobreponer Yale Clásica Derecha 110', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P02-E04-N3', peso_unitario_kg: 1.2, unidad: 'UND' },
-      { id: 'it-15', sku: 'SKU-DIS-COR', descripcion_producto: 'Caja Discos Corte Metal 4.5" DeWalt (x10)', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P02-E01-N4', peso_unitario_kg: 0.45, unidad: 'UND' }
+      { id: 'it-13', sku: 'SKU-TAL-DEW', descripcion_producto: 'Taladro Percutor Inalámbrico 20V Max DeWalt DCD778', cantidad_solicitada: 2, cantidad_auditada: 2, ubicacion_bodega: 'P01-E03-N2', unidad: 'UND' },
+      { id: 'it-14', sku: 'SKU-CER-YAL', descripcion_producto: 'Cerradura Sobreponer Yale Clásica Derecha 110', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P02-E04-N3', unidad: 'UND' },
+      { id: 'it-15', sku: 'SKU-DIS-COR', descripcion_producto: 'Caja Discos Corte Metal 4.5" DeWalt (x10)', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P02-E01-N4', unidad: 'UND' }
     ],
     history: [
       { id: 'h-107', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Líder Bodega', tiempo_estancia_seg: 900, timestamp: subMinutes(50), nota: 'Asignado a reparto express motocarro MC-441' }
@@ -281,16 +265,13 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'STZ-910',
     estado_actual: 'PENDIENTE',
     prioridad: 2,
-    horario_corte: addMinutes(75),
     bahia_asignada: 'Bodega A-02',
     numero_guia: 'GUIA-VAL-0912',
-    peso_total_kg: 51.0,
-    peso_bascula_kg: 51.2,
     valor_total: 4780000,
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
-      { id: 'it-16', sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 10, cantidad_auditada: 10, ubicacion_bodega: 'P04-E02-N1', peso_unitario_kg: 5.1, unidad: 'GAL' }
+      { id: 'it-16', sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 10, cantidad_auditada: 10, ubicacion_bodega: 'P04-E02-N1', unidad: 'GAL' }
     ],
     history: [
       { id: 'h-109', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 480, timestamp: subMinutes(15), nota: 'Paletizado y listo en muelle' }
@@ -309,17 +290,14 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'WRO-482',
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
-    horario_corte: addMinutes(45),
     bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0899',
-    peso_total_kg: 650.0,
-    peso_bascula_kg: 651.5,
     valor_total: 14200000,
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
-      { id: 'it-17', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 12, cantidad_auditada: 12, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' },
-      { id: 'it-18', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P08-E02-N1', peso_unitario_kg: 5.9, unidad: 'UND' }
+      { id: 'it-17', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 12, cantidad_auditada: 12, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' },
+      { id: 'it-18', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P08-E02-N1', unidad: 'UND' }
     ],
     history: [
       { id: 'h-110', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Líder Despacho', tiempo_estancia_seg: 920, timestamp: subMinutes(28), nota: 'Listo para cargar en camión NHR WRO-482' }
@@ -338,16 +316,13 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'ENV-301',
     estado_actual: 'PENDIENTE',
     prioridad: 2,
-    horario_corte: addMinutes(95),
     bahia_asignada: 'Bodega B-01',
     numero_guia: 'GUIA-VAL-448102',
-    peso_total_kg: 95.0,
-    peso_bascula_kg: 95.0,
     valor_total: 6200000,
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
-      { id: 'it-19', sku: 'SKU-TUB-PVC', descripcion_producto: 'Tubo PVC Sanitario 3" x 3m Pavco', cantidad_solicitada: 25, cantidad_auditada: 25, ubicacion_bodega: 'P05-E05-N1', peso_unitario_kg: 3.8, unidad: 'UND' }
+      { id: 'it-19', sku: 'SKU-TUB-PVC', descripcion_producto: 'Tubo PVC Sanitario 3" x 3m Pavco', cantidad_solicitada: 25, cantidad_auditada: 25, ubicacion_bodega: 'P05-E05-N1', unidad: 'UND' }
     ],
     history: [
       { id: 'h-111', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 600, timestamp: subMinutes(35), nota: 'Preparado para despacho en ruta' }
@@ -366,13 +341,10 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'WRO-482',
     estado_actual: 'DESPACHADO',
     prioridad: 1,
-    horario_corte: subMinutes(40),
     bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0880',
     manifiesto_despacho: 'MAN-VAL-2026-09-082',
     hora_salida: subMinutes(35),
-    peso_total_kg: 1250.0,
-    peso_bascula_kg: 1252.0,
     valor_total: 21500000,
     incidencia_activa: null,
     sync_onedrive: {
@@ -383,7 +355,7 @@ export const INITIAL_DESPACHOS = [
       error: null
     },
     items: [
-      { id: 'it-20', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 25, cantidad_auditada: 25, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' }
+      { id: 'it-20', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 25, cantidad_auditada: 25, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' }
     ],
     history: [
       { id: 'h-112', estado_anterior: 'PENDIENTE', estado_nuevo: 'DESPACHADO', usuario_operador: 'Líder Despachos', tiempo_estancia_seg: 450, timestamp: subMinutes(35), nota: 'Camión NHR WRO-482 despachado. Fila registrada en plantilla Excel de OneDrive.' }
@@ -402,11 +374,8 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'WRO-482',
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
-    horario_corte: addMinutes(12),
     bahia_asignada: 'Bodega Retención R-01',
     numero_guia: 'GUIA-VAL-0919',
-    peso_total_kg: 18.0,
-    peso_bascula_kg: 24.2,
     valor_total: 3100000,
     incidencia_activa: {
       id: 'inc-101',
@@ -418,7 +387,7 @@ export const INITIAL_DESPACHOS = [
     },
     sync_onedrive: null,
     items: [
-      { id: 'it-21', sku: 'SKU-CER-YAL', descripcion_producto: 'Cerradura Sobreponer Yale Clásica Derecha 110', cantidad_solicitada: 15, cantidad_auditada: 15, ubicacion_bodega: 'P02-E04-N3', peso_unitario_kg: 1.2, unidad: 'UND' }
+      { id: 'it-21', sku: 'SKU-CER-YAL', descripcion_producto: 'Cerradura Sobreponer Yale Clásica Derecha 110', cantidad_solicitada: 15, cantidad_auditada: 15, ubicacion_bodega: 'P02-E04-N3', unidad: 'UND' }
     ],
     history: [
       { id: 'h-113', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 180, timestamp: subMinutes(10), nota: 'Novedad registrada: Divergencia de peso > ±3% detectada' }
@@ -437,11 +406,8 @@ export const INITIAL_DESPACHOS = [
     vehiculo_placa: 'STZ-910',
     estado_actual: 'PENDIENTE',
     prioridad: 2,
-    horario_corte: addMinutes(50),
     bahia_asignada: 'Bodega Retención R-02',
     numero_guia: 'GUIA-VAL-881290',
-    peso_total_kg: 150.0,
-    peso_bascula_kg: 100.0,
     valor_total: 4800000,
     incidencia_activa: {
       id: 'inc-102',
@@ -453,7 +419,7 @@ export const INITIAL_DESPACHOS = [
     },
     sync_onedrive: null,
     items: [
-      { id: 'it-22', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 2, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' }
+      { id: 'it-22', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 2, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' }
     ],
     history: [
       { id: 'h-114', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Sandra Torres', tiempo_estancia_seg: 240, timestamp: subMinutes(14), nota: 'Novedad registrada: Faltante de 1 saco de 50kg' }

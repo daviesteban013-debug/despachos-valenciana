@@ -82,17 +82,10 @@ export function WmsProvider({ children }) {
   const [selectedDespachoId, setSelectedDespachoId] = useState(null);
   const [incidentModalTarget, setIncidentModalTarget] = useState(null);
   const [returnsDrawerOpen, setReturnsDrawerOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [notification, setNotification] = useState(null);
 
-  // Reloj de corte SLA (cada 5 segundos)
-  const [currentTime, setCurrentTime] = useState(Date.now());
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Persistencia local de despachos v3 (2 estados)
   useEffect(() => {
@@ -448,18 +441,15 @@ export function WmsProvider({ children }) {
       vehiculo_placa: 'WRO-482',
       estado_actual: 'PENDIENTE',
       prioridad: 1, // Urgente
-      horario_corte: new Date(Date.now() + 19 * 60000).toISOString(),
       bahia_asignada: 'Bodega A-01',
       numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
-      peso_total_kg: 172.0,
-      peso_bascula_kg: 172.0,
       valor_total: 4280000,
       incidencia_activa: null,
       sync_onedrive: null,
       items: [
-        { id: `it-sim-1`, sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' },
-        { id: `it-sim-2`, sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P08-E02-N1', peso_unitario_kg: 5.9, unidad: 'UND' },
-        { id: `it-sim-3`, sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 1, cantidad_auditada: 1, ubicacion_bodega: 'P04-E02-N1', peso_unitario_kg: 5.1, unidad: 'GAL' }
+        { id: `it-sim-1`, sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' },
+        { id: `it-sim-2`, sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P08-E02-N1', unidad: 'UND' },
+        { id: `it-sim-3`, sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 1, cantidad_auditada: 1, ubicacion_bodega: 'P04-E02-N1', unidad: 'GAL' }
       ],
       history: [
         { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: 'Pedido express ferretería programado para WRO-482' }
@@ -469,6 +459,61 @@ export function WmsProvider({ children }) {
     setDespachos((prev) => [newOrder, ...prev]);
     playBeep(880, 'triangle');
     showToast(`⚡ Nuevo pedido crítico: ${newOrder.codigo_orden} (Asignado a WRO-482)`, 'warning');
+  };
+
+  // Crear nuevo despacho desde formulario de registro rápido
+  const crearNuevoDespacho = (nuevo) => {
+    const randomNum = Math.floor(6400 + Math.random() * 600);
+    const despachoCreado = {
+      id: `ORD-${Date.now().toString().slice(-6)}`,
+      codigo_orden: `PVSW-${randomNum}`,
+      codigo_factura_erp: nuevo.numero_factura.trim().toUpperCase(),
+      cliente_nombre: nuevo.cliente_nombre.trim(),
+      cliente_codigo: `CL-${Math.floor(7000000 + Math.random() * 3000000)}`,
+      zona_entrega: nuevo.direccion_entrega.trim(),
+      bodega_origen_id: nuevo.bodega_id || '01',
+      transportadora: 'Flota Propia',
+      ruta_id: 'rt-101',
+      vehiculo_placa: nuevo.vehiculo_placa || 'WRO-482',
+      vehiculo_cuadrilla: nuevo.vehiculo_cuadrilla || '',
+      estado_actual: 'PENDIENTE',
+      prioridad: 2, // Normal por defecto
+      bahia_asignada: `Bodega A-01`,
+      numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
+      valor_total: Number(nuevo.valor_factura) || 0,
+      jornada: nuevo.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM'),
+      bultos_total: Number(nuevo.bultos) || 1,
+      observaciones: nuevo.observaciones?.trim() || '',
+      incidencia_activa: null,
+      sync_onedrive: null,
+      items: [
+        {
+          id: `it-manual-${Date.now()}`,
+          sku: 'SKU-MANUAL',
+          descripcion_producto: `Pedido ${nuevo.numero_factura.trim().toUpperCase()} — ${Number(nuevo.bultos) || 1} bultos`,
+          cantidad_solicitada: Number(nuevo.bultos) || 1,
+          cantidad_auditada: Number(nuevo.bultos) || 1,
+          ubicacion_bodega: 'DESPACHO',
+          unidad: 'BUL'
+        }
+      ],
+      history: [
+        {
+          id: `h-create-${Date.now()}`,
+          estado_anterior: null,
+          estado_nuevo: 'PENDIENTE',
+          usuario_operador: 'Administrador Logística',
+          tiempo_estancia_seg: 0,
+          timestamp: new Date().toISOString(),
+          nota: `Pedido registrado manualmente. Cuadrilla: ${nuevo.vehiculo_cuadrilla || 'N/A'}. Jornada: ${nuevo.jornada || 'N/A'}. Obs: ${nuevo.observaciones?.trim() || 'Ninguna'}`
+        }
+      ]
+    };
+
+    setDespachos((prev) => [despachoCreado, ...prev]);
+    playBeep(880, 'triangle');
+    showToast(`✅ Despacho ${despachoCreado.codigo_orden} (${despachoCreado.codigo_factura_erp}) creado exitosamente.`, 'success');
+    return despachoCreado;
   };
 
   const resetDemoData = () => {
@@ -516,19 +561,7 @@ export function WmsProvider({ children }) {
     despachados: despachos.filter((d) => d.estado_actual === 'DESPACHADO').length,
     conIncidencia: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
     incidencias: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
-    pendientesSyncExcel: despachos.filter((d) => d.estado_actual === 'DESPACHADO' && d.sync_onedrive?.estado === 'PENDIENTE').length,
-    alertasCorteProximo: despachos.filter((d) => {
-      if (d.estado_actual === 'DESPACHADO') return false;
-      const diffMins = (new Date(d.horario_corte).getTime() - currentTime) / 60000;
-      return diffMins > 0 && diffMins <= 30;
-    }).length,
-    eficienciaSla: Math.round(
-      (despachos.filter((d) => {
-        if (d.estado_actual === 'DESPACHADO') return true;
-        const diffMins = (new Date(d.horario_corte).getTime() - currentTime) / 60000;
-        return diffMins > 0;
-      }).length / (despachos.length || 1)) * 100
-    )
+    pendientesSyncExcel: despachos.filter((d) => d.estado_actual === 'DESPACHADO' && d.sync_onedrive?.estado === 'PENDIENTE').length
   };
 
   const selectedDespacho = despachos.find((d) => d.id === selectedDespachoId) || null;
@@ -566,7 +599,6 @@ export function WmsProvider({ children }) {
         setReturnsDrawerOpen,
         notification,
         setNotification,
-        currentTime,
         kpis,
         despacharOrden,
         asignarVehiculo,
@@ -577,6 +609,9 @@ export function WmsProvider({ children }) {
         resolverIncidencia,
         procesarDevolucion,
         addSimulatedOrder,
+        crearNuevoDespacho,
+        createModalOpen,
+        setCreateModalOpen,
         resetDemoData,
         showToast,
         playBeep

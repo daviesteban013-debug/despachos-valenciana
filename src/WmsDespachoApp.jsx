@@ -10,9 +10,10 @@ import DispatchDetailDrawer from './components/DispatchDetailDrawer';
 import IncidentModal from './components/IncidentModal';
 import ReturnsDrawer from './components/ReturnsDrawer';
 import ToastNotification from './components/ToastNotification';
+import CreateDispatchModal from './components/CreateDispatchModal';
 
 function AppContent() {
-  const { activeDockTab } = useWms();
+  const { activeDockTab, createModalOpen, setCreateModalOpen } = useWms();
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col selection:bg-red-600 selection:text-white">
@@ -38,6 +39,7 @@ function AppContent() {
       <DispatchDetailDrawer />
       <IncidentModal />
       <ReturnsDrawer />
+      <CreateDispatchModal isOpen={createModalOpen} onClose={() => setCreateModalOpen(false)} />
       <ToastNotification />
     </div>
   );

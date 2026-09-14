@@ -3,8 +3,6 @@ import { useWms } from '../context/WmsContext';
 import { 
   Package, 
   Warehouse, 
-  Clock, 
-  Timer, 
   ChevronDown, 
   ChevronUp 
 } from 'lucide-react';
@@ -39,28 +37,21 @@ export default function MetricsCarousel() {
               <span className="text-slate-300">•</span>
               <div className="flex items-center gap-1 shrink-0 text-amber-700 font-bold">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="text-amber-800">Incidencias:</span>
+                <span className="text-amber-800">Novedades:</span>
                 <span>{kpis.conIncidencia}</span>
               </div>
             </>
           )}
 
-          {kpis.alertasCorteProximo > 0 && (
+          {kpis.pendientesSyncExcel > 0 && (
             <>
               <span className="text-slate-300">•</span>
-              <div className="flex items-center gap-1 shrink-0 text-[#E11D24] font-bold">
-                <Clock className="h-3.5 w-3.5 animate-pulse" />
-                <span>{kpis.alertasCorteProximo} &lt;30m</span>
+              <div className="flex items-center gap-1 shrink-0 text-red-700 font-bold">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span>Sync pendiente: {kpis.pendientesSyncExcel}</span>
               </div>
             </>
           )}
-
-          <span className="text-slate-300 hidden sm:inline">•</span>
-
-          <div className="hidden sm:flex items-center gap-1 shrink-0">
-            <span className="text-slate-500">SLA:</span>
-            <span className="font-bold text-slate-900">{kpis.eficienciaSla}%</span>
-          </div>
         </div>
 
         {/* Botón para expandir/colapsar panel de KPIs */}
@@ -77,7 +68,7 @@ export default function MetricsCarousel() {
       {/* 2. PANEL DESLIZABLE / EXPANDIBLE DE TARJETAS DE KPIS */}
       {expanded && (
         <div className="mt-2 p-3 bg-white border border-slate-200 rounded-2xl shadow-sm animate-fadeIn">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
               <div>
                 <span className="text-slate-500 block text-xs font-medium">Pendientes Hoy</span>
@@ -98,18 +89,10 @@ export default function MetricsCarousel() {
               kpis.conIncidencia > 0 ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-slate-50 border-slate-200'
             }`}>
               <div>
-                <span className="block text-xs font-medium">Con Incidencia</span>
+                <span className="block text-xs font-medium">Con Novedad</span>
                 <span className="text-lg font-bold text-amber-600">{kpis.conIncidencia}</span>
               </div>
-              <Clock className="h-5 w-5 text-amber-500" />
-            </div>
-
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
-              <div>
-                <span className="text-slate-500 block text-xs font-medium">Cumplimiento SLA</span>
-                <span className="text-lg font-bold text-slate-900">{kpis.eficienciaSla}%</span>
-              </div>
-              <Timer className="h-5 w-5 text-slate-600" />
+              <Package className="h-5 w-5 text-amber-500" />
             </div>
           </div>
         </div>

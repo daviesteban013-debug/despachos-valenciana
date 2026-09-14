@@ -2,11 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
 @layer base {
   body {
     background-color: #080d1a;
     color: #f1f5f9;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    padding-top: var(--sat);
+    padding-bottom: var(--sab);
+    padding-left: var(--sal);
+    padding-right: var(--sar);
+  }
+}
+
+/* Safe Area Utility Classes */
+.safe-pt {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-pl {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.safe-pr {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Standalone PWA adjustments for warehouse mobile devices */
+@media all and (display-mode: standalone) {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input, textarea, select {
+    user-select: auto;
+    -webkit-user-select: auto;
   }
 }
 

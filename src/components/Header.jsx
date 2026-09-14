@@ -1,7 +1,7 @@
 import React from 'react';
 import logoValenciana from '../assets/logo-valenciana.jpg';
 import { useWms } from '../context/WmsContext';
-import { Building2, Zap, RotateCcw } from 'lucide-react';
+import { Building2, Zap, RotateCcw, Plus } from 'lucide-react';
 
 export default function Header() {
   const {
@@ -9,6 +9,7 @@ export default function Header() {
     activeBodega,
     setActiveBodega,
     addSimulatedOrder,
+    setCreateModalOpen,
     resetDemoData
   } = useWms();
 
@@ -54,14 +55,24 @@ export default function Header() {
           </select>
         </div>
 
-        {/* Inyector Rápido de Órdenes */}
+        {/* Botón Principal: Nuevo Despacho */}
+        <button
+          onClick={() => setCreateModalOpen(true)}
+          className="h-8 px-2.5 sm:px-3 bg-[#E11D24] hover:bg-red-700 text-white rounded-xl font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5 shrink-0"
+          title="Registrar nuevo pedido de despacho"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="text-xs hidden sm:inline">Nuevo Despacho</span>
+        </button>
+
+        {/* Inyector Rápido de Órdenes (demo) */}
         <button
           onClick={addSimulatedOrder}
-          className="h-8 px-2 sm:px-2.5 bg-[#E11D24] hover:bg-red-700 text-white rounded-xl font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1 shrink-0"
+          className="h-8 px-2 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1 shrink-0"
           title="Inyectar orden de prueba urgente"
         >
           <Zap className="h-3.5 w-3.5 fill-white" />
-          <span className="text-xs hidden sm:inline">+Orden</span>
+          <span className="text-xs hidden sm:inline">Demo</span>
         </button>
 
         {/* Reiniciar Datos Demo */}

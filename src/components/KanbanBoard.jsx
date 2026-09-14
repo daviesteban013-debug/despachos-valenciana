@@ -10,8 +10,7 @@ import {
   RefreshCw, 
   LayoutGrid, 
   Columns2,
-  CheckCircle,
-  Clock
+  CheckCircle
 } from 'lucide-react';
 
 export default function KanbanBoard() {
@@ -32,10 +31,7 @@ export default function KanbanBoard() {
   const pendientes = filteredDespachos
     .filter((d) => d.estado_actual === 'PENDIENTE')
     .filter((d) => (soloConIncidencia ? Boolean(d.incidencia_activa) : true))
-    .sort((a, b) => {
-      if (a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
-      return new Date(a.horario_corte) - new Date(b.horario_corte);
-    });
+    .sort((a, b) => a.prioridad - b.prioridad);
 
   const despachados = filteredDespachos
     .filter((d) => d.estado_actual === 'DESPACHADO')
@@ -46,8 +42,7 @@ export default function KanbanBoard() {
       return timeB - timeA;
     });
 
-  const cargaPendienteKg = pendientes.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);
-  const cargaDespachadaKg = despachados.reduce((acc, d) => acc + (d.peso_total_kg || 0), 0);
+
 
   const despachosConSyncPendiente = despachados.filter(
     (d) => d.sync_onedrive?.estado === 'PENDIENTE'
@@ -199,9 +194,6 @@ export default function KanbanBoard() {
                 <span className="text-xs font-bold uppercase tracking-wider">Órdenes Pendientes</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-600 hidden sm:inline">
-                  Carga: <strong className="text-slate-900">{Math.round(cargaPendienteKg)} kg</strong>
-                </span>
                 <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-[#E11D24] text-white">
                   {pendientes.length}
                 </span>
@@ -235,9 +227,6 @@ export default function KanbanBoard() {
                 <span className="text-xs font-bold uppercase tracking-wider">Despachados (Historial)</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-600 hidden sm:inline">
-                  Carga: <strong className="text-slate-900">{Math.round(cargaDespachadaKg)} kg</strong>
-                </span>
                 <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-emerald-700 text-white">
                   {despachados.length}
                 </span>
