@@ -18,7 +18,8 @@ export default function DispatchDetailDrawer() {
     selectedDespacho, 
     setSelectedDespachoId, 
     despacharOrden, 
-    setIncidentModalTarget,
+    marcarComoDespachado,
+    setIncidentModalTarget, 
     rutasVehiculos 
   } = useWms();
 
@@ -27,8 +28,12 @@ export default function DispatchDetailDrawer() {
 
   if (!selectedDespacho) return null;
 
+  const isDespachado = (selectedDespacho.estado || selectedDespacho.estado_actual) === 'DESPACHADO';
+  const factura = selectedDespacho.numero_factura || selectedDespacho.codigo_factura_erp || selectedDespacho.codigo_orden;
+  const direccion = selectedDespacho.direccion_entrega || selectedDespacho.zona_entrega || 'Sin dirección registrada';
+  const cuadrilla = selectedDespacho.vehiculo_cuadrilla || selectedDespacho.vehiculo_placa || 'Flota Fija';
+  const totalBultos = selectedDespacho.total_bultos || selectedDespacho.bultos_total || selectedDespacho.items?.reduce((acc, it) => acc + (it.cantidad_solicitada || it.cantidad || 0), 0) || 1;
   const rutaAsignada = rutasVehiculos.find((r) => r.id === selectedDespacho.ruta_id) || rutasVehiculos[0];
-  const totalPiezas = selectedDespacho.items?.reduce((acc, it) => acc + (it.cantidad_solicitada || 0), 0) || 0;
 
   return (
     <>
@@ -46,22 +51,24 @@ export default function DispatchDetailDrawer() {
             <div className="w-12 h-1.5 bg-white/40 rounded-full mx-auto" />
           </div>
 
-          {/* 1. ENCABEZADO CON ROJO VALENCIANA (#E11D24) */}
+          {/* 1. CABECERA: CLIENTE, FACTURA, DIRECCIÓN, CUADRILLA Y ESTADO (PENDIENTE / DESPACHADO) */}
           <div className="bg-[#E11D24] text-white px-4 py-3 flex items-start justify-between gap-3 shadow-sm">
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-lg sm:text-xl font-bold text-white">
-                  {selectedDespacho.codigo_factura_erp || selectedDespacho.codigo_orden}
+                <span className="font-mono text-lg sm:text-xl font-black text-white tracking-tight">
+                  {factura}
                 </span>
-                <span className="font-mono text-xs font-bold bg-white text-[#E11D24] px-2 py-0.5 rounded-md">
-                  {selectedDespacho.codigo_orden}
-                </span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
-                  selectedDespacho.estado_actual === 'DESPACHADO' 
+                {selectedDespacho.codigo_orden && selectedDespacho.codigo_orden !== factura && (
+                  <span className="font-mono text-xs font-bold bg-white text-[#E11D24] px-2 py-0.5 rounded-md">
+                    {selectedDespacho.codigo_orden}
+                  </span>
+                )}
+                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${
+                  isDespachado 
                     ? 'bg-emerald-600 text-white' 
                     : 'bg-red-800 text-white'
                 }`}>
-                  {selectedDespacho.estado_actual}
+                  {isDespachado ? 'DESPACHADO' : 'PENDIENTE'}
                 </span>
               </div>
 
@@ -69,25 +76,28 @@ export default function DispatchDetailDrawer() {
                 {selectedDespacho.cliente_nombre}
               </h2>
 
-              <p className="text-xs text-red-100 font-medium flex items-center gap-2">
-                <MapPin className="h-3 w-3" />
-                <span>{selectedDespacho.zona_entrega}</span>
-                <span>•</span>
-                <span className="font-bold text-yellow-200">{selectedDespacho.bahia_asignada}</span>
+              <p className="text-xs text-red-100 font-medium flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-red-200 shrink-0" />
+                <span className="truncate max-w-md">{direccion}</span>
               </p>
 
-              {/* Cuadrilla / Vehículo */}
-              {selectedDespacho.vehiculo_placa && (
-                <p className="text-xs text-red-100 font-medium flex items-center gap-1.5">
+              <div className="flex items-center gap-2 text-xs text-red-100 font-medium flex-wrap pt-0.5">
+                <span className="flex items-center gap-1 bg-red-800/80 px-2 py-0.5 rounded-md text-white font-semibold">
                   <Truck className="h-3 w-3" />
-                  <span>Vehículo: <strong className="text-white">{selectedDespacho.vehiculo_placa}</strong></span>
-                </p>
-              )}
+                  Cuadrilla: {cuadrilla}
+                </span>
+                {selectedDespacho.jornada && (
+                  <span className="bg-white/20 text-white font-bold px-2 py-0.5 rounded-md">
+                    Jornada: {selectedDespacho.jornada}
+                  </span>
+                )}
+              </div>
             </div>
 
             <button
               onClick={() => setSelectedDespachoId(null)}
               className="p-2 rounded-xl bg-red-800/80 hover:bg-red-900 text-white transition-all shrink-0"
+              title="Cerrar"
             >
               <X className="h-5 w-5" />
             </button>
@@ -104,7 +114,7 @@ export default function DispatchDetailDrawer() {
               }`}
             >
               <Package className="h-4 w-4" />
-              <span>Materiales ({totalPiezas})</span>
+              <span>Materiales ({totalBultos})</span>
             </button>
 
             <button
@@ -144,7 +154,7 @@ export default function DispatchDetailDrawer() {
                   <div>
                     <span className="text-xs text-slate-500 font-bold block">Total Bultos / Piezas:</span>
                     <div className="font-mono text-sm font-bold text-slate-800">
-                      {totalPiezas} unidades ({selectedDespacho.items?.length || 0} líneas)
+                      {totalBultos} bulto{totalBultos !== 1 ? 's' : ''} ({selectedDespacho.items?.length || 1} {selectedDespacho.items?.length ? 'líneas' : 'entrega'})
                     </div>
                   </div>
 
@@ -171,39 +181,46 @@ export default function DispatchDetailDrawer() {
                 {/* Lista Detallada de SKUs (solo lectura) */}
                 <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white">
                   <div className="bg-slate-100 p-2.5 text-xs font-bold uppercase text-slate-600">
-                    Líneas de Pedido ({selectedDespacho.items?.length || 0} SKUs)
+                    Líneas de Pedido ({selectedDespacho.items?.length || 1} SKUs)
                   </div>
                   <div className="divide-y divide-slate-100">
-                    {selectedDespacho.items?.map((item) => (
-                      <div 
-                        key={item.id} 
-                        className="p-3.5 flex items-center justify-between gap-2 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                              {item.sku}
-                            </span>
-                            <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
-                              {item.ubicacion_bodega}
-                            </span>
+                    {selectedDespacho.items && selectedDespacho.items.length > 0 ? (
+                      selectedDespacho.items.map((item) => (
+                        <div 
+                          key={item.id} 
+                          className="p-3.5 flex items-center justify-between gap-2 hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                {item.sku || 'SKU-GEN'}
+                              </span>
+                              <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
+                                {item.ubicacion_bodega || 'DESPACHO'}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-900">
+                              {item.descripcion_producto}
+                            </h4>
+                            <p className="text-xs text-slate-500 font-mono">
+                              Unidad: {item.unidad || 'UND'}
+                            </p>
                           </div>
-                          <h4 className="text-sm font-bold text-slate-900">
-                            {item.descripcion_producto}
-                          </h4>
-                          <p className="text-xs text-slate-500 font-mono">
-                            Unidad: {item.unidad || 'UND'}
-                          </p>
-                        </div>
 
-                        <div className="text-right font-mono shrink-0">
-                          <span className="font-bold text-base text-slate-800">
-                            {item.cantidad_solicitada}
-                          </span>
-                          <span className="text-xs text-slate-400 ml-1">{item.unidad || 'UND'}</span>
+                          <div className="text-right font-mono shrink-0">
+                            <span className="font-bold text-base text-slate-800">
+                              {item.cantidad_solicitada || item.cantidad || totalBultos}
+                            </span>
+                            <span className="text-xs text-slate-400 ml-1">{item.unidad || 'UND'}</span>
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-slate-500 space-y-1">
+                        <p className="font-semibold text-slate-700">Pedido registrado por remisión general</p>
+                        <p className="text-xs text-slate-400">Total {totalBultos} bulto{totalBultos !== 1 ? 's' : ''} preparado para despacho directo</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -290,7 +307,7 @@ export default function DispatchDetailDrawer() {
               Reportar Novedad
             </button>
 
-            {selectedDespacho.estado_actual !== 'DESPACHADO' ? (
+            {!isDespachado ? (
               <button
                 onClick={() => {
                   despacharOrden(selectedDespacho.id, selectedDespacho.vehiculo_placa || 'WRO-482');

@@ -461,59 +461,113 @@ export function WmsProvider({ children }) {
     showToast(`⚡ Nuevo pedido crítico: ${newOrder.codigo_orden} (Asignado a WRO-482)`, 'warning');
   };
 
-  // Crear nuevo despacho desde formulario de registro rápido
-  const crearNuevoDespacho = (nuevo) => {
+  // 1. Inserción de nueva orden
+  const crearNuevoDespacho = (payload) => {
+    const factura = (payload.numero_factura || '').trim().toUpperCase();
+    const cliente = (payload.cliente_nombre || '').trim();
+    const direccion = (payload.direccion_entrega || '').trim();
+    const valor = Number(payload.valor_factura) || 0;
+    const bultos = Number(payload.total_bultos || payload.bultos) || 1;
+    const cuadrilla = payload.vehiculo_cuadrilla || 'LEO - JULIAN';
+    const jornada = payload.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM');
+    const bodega = payload.bodega_id || '01';
+    const obs = (payload.observaciones || '').trim();
+    const placa = payload.vehiculo_placa || (
+      cuadrilla.includes('LEO') ? 'WRO-482' :
+      cuadrilla.includes('ANDERSON') ? 'STZ-910' :
+      cuadrilla.includes('JEFFERSON') ? 'ENV-301' :
+      cuadrilla.includes('JESUS') ? 'MC-441' : 'WRO-482'
+    );
     const randomNum = Math.floor(6400 + Math.random() * 600);
-    const despachoCreado = {
-      id: `ORD-${Date.now().toString().slice(-6)}`,
+    const nowIso = new Date().toISOString();
+
+    const nuevaOrden = {
+      id: `ORD-${Date.now().toString().slice(-4)}`,
+      numero_factura: factura,
+      cliente_nombre: cliente,
+      direccion_entrega: direccion,
+      valor_factura: valor,
+      jornada: jornada,
+      vehiculo_cuadrilla: cuadrilla,
+      bodega_id: bodega,
+      total_bultos: bultos,
+      observaciones: obs,
+      estado: 'PENDIENTE',
+      tiene_incidencia: false,
+      fecha_creacion: nowIso,
+
+      // Compatibilidad y soporte completo para tablero y reportes
       codigo_orden: `PVSW-${randomNum}`,
-      codigo_factura_erp: nuevo.numero_factura.trim().toUpperCase(),
-      cliente_nombre: nuevo.cliente_nombre.trim(),
+      codigo_factura_erp: factura,
       cliente_codigo: `CL-${Math.floor(7000000 + Math.random() * 3000000)}`,
-      zona_entrega: nuevo.direccion_entrega.trim(),
-      bodega_origen_id: nuevo.bodega_id || '01',
+      zona_entrega: direccion,
+      bodega_origen_id: bodega,
       transportadora: 'Flota Propia',
       ruta_id: 'rt-101',
-      vehiculo_placa: nuevo.vehiculo_placa || 'WRO-482',
-      vehiculo_cuadrilla: nuevo.vehiculo_cuadrilla || '',
+      vehiculo_placa: placa,
       estado_actual: 'PENDIENTE',
-      prioridad: 2, // Normal por defecto
-      bahia_asignada: `Bodega A-01`,
+      prioridad: 2,
+      bahia_asignada: 'Bodega A-01',
       numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
-      valor_total: Number(nuevo.valor_factura) || 0,
-      jornada: nuevo.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM'),
-      bultos_total: Number(nuevo.bultos) || 1,
-      observaciones: nuevo.observaciones?.trim() || '',
+      valor_total: valor,
+      bultos_total: bultos,
       incidencia_activa: null,
       sync_onedrive: null,
       items: [
         {
-          id: `it-manual-${Date.now()}`,
-          sku: 'SKU-MANUAL',
-          descripcion_producto: `Pedido ${nuevo.numero_factura.trim().toUpperCase()} — ${Number(nuevo.bultos) || 1} bultos`,
-          cantidad_solicitada: Number(nuevo.bultos) || 1,
-          cantidad_auditada: Number(nuevo.bultos) || 1,
+          id: `it-${Date.now()}`,
+          sku: 'SKU-PEDIDO',
+          descripcion_producto: `Despacho ${factura} — ${bultos} bulto${bultos > 1 ? 's' : ''}`,
+          cantidad_solicitada: bultos,
+          cantidad_auditada: bultos,
           ubicacion_bodega: 'DESPACHO',
           unidad: 'BUL'
         }
       ],
       history: [
         {
-          id: `h-create-${Date.now()}`,
+          id: `h-${Date.now()}`,
           estado_anterior: null,
           estado_nuevo: 'PENDIENTE',
-          usuario_operador: 'Administrador Logística',
+          usuario_operador: 'Coordinador Logística',
           tiempo_estancia_seg: 0,
-          timestamp: new Date().toISOString(),
-          nota: `Pedido registrado manualmente. Cuadrilla: ${nuevo.vehiculo_cuadrilla || 'N/A'}. Jornada: ${nuevo.jornada || 'N/A'}. Obs: ${nuevo.observaciones?.trim() || 'Ninguna'}`
+          timestamp: nowIso,
+          nota: `Pedido registrado. Cuadrilla: ${cuadrilla}. Jornada: ${jornada}. Obs: ${obs || 'Sin observaciones'}`
         }
       ]
     };
 
-    setDespachos((prev) => [despachoCreado, ...prev]);
+    setDespachos((prev) => [nuevaOrden, ...prev]);
     playBeep(880, 'triangle');
-    showToast(`✅ Despacho ${despachoCreado.codigo_orden} (${despachoCreado.codigo_factura_erp}) creado exitosamente.`, 'success');
-    return despachoCreado;
+    showToast(`✅ Despacho ${nuevaOrden.numero_factura} creado con éxito.`, 'success');
+    return nuevaOrden;
+  };
+
+  // 2. Transición de estado a DESPACHADO
+  const marcarComoDespachado = (despachoId) => {
+    const nowIso = new Date().toISOString();
+    setDespachos((prev) =>
+      prev.map((orden) => {
+        if (orden.id === despachoId || orden.numero_factura === despachoId || orden.codigo_factura_erp === despachoId) {
+          const placa = orden.vehiculo_placa || 'WRO-482';
+          return {
+            ...orden,
+            estado: 'DESPACHADO',
+            estado_actual: 'DESPACHADO',
+            fecha_despacho: nowIso,
+            hora_salida: nowIso,
+            sync_onedrive: {
+              estado: 'PENDIENTE',
+              placa: placa,
+              fecha: nowIso,
+              error: null
+            }
+          };
+        }
+        return orden;
+      })
+    );
+    showToast('Orden marcada como DESPACHADA.', 'success');
   };
 
   const resetDemoData = () => {
@@ -601,6 +655,7 @@ export function WmsProvider({ children }) {
         setNotification,
         kpis,
         despacharOrden,
+        marcarComoDespachado,
         asignarVehiculo,
         reintentarSyncOneDrive,
         exportarCopiaExcel,
