@@ -17,7 +17,7 @@ const INCIDENT_TYPES = [
 ];
 
 export default function IncidentModal() {
-  const { incidentModalTarget, setIncidentModalTarget, reportIncident, resolveIncident } = useWms();
+  const { incidentModalTarget, setIncidentModalTarget, registrarIncidencia, resolverIncidencia } = useWms();
 
   if (!incidentModalTarget) return null;
 
@@ -33,9 +33,9 @@ export default function IncidentModal() {
     if (!description.trim()) return;
 
     if (isResolving) {
-      resolveIncident(incidentModalTarget.id, description);
+      resolverIncidencia(incidentModalTarget.id, description);
     } else {
-      reportIncident(incidentModalTarget.id, selectedType, description);
+      registrarIncidencia(incidentModalTarget.id, selectedType, description);
     }
   };
 

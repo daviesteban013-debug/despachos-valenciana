@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import logoValenciana from '../../../assets/logo-valenciana.jpg';
-import { useWms } from '../../../context/WmsContext';
 import { SECCIONES, getSeccionInfo } from '../../ventaMostrador/data/secciones';
 import {
   obtenerInventario,
@@ -32,14 +31,6 @@ import {
 } from 'lucide-react';
 
 export default function InventarioPage() {
-  let wms = null;
-  try {
-    wms = useWms();
-  } catch (e) {}
-
-  const inventarioWms = wms?.inventario;
-  const trazabilidadStock = wms?.trazabilidadStock || [];
-
   // Estado de rol para demostración de seguridad
   const [rolUsuario, setRolUsuario] = useState('admin'); // 'admin' | 'operativo'
 

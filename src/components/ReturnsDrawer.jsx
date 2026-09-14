@@ -13,7 +13,7 @@ export default function ReturnsDrawer() {
     devoluciones, 
     returnsDrawerOpen, 
     setReturnsDrawerOpen, 
-    processReturn 
+    procesarDevolucion 
   } = useWms();
 
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -29,7 +29,7 @@ export default function ReturnsDrawer() {
     const notes = action === 'REINGRESO_INVENTARIO' 
       ? 'Producto verificado sin daños. Reintegrado al rack de origen en bodega.' 
       : 'Producto con rotura irreparable. Dado de baja contable y enviado a contenedor de mermas.';
-    processReturn(returnId, action, notes);
+    procesarDevolucion(returnId, action, notes);
   };
 
   return (

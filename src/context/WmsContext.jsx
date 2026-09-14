@@ -1,23 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
   INITIAL_DESPACHOS, 
   INITIAL_DEVOLUCIONES, 
   MOCK_VEHICULOS_RUTAS, 
   MOCK_BODEGAS,
-  INITIAL_INVENTARIO,
-  INITIAL_FACTURAS_EMITIDAS,
   PLACAS_FLOTA_FIJA
 } from '../data/mockData';
 
 const WmsContext = createContext(null);
 
 export function WmsProvider({ children }) {
+  // Despachos con modelo de 2 estados: PENDIENTE / DESPACHADO
   const [despachos, setDespachos] = useState(() => {
     try {
       const savedV3 = localStorage.getItem('wms_valenciana_despachos_v3');
       if (savedV3) {
         return JSON.parse(savedV3);
       }
+      // Migración de datos legados de versiones anteriores
       const savedV2 = localStorage.getItem('wms_valenciana_despachos_v2');
       if (savedV2) {
         const parsed = JSON.parse(savedV2);
@@ -64,41 +64,13 @@ export function WmsProvider({ children }) {
     return saved ? JSON.parse(saved) : INITIAL_DEVOLUCIONES;
   });
 
-  // Catálogo maestro e inventario operativo con stock global
-  // MIGRACIÓN: Si el cache tiene un catálogo obsoleto (mini-mock de 6 SKUs),
-  // se descarta y se carga el catálogo completo de 350 SKUs.
-  const [inventario, setInventario] = useState(() => {
-    try {
-      const saved = localStorage.getItem('wms_valenciana_inventario_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Guardia de migración: si el cache tiene menos del 50% de SKUs esperados,
-        // es un catálogo obsoleto — forzar carga del catálogo completo
-        if (Array.isArray(parsed) && parsed.length >= INITIAL_INVENTARIO.length * 0.5) {
-          return parsed;
-        }
-        console.warn(`[WMS-MIGRACIÓN] Cache de inventario obsoleto (${parsed.length} SKUs vs ${INITIAL_INVENTARIO.length} esperados). Cargando catálogo completo.`);
-        localStorage.removeItem('wms_valenciana_inventario_v2');
-      }
-    } catch (e) {
-      console.warn('[WMS-MIGRACIÓN] Error leyendo cache de inventario, usando catálogo fresco.', e);
-    }
-    return INITIAL_INVENTARIO;
-  });
-
-  // Facturas emitidas y control de sello
-  const [facturas, setFacturas] = useState(() => {
-    const saved = localStorage.getItem('wms_valenciana_facturas_v2');
-    return saved ? JSON.parse(saved) : INITIAL_FACTURAS_EMITIDAS;
-  });
-
-  // Navegación Bottom Dock: 'waves' | 'packing' | 'bays' | 'incidents'
+  // Navegación Bottom Dock: 'waves' (Despachos) | 'incidents' (Novedades)
   const [activeDockTab, setActiveDockTab] = useState('waves');
 
-  // Modo de visualización en Tablero de Olas: 'kanban' | 'list'
+  // Modo de visualización en Tablero: 'kanban' | 'list'
   const [wavesViewMode, setWavesViewMode] = useState('kanban');
 
-  // Configuración operativa
+  // Configuración operativa y filtros
   const [activeBodega, setActiveBodega] = useState(MOCK_BODEGAS[0].codigo);
   const [activeTurno, setActiveTurno] = useState('Diurno');
   const [selectedCarrier, setSelectedCarrier] = useState('TODAS');
@@ -106,54 +78,11 @@ export function WmsProvider({ children }) {
   const [onlyUrgent, setOnlyUrgent] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modales y Drawers
+  // Modales y selección
   const [selectedDespachoId, setSelectedDespachoId] = useState(null);
   const [incidentModalTarget, setIncidentModalTarget] = useState(null);
-  const [packageLabelDespacho, setPackageLabelDespacho] = useState(null);
-  const [scannerModalOpen, setScannerModalOpen] = useState(false);
   const [returnsDrawerOpen, setReturnsDrawerOpen] = useState(false);
   const [notification, setNotification] = useState(null);
-
-  // Registro inmutable de trazabilidad de movimientos de stock
-  const [trazabilidadStock, setTrazabilidadStock] = useState(() => {
-    try {
-      const saved = localStorage.getItem('wms_valenciana_trazabilidad_stock_v1');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  // ============================================================================
-  // SSOT: HELPER DE NORMALIZACIÓN Y SELECTORES DERIVADOS MEMOIZADOS
-  // ============================================================================
-
-  // Normalización insensible a tildes, espacios, mayúsculas para matching robusto
-  const normalizarCadena = useCallback((str) => {
-    return (str || '')
-      .toLowerCase()
-      .trim()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-  }, []);
-
-  // Métricas globales derivadas del inventario central (SSOT)
-  const metricasInventario = useMemo(() => {
-    const totalUnidades = inventario.reduce(
-      (acc, item) => acc + Number(item.stockActual ?? item.stockTotal ?? item.stock ?? 0),
-      0
-    );
-    const totalSkus = inventario.length;
-    const valorizacionTotal = inventario.reduce(
-      (acc, item) => {
-        const cant = Number(item.stockActual ?? item.stockTotal ?? item.stock ?? 0);
-        const precio = Number(item.precio_unitario ?? item.precioUnitario ?? item.precio ?? 0);
-        return acc + (cant * precio);
-      },
-      0
-    );
-    return { totalUnidades, totalSkus, valorizacionTotal };
-  }, [inventario]);
 
   // Reloj de corte SLA (cada 5 segundos)
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -165,7 +94,7 @@ export function WmsProvider({ children }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Persistencia local v3 (2 estados)
+  // Persistencia local de despachos v3 (2 estados)
   useEffect(() => {
     try {
       localStorage.setItem('wms_valenciana_despachos_v3', JSON.stringify(despachos));
@@ -174,30 +103,6 @@ export function WmsProvider({ children }) {
     }
   }, [despachos]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('wms_valenciana_inventario_v2', JSON.stringify(inventario));
-    } catch (e) {
-      console.warn('LocalStorage inventario error', e);
-    }
-  }, [inventario]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('wms_valenciana_facturas_v2', JSON.stringify(facturas));
-    } catch (e) {
-      console.warn('LocalStorage facturas error', e);
-    }
-  }, [facturas]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('wms_valenciana_trazabilidad_stock_v1', JSON.stringify(trazabilidadStock));
-    } catch (e) {
-      console.warn('LocalStorage trazabilidad error', e);
-    }
-  }, [trazabilidadStock]);
-
   const showToast = (message, type = 'info') => {
     setNotification({ message, type, id: Date.now() });
     setTimeout(() => {
@@ -205,7 +110,7 @@ export function WmsProvider({ children }) {
     }, 4500);
   };
 
-  // Efecto auditivo / háptico simulado para el pistoleo RF
+  // Sonido / respuesta táctil para interacción en bodega
   const playBeep = (freq = 880, type = 'sine') => {
     try {
       if (typeof window !== 'undefined' && window.AudioContext) {
@@ -248,6 +153,7 @@ export function WmsProvider({ children }) {
   };
 
   // Acción principal: "Despachar" (PENDIENTE -> DESPACHADO + Guardado en plantilla Excel de OneDrive)
+  // NOTA CRÍTICA: NO DESCUENTA INVENTARIO. El inventario se descuenta solo al sellar en mostrador.
   const despacharOrden = async (despachoId, vehiculoPlacaOverride = null, metadataOperador = 'Líder Bodega Valenciana') => {
     const targetDespacho = despachos.find(d => d.id === despachoId);
     if (!targetDespacho) return false;
@@ -262,7 +168,7 @@ export function WmsProvider({ children }) {
 
     const nowIso = new Date().toISOString();
 
-    // 1. Actualización optimista inmediata en UI (no bloquea el flujo físico de la bodega)
+    // 1. Transición de estado inmediata en la interfaz
     setDespachos(prev =>
       prev.map(d => {
         if (d.id !== despachoId) return d;
@@ -273,8 +179,9 @@ export function WmsProvider({ children }) {
             estado_anterior: d.estado_actual,
             estado_nuevo: 'DESPACHADO',
             usuario_operador: metadataOperador,
+            tiempo_estancia_seg: 300,
             timestamp: nowIso,
-            nota: `Orden despachada en vehículo [${placaFinal}]. Registro automático a OneDrive iniciado.`
+            nota: `Despachado en vehículo [${placaFinal}]. Sincronizando con plantilla OneDrive.`
           }
         ];
 
@@ -283,9 +190,8 @@ export function WmsProvider({ children }) {
           estado_actual: 'DESPACHADO',
           vehiculo_placa: placaFinal,
           hora_salida: nowIso,
-          despachado_por: metadataOperador,
           sync_onedrive: {
-            estado: 'SINCRONIZANDO',
+            estado: 'PENDIENTE',
             placa: placaFinal,
             fecha: nowIso,
             error: null
@@ -378,10 +284,9 @@ export function WmsProvider({ children }) {
           prev.map(item => (item.id === despachoId ? { ...item, sync_onedrive: data.syncExcel } : item))
         );
         playBeep(440, 'sawtooth');
-        showToast(`Fallo al sincronizar: ${data.error}`, 'warning');
+        showToast(`Fallo al sincronizar: ${data.error || 'Error desconocido'}`, 'warning');
       }
     } catch (e) {
-      playBeep(440, 'sawtooth');
       showToast(`Error al reintentar: ${e.message}`, 'warning');
     }
   };
@@ -422,111 +327,19 @@ export function WmsProvider({ children }) {
         };
       })
     );
-    showToast(`Orden devuelta a PENDIENTE.`, 'info');
+    showToast('Orden devuelta a PENDIENTE.', 'info');
   };
 
-  // Aliases para compatibilidad con vistas existentes
-  const advanceStage = despacharOrden;
-  const avanzarEstadoDespacho = despacharOrden;
-
-  // Auditar ítem individual (+1)
-  const auditItem = (despachoId, itemId) => {
-    playBeep(1200);
-    setDespachos((prev) =>
-      prev.map((d) => {
-        if (d.id !== despachoId) return d;
-        const updatedItems = d.items?.map((it) => {
-          if (it.id !== itemId) return it;
-          const current = it.cantidad_auditada || 0;
-          return {
-            ...it,
-            cantidad_auditada: Math.min(it.cantidad_solicitada, current + 1)
-          };
-        });
-        return { ...d, items: updatedItems };
-      })
+  // Procesar devolución en logística inversa
+  const procesarDevolucion = (devolucionId, accion, notas = '') => {
+    setDevoluciones(prev =>
+      prev.map(d => (d.id === devolucionId ? {
+        ...d,
+        estado: accion === 'REINGRESO_INVENTARIO' ? 'RESUELTO_REINGRESO' : 'RESUELTO_BAJA',
+        notas_resolucion: notas
+      } : d))
     );
-  };
-
-  // Auditar todos los ítems de una orden
-  const auditAllItems = (despachoId) => {
-    playBeep(1046);
-    setDespachos((prev) =>
-      prev.map((d) => {
-        if (d.id !== despachoId) return d;
-        const updatedItems = d.items?.map((it) => ({
-          ...it,
-          cantidad_auditada: it.cantidad_solicitada
-        }));
-        return { ...d, items: updatedItems };
-      })
-    );
-    showToast('Todos los ítems han sido auditados con éxito.', 'info');
-  };
-
-  // Actualizar peso de báscula
-  const updateScaleWeight = (despachoId, newWeight) => {
-    setDespachos((prev) =>
-      prev.map((d) => (d.id === despachoId ? { ...d, peso_bascula_kg: Number(newWeight) } : d))
-    );
-  };
-
-  // Simular inyección de nuevo pedido crítico
-  const addSimulatedOrder = () => {
-    const randomNum = Math.floor(6320 + Math.random() * 80);
-    const invoiceNum = Math.floor(80310 + Math.random() * 80);
-    const newOrder = {
-      id: `dsp-new-${Date.now()}`,
-      codigo_orden: `PVSW-${randomNum}`,
-      codigo_factura_erp: `FE-${invoiceNum}`,
-      cliente_nombre: 'Ferretería y Depósito La 10 Cúcuta',
-      cliente_codigo: 'CL-9008899',
-      zona_entrega: 'Atalaya Occidental',
-      bodega_origen_id: activeBodega,
-      transportadora: 'Flota Propia',
-      ruta_id: 'rt-101',
-      vehiculo_placa: 'WRO-482',
-      estado_actual: 'PENDIENTE',
-      prioridad: 1, // Urgente
-      horario_corte: new Date(Date.now() + 19 * 60000).toISOString(),
-      bahia_asignada: 'Bodega A-01',
-      numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
-      peso_total_kg: 172.0,
-      peso_bascula_kg: 172.0,
-      valor_total: 4280000,
-      incidencia_activa: null,
-      sync_onedrive: null,
-      items: [
-        { id: `it-sim-1`, sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' },
-        { id: `it-sim-2`, sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P08-E02-N1', peso_unitario_kg: 5.9, unidad: 'UND' },
-        { id: `it-sim-3`, sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 1, cantidad_auditada: 1, ubicacion_bodega: 'P04-E02-N1', peso_unitario_kg: 5.1, unidad: 'GAL' }
-      ],
-      history: [
-        { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: 'Pedido express ferretería programado para WRO-482' }
-      ]
-    };
-
-    setDespachos((prev) => [newOrder, ...prev]);
-    playBeep(880, 'triangle');
-    showToast(`⚡ Nuevo pedido crítico: ${newOrder.codigo_orden} (Asignado a WRO-482)`, 'warning');
-  };
-
-  const resetDemoData = () => {
-    localStorage.removeItem('wms_valenciana_despachos_v3');
-    localStorage.removeItem('wms_valenciana_despachos_v2');
-    localStorage.removeItem('wms_valenciana_inventario_v2');
-    localStorage.removeItem('wms_valenciana_facturas_v2');
-    localStorage.removeItem('wms_valenciana_trazabilidad_stock_v1');
-    setDespachos(INITIAL_DESPACHOS);
-    setDevoluciones(INITIAL_DEVOLUCIONES);
-    setInventario(INITIAL_INVENTARIO);
-    setFacturas(INITIAL_FACTURAS_EMITIDAS);
-    setTrazabilidadStock([]);
-    setSelectedCarrier('TODAS');
-    setSelectedZone('TODAS');
-    setOnlyUrgent(false);
-    setSearchQuery('');
-    showToast('Datos reiniciados al modelo de 2 estados de La Valenciana FERREHOGAR.', 'info');
+    showToast(`Devolución gestionada con éxito.`, 'info');
   };
 
   // ============================================================================
@@ -618,149 +431,57 @@ export function WmsProvider({ children }) {
     }
   };
 
-  const reportIncident = registrarIncidencia;
-  const resolveIncident = resolverIncidencia;
+  // Simular inyección de nuevo pedido crítico
+  const addSimulatedOrder = () => {
+    const randomNum = Math.floor(6320 + Math.random() * 80);
+    const invoiceNum = Math.floor(80310 + Math.random() * 80);
+    const newOrder = {
+      id: `dsp-new-${Date.now()}`,
+      codigo_orden: `PVSW-${randomNum}`,
+      codigo_factura_erp: `FE-${invoiceNum}`,
+      cliente_nombre: 'Ferretería y Depósito La 10 Cúcuta',
+      cliente_codigo: 'CL-9008899',
+      zona_entrega: 'Atalaya Occidental',
+      bodega_origen_id: activeBodega,
+      transportadora: 'Flota Propia',
+      ruta_id: 'rt-101',
+      vehiculo_placa: 'WRO-482',
+      estado_actual: 'PENDIENTE',
+      prioridad: 1, // Urgente
+      horario_corte: new Date(Date.now() + 19 * 60000).toISOString(),
+      bahia_asignada: 'Bodega A-01',
+      numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
+      peso_total_kg: 172.0,
+      peso_bascula_kg: 172.0,
+      valor_total: 4280000,
+      incidencia_activa: null,
+      sync_onedrive: null,
+      items: [
+        { id: `it-sim-1`, sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P06-E01-N1', peso_unitario_kg: 50.0, unidad: 'BUL' },
+        { id: `it-sim-2`, sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P08-E02-N1', peso_unitario_kg: 5.9, unidad: 'UND' },
+        { id: `it-sim-3`, sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 1, cantidad_auditada: 1, ubicacion_bodega: 'P04-E02-N1', peso_unitario_kg: 5.1, unidad: 'GAL' }
+      ],
+      history: [
+        { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: 'Pedido express ferretería programado para WRO-482' }
+      ]
+    };
 
-  // ============================================================================
-  // PILAR 1: TRANSACCIONALIDAD E IDEMPOTENCIA EN SELLO DE FACTURA
-  // Protocolo: Pre-validación completa → Deducción atómica → Auditoría inmutable
-  // ============================================================================
-  const confirmarSelloFactura = useCallback((facturaId, metadataOperador = 'Cajero 01') => {
-    // 1. Obtener la factura que se está sellando
-    const factura = facturas.find(
-      f => f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId
-    );
+    setDespachos((prev) => [newOrder, ...prev]);
+    playBeep(880, 'triangle');
+    showToast(`⚡ Nuevo pedido crítico: ${newOrder.codigo_orden} (Asignado a WRO-482)`, 'warning');
+  };
 
-    if (!factura) {
-      console.error(`[WMS-TRANSACCIÓN] Factura no encontrada: ${facturaId}`);
-      return { success: false, reason: 'NOT_FOUND', error: 'Factura no encontrada en el sistema.' };
-    }
-
-    // 2. Guardia de Idempotencia estricta (prevenir doble descuento accidental)
-    if (factura.sellada || factura.estado === 'ENTREGADA Y SELLADA' || factura.estado === 'Sello verificado') {
-      console.warn(`[WMS-IDEMPOTENCIA] Factura ya sellada previamente: ${factura.numeroFactura || factura.id}. Acción bloqueada.`);
-      return { success: false, reason: 'ALREADY_SEALED', error: 'Esta factura ya fue entregada, sellada y descontada previamente.' };
-    }
-
-    // 3. Pre-verificación: Mapear TODOS los ítems facturados contra el catálogo con normalizarCadena
-    const mapaConciliacion = (factura.items || []).map(item => {
-      const producto = inventario.find(prod => {
-        // Prioridad 1: Match por SKU (más confiable)
-        const skuMatch = item.sku && prod.sku &&
-          normalizarCadena(prod.sku) === normalizarCadena(item.sku);
-        if (skuMatch) return true;
-
-        // Prioridad 2: Match por nombre exacto normalizado
-        const nomItem = normalizarCadena(item.nombre || item.producto);
-        const nomProd = normalizarCadena(prod.nombre);
-        if (nomItem.length > 0 && nomItem === nomProd) return true;
-
-        // Prioridad 3: Match parcial (uno contiene al otro)
-        if (nomItem.length > 5 && nomProd.length > 5) {
-          return nomProd.includes(nomItem) || nomItem.includes(nomProd);
-        }
-
-        return false;
-      });
-
-      return { itemFacturado: item, productoEnCatalogo: producto };
-    });
-
-    // Validar ítems huérfanos: si algún ítem no se localizó, ABORTAR toda la transacción
-    const itemsHuerfanos = mapaConciliacion.filter(m => !m.productoEnCatalogo);
-    if (itemsHuerfanos.length > 0) {
-      const detalleError = itemsHuerfanos.map(h => h.itemFacturado.nombre || h.itemFacturado.sku).join(', ');
-      console.error(`[WMS-ROLLBACK] Transacción abortada. Ítems huérfanos: ${detalleError}`);
-      return {
-        success: false,
-        reason: 'ORPHAN_ITEMS',
-        error: `No se pudo reconciliar con el catálogo: [${detalleError}]. Transacción abortada para proteger el stock.`
-      };
-    }
-
-    // 4. Transacción Exitosa: Deducción Atómica en una sola actualización de estado
-    const timestampIso = new Date().toISOString();
-    const horaLegible = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const nuevosMovimientos = [];
-
-    setInventario(prevInventario => {
-      return prevInventario.map(prod => {
-        const conciliado = mapaConciliacion.find(m =>
-          m.productoEnCatalogo && m.productoEnCatalogo.sku === prod.sku
-        );
-
-        if (conciliado) {
-          const cantidadDescontar = Number(conciliado.itemFacturado.cantidad) || 0;
-          const stockAnterior = Number(prod.stockActual ?? prod.stockTotal ?? prod.stock ?? 0);
-          const stockNuevo = Math.max(0, stockAnterior - cantidadDescontar);
-
-          nuevosMovimientos.push({
-            logId: `log-sello-${Date.now()}-${prod.sku}`,
-            tipo: 'SALIDA_VENTA_MOSTRADOR',
-            facturaId: factura.numeroFactura || factura.numero || factura.id,
-            sku: prod.sku,
-            nombreProducto: prod.nombre,
-            cantidadDescontada: cantidadDescontar,
-            stockPrevio: stockAnterior,
-            stockPosterior: stockNuevo,
-            operador: metadataOperador,
-            timestamp: timestampIso
-          });
-
-          return {
-            ...prod,
-            stockTotal: stockNuevo,
-            stock: stockNuevo,
-            stock_total: stockNuevo,
-            stockActual: stockNuevo,
-            ultimaActualizacionStock: timestampIso,
-            ultimaSalida: timestampIso
-          };
-        }
-        return prod;
-      });
-    });
-
-    // 5. Registro inmutable en el log de auditoría
-    if (nuevosMovimientos.length > 0) {
-      setTrazabilidadStock(prev => [...nuevosMovimientos, ...prev]);
-    }
-
-    // 6. Actualizar el estado de la factura a sellada
-    setFacturas(prevFacturas =>
-      prevFacturas.map(f =>
-        (f.id === facturaId || f.numero === facturaId || f.numeroFactura === facturaId)
-          ? {
-              ...f,
-              estado: 'ENTREGADA Y SELLADA',
-              sellada: true,
-              fechaSello: timestampIso,
-              selladaAt: timestampIso,
-              fechaEntregaFinal: timestampIso,
-              operadorSello: metadataOperador,
-              selloConfirmadoPor: metadataOperador,
-              historial: [
-                ...(f.historial || []),
-                {
-                  estado: 'ENTREGADA Y SELLADA',
-                  timestamp: horaLegible,
-                  detalle: `Sello físico verificado por ${metadataOperador}. Mercancía entregada e inventario descontado con éxito.`
-                }
-              ]
-            }
-          : f
-      )
-    );
-
-    playBeep(1046);
-    const itemsResumen = nuevosMovimientos.map(m => `${m.cantidadDescontada} un. de SKU ${m.sku}`).join(', ');
-    showToast(
-      `Factura #${factura.numeroFactura || factura.numero || factura.id} sellada: Se descontaron ${itemsResumen || 'las unidades facturadas'}.`,
-      'success'
-    );
-
-    return { success: true, movimientos: nuevosMovimientos, itemsAfectados: nuevosMovimientos.length };
-  }, [facturas, inventario, normalizarCadena]);
+  const resetDemoData = () => {
+    localStorage.removeItem('wms_valenciana_despachos_v3');
+    localStorage.removeItem('wms_valenciana_despachos_v2');
+    setDespachos(INITIAL_DESPACHOS);
+    setDevoluciones(INITIAL_DEVOLUCIONES);
+    setSelectedCarrier('TODAS');
+    setSelectedZone('TODAS');
+    setOnlyUrgent(false);
+    setSearchQuery('');
+    showToast('Datos reiniciados al modelo de 2 estados de La Valenciana FERREHOGAR.', 'info');
+  };
 
   // Filtrado reactivo de despachos
   const filteredDespachos = despachos.filter((d) => {
@@ -796,8 +517,6 @@ export function WmsProvider({ children }) {
     conIncidencia: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
     incidencias: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
     pendientesSyncExcel: despachos.filter((d) => d.estado_actual === 'DESPACHADO' && d.sync_onedrive?.estado === 'PENDIENTE').length,
-    unidadesEnBodega: metricasInventario.totalUnidades,
-    unidades_en_bodega: metricasInventario.totalUnidades,
     alertasCorteProximo: despachos.filter((d) => {
       if (d.estado_actual === 'DESPACHADO') return false;
       const diffMins = (new Date(d.horario_corte).getTime() - currentTime) / 60000;
@@ -820,11 +539,6 @@ export function WmsProvider({ children }) {
         despachos,
         filteredDespachos,
         devoluciones,
-        inventario,
-        setInventario,
-        facturas,
-        setFacturas,
-        confirmarSelloFactura,
         bodegas: MOCK_BODEGAS,
         rutasVehiculos: MOCK_VEHICULOS_RUTAS,
         placasFlotaFija: PLACAS_FLOTA_FIJA,
@@ -848,35 +562,21 @@ export function WmsProvider({ children }) {
         setSelectedDespachoId,
         incidentModalTarget,
         setIncidentModalTarget,
-        packageLabelDespacho,
-        setPackageLabelDespacho,
-        scannerModalOpen,
-        setScannerModalOpen,
         returnsDrawerOpen,
         setReturnsDrawerOpen,
         notification,
         setNotification,
         currentTime,
         kpis,
-        trazabilidadStock,
-        setTrazabilidadStock,
         despacharOrden,
         asignarVehiculo,
         reintentarSyncOneDrive,
         exportarCopiaExcel,
         restaurarAPendiente,
-        avanzarEstadoDespacho,
-        advanceStage,
-        auditItem,
-        auditAllItems,
-        updateScaleWeight,
         registrarIncidencia,
-        reportIncident,
         resolverIncidencia,
-        resolveIncident,
+        procesarDevolucion,
         addSimulatedOrder,
-        metricasInventario,
-        normalizarCadena,
         resetDemoData,
         showToast,
         playBeep

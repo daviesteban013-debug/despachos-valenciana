@@ -10,40 +10,45 @@ import WmsDespachoApp from './WmsDespachoApp';
 
 export default function App() {
   return (
-    <WmsProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Selector inicial "¿Qué pantalla eres?" para pruebas locales */}
-          <Route path="/" element={<SelectorPage />} />
+    <BrowserRouter>
+      <Routes>
+        {/* Selector inicial "¿Qué pantalla eres?" para pruebas locales */}
+        <Route path="/" element={<SelectorPage />} />
 
-          {/* Módulo aislado: Venta Mostrador (Facturación ↔ Vitrina) */}
-          <Route
-            path="/facturacion"
-            element={
-              <VentaMostradorProvider>
-                <FacturacionPage />
-              </VentaMostradorProvider>
-            }
-          />
-          <Route
-            path="/vitrina"
-            element={
-              <VentaMostradorProvider>
-                <VitrinaPage />
-              </VentaMostradorProvider>
-            }
-          />
+        {/* Módulo aislado: Venta Mostrador (Facturación ↔ Vitrina) */}
+        <Route
+          path="/facturacion"
+          element={
+            <VentaMostradorProvider>
+              <FacturacionPage />
+            </VentaMostradorProvider>
+          }
+        />
+        <Route
+          path="/vitrina"
+          element={
+            <VentaMostradorProvider>
+              <VitrinaPage />
+            </VentaMostradorProvider>
+          }
+        />
 
-          {/* Módulo de Gestión de Inventario (Rol Admin) */}
-          <Route path="/inventario" element={<InventarioPage />} />
+        {/* Módulo de Gestión de Inventario (Rol Admin) */}
+        <Route path="/inventario" element={<InventarioPage />} />
 
-          {/* Módulo WMS de despacho a domicilio */}
-          <Route path="/wms" element={<WmsDespachoApp />} />
+        {/* Módulo WMS de despacho a domicilio (aislado con su propio WmsProvider) */}
+        <Route
+          path="/wms"
+          element={
+            <WmsProvider>
+              <WmsDespachoApp />
+            </WmsProvider>
+          }
+        />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </WmsProvider>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

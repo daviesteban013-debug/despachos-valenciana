@@ -19,9 +19,8 @@ export default function DispatchDetailDrawer() {
     setSelectedDespachoId, 
     auditItem, 
     auditAllItems, 
-    advanceStage, 
+    despacharOrden, 
     setIncidentModalTarget,
-    setPackageLabelDespacho,
     rutasVehiculos 
   } = useWms();
 
@@ -155,11 +154,11 @@ export default function DispatchDetailDrawer() {
                   </button>
 
                   <button
-                    onClick={() => setPackageLabelDespacho(selectedDespacho)}
-                    className="flex items-center gap-1 bg-[#E11D24] hover:bg-red-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-slate-200 shadow-sm active:scale-95"
                   >
                     <Printer className="h-4 w-4" />
-                    <span>Etiqueta</span>
+                    <span>Imprimir</span>
                   </button>
                 </div>
               </div>
@@ -351,7 +350,7 @@ export default function DispatchDetailDrawer() {
           {selectedDespacho.estado_actual !== 'DESPACHADO' ? (
             <button
               onClick={() => {
-                advanceStage(selectedDespacho.id, selectedDespacho.vehiculo_placa || 'WRO-482');
+                despacharOrden(selectedDespacho.id, selectedDespacho.vehiculo_placa || 'WRO-482');
                 setSelectedDespachoId(null);
               }}
               className="flex-1 min-h-[44px] bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"

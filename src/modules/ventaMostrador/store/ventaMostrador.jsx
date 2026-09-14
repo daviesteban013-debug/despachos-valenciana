@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ejecutarDescuentoTransaccional } from '../../inventario/services/inventarioApi.js';
 import { INITIAL_INVENTARIO } from '../../../data/mockData.js';
-import { useWms } from '../../../context/WmsContext.jsx';
 
 const STORAGE_KEY = 'valenciana_mostrador_facturas_v1';
 const BROADCAST_CHANNEL_NAME = 'valenciana_mostrador_channel';
@@ -247,13 +246,6 @@ const INITIAL_FACTURAS = [
 const VentaMostradorContext = createContext(null);
 
 export function VentaMostradorProvider({ children }) {
-  let wms = null;
-  try {
-    wms = useWms();
-  } catch (e) {
-    // Fallback si se ejecuta fuera de WmsProvider
-  }
-
   const [facturas, setFacturas] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -272,25 +264,20 @@ export function VentaMostradorProvider({ children }) {
     return INITIAL_FACTURAS;
   });
 
-  // Estado del catálogo global e inventario de productos (respaldado por WMS si existe)
-  const [localInventario, setLocalInventario] = useState(() => {
+  // Estado del catálogo global e inventario de productos (independiente de WMS)
+  const [inventario, setInventario] = useState(() => {
     try {
-      const saved = localStorage.getItem('wms_valenciana_inventario_v2');
+      const saved = localStorage.getItem('valenciana_mostrador_inventario_v1') || localStorage.getItem('wms_valenciana_inventario_v2');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return INITIAL_INVENTARIO;
   });
 
-  const inventario = wms?.inventario || localInventario;
-  const setInventario = wms?.setInventario || setLocalInventario;
-
   useEffect(() => {
-    if (!wms) {
-      try {
-        localStorage.setItem('wms_valenciana_inventario_v2', JSON.stringify(localInventario));
-      } catch (e) {}
-    }
-  }, [localInventario, wms]);
+    try {
+      localStorage.setItem('valenciana_mostrador_inventario_v1', JSON.stringify(inventario));
+    } catch (e) {}
+  }, [inventario]);
 
   const [sedeActiva, setSedeActiva] = useState('BOG-VAL-01');
   const [ultimaAccion, setUltimaAccion] = useState(null);
@@ -507,49 +494,33 @@ export function VentaMostradorProvider({ children }) {
       return { success: false, reason: 'ALREADY_SEALED', factura };
     }
 
-    // 3. Delegar descuento transaccional al WmsContext (SSOT única fuente de verdad)
-    //    WmsContext.confirmarSelloFactura se encarga de:
-    //    - Normalización robusta (NFD, tildes, mayúsculas)
-    //    - Pre-validación de ítems huérfanos (rollback si no coinciden)
-    //    - Deducción atómica del inventario
-    //    - Registro de trazabilidad inmutable
-    //    - Actualización del estado de la factura en su propio array
-    let resultadoWms = { success: true };
-    if (wms?.confirmarSelloFactura) {
-      resultadoWms = wms.confirmarSelloFactura(facturaId, metadataOperador);
-      // Si el WMS abortó la transacción (ítems huérfanos, ya sellada, etc.), NO continuar
-      if (!resultadoWms?.success) {
-        return resultadoWms;
-      }
-    } else {
-      // Fallback local SOLO si NO hay WmsContext (ejecución aislada sin WmsProvider)
-      setInventario(prevInventario => {
-        return prevInventario.map(producto => {
-          const nomProd = (producto.nombre || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          const itemFacturado = factura.items?.find(item => {
-            const skuItem = item.sku?.toUpperCase();
-            const skuProd = producto.sku?.toUpperCase();
-            if (skuItem && skuProd && skuItem === skuProd) return true;
+    // 3. Deducción atómica de inventario en mostrador (idempotente y trazable)
+    setInventario(prevInventario => {
+      return prevInventario.map(producto => {
+        const nomProd = (producto.nombre || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const itemFacturado = factura.items?.find(item => {
+          const skuItem = item.sku?.toUpperCase();
+          const skuProd = producto.sku?.toUpperCase();
+          if (skuItem && skuProd && skuItem === skuProd) return true;
 
-            const nomItem = (item.nombre || item.producto || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            return nomItem.length > 0 && nomItem === nomProd;
-          });
-
-          if (itemFacturado) {
-            const stockActual = producto.stockTotal ?? producto.stock ?? producto.stock_total ?? 0;
-            const nuevoStock = Math.max(0, stockActual - (Number(itemFacturado.cantidad) || 0));
-            return {
-              ...producto,
-              stockTotal: nuevoStock,
-              stock: nuevoStock,
-              stock_total: nuevoStock,
-              ultimaActualizacionStock: new Date().toISOString()
-            };
-          }
-          return producto;
+          const nomItem = (item.nombre || item.producto || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          return nomItem.length > 0 && nomItem === nomProd;
         });
+
+        if (itemFacturado) {
+          const stockActual = producto.stockTotal ?? producto.stock ?? producto.stock_total ?? 0;
+          const nuevoStock = Math.max(0, stockActual - (Number(itemFacturado.cantidad) || 0));
+          return {
+            ...producto,
+            stockTotal: nuevoStock,
+            stock: nuevoStock,
+            stock_total: nuevoStock,
+            ultimaActualizacionStock: new Date().toISOString()
+          };
+        }
+        return producto;
       });
-    }
+    });
 
     // 4. Actualizar el estado de la factura a sellada en este store local (sincronización de UI)
     const timestamp = new Date().toISOString();

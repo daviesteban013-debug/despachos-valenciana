@@ -4,14 +4,10 @@ import Header from './components/Header';
 import ControlBar from './components/ControlBar';
 import MetricsCarousel from './components/MetricsCarousel';
 import KanbanBoard from './components/KanbanBoard';
-import PackingStationView from './components/PackingStationView';
-import BayFleetView from './components/BayFleetView';
 import IncidentsView from './components/IncidentsView';
 import BottomDock from './components/BottomDock';
 import DispatchDetailDrawer from './components/DispatchDetailDrawer';
 import IncidentModal from './components/IncidentModal';
-import PackageLabelModal from './components/PackageLabelModal';
-import BarcodeScannerModal from './components/BarcodeScannerModal';
 import ReturnsDrawer from './components/ReturnsDrawer';
 import ToastNotification from './components/ToastNotification';
 
@@ -32,19 +28,15 @@ function AppContent() {
       {/* 4. Contenido Principal con pb-24 para despejar el BottomDock */}
       <main className="flex-1 w-full max-w-7xl mx-auto pb-24">
         {activeDockTab === 'waves' && <KanbanBoard />}
-        {activeDockTab === 'packing' && <PackingStationView />}
-        {activeDockTab === 'bays' && <BayFleetView />}
         {activeDockTab === 'incidents' && <IncidentsView />}
       </main>
 
-      {/* 5. Dock Inferior Táctil con Botón Destacado de Escáner */}
+      {/* 5. Dock Inferior Táctil */}
       <BottomDock />
 
       {/* 6. Modales y Bottom Sheets */}
       <DispatchDetailDrawer />
       <IncidentModal />
-      <PackageLabelModal />
-      <BarcodeScannerModal />
       <ReturnsDrawer />
       <ToastNotification />
     </div>
