@@ -581,7 +581,7 @@ export function VentaMostradorProvider({ children }) {
     } catch (e) {}
 
     return { success: true };
-  }, [facturas, persistFacturas, wms, setInventario]);
+  }, [facturas, persistFacturas, setInventario]);
 
   // Alias para compatibilidad operativa
   const confirmarSelloYEntregar = useCallback(async (facturaId, cajero = 'Facturación') => {
