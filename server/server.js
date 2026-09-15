@@ -17,6 +17,7 @@ import {
 } from './controllers/facturasController.js';
 import {
   listarDespachos,
+  crearDespacho,
   cambiarEstadoDespacho,
   reintentarSincronizacionOneDrive,
   gestionarIncidenciaDespacho,

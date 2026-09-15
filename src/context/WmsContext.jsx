@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { 
-  INITIAL_DESPACHOS, 
-  INITIAL_DEVOLUCIONES, 
-  MOCK_VEHICULOS_RUTAS, 
+import {
+  INITIAL_DESPACHOS,
+  INITIAL_DEVOLUCIONES,
+  MOCK_VEHICULOS_RUTAS,
   MOCK_BODEGAS
 } from '../data/mockData';
 import { FLOTA_VEHICULOS } from '../data/flota';
-
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const WmsContext = createContext(null);
 
 export function WmsProvider({ children }) {
@@ -475,7 +475,7 @@ export function WmsProvider({ children }) {
       const obs = (payload.observaciones || '').trim();
       const fechaDespacho = payload.fecha_despacho || new Date().toISOString().slice(0, 10);
       const randomNum = Math.floor(6400 + Math.random() * 600);
-      
+
       const items = [
         {
           id: `it-${Date.now()}`,
@@ -542,7 +542,7 @@ export function WmsProvider({ children }) {
       playBeep(880, 'triangle');
       showToast(`✅ Despacho ${ordenCompleta.codigo_factura_erp || ordenCompleta.codigo_orden} creado con éxito.`, 'success');
       return ordenCompleta;
-      
+
     } catch (error) {
       console.error('Error al crear despacho:', error);
       showToast(`Fallo crítico creando despacho: ${error.message}`, 'error');
