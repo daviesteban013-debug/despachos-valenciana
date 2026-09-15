@@ -11,8 +11,6 @@ export default function PackageLabelModal({ despacho, onClose }) {
   const hora = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
   const jornada = now.getHours() < 12 ? 'AM' : 'PM';
 
-  const totalBultos = despacho.items?.reduce((acc, it) => acc + (it.cantidad_solicitada || 0), 0) || despacho.bultos_total || 0;
-
   const vehiculoAsignado = despacho.vehiculo_placa || 'Sin asignar';
 
   const qrData = encodeURIComponent(despacho.id || despacho.codigo_orden);
@@ -158,13 +156,7 @@ export default function PackageLabelModal({ despacho, onClose }) {
               </div>
             </div>
 
-            {/* Total Bultos */}
-            <div style={{ marginTop: '4px' }}>
-              <span style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase' }}>Total Bultos:</span>
-              <div style={{ fontWeight: 'bold', fontSize: '20px', textAlign: 'center', margin: '4px 0' }}>
-                {totalBultos} bultos
-              </div>
-            </div>
+
 
             <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }} />
 

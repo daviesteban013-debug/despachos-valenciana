@@ -31,7 +31,6 @@ export default function DispatchCard({ despacho }) {
   const [reintentando, setReintentando] = useState(false);
   const [showTirilla, setShowTirilla] = useState(false);
 
-  const totalPiezas = despacho.items?.reduce((acc, it) => acc + (it.cantidad_solicitada || it.cantidad || 0), 0) || despacho.bultos_total || 0;
   const isUrgent = despacho.prioridad === 1;
   const tieneIncidencia = Boolean(despacho.incidencia_activa);
 
@@ -110,14 +109,10 @@ export default function DispatchCard({ despacho }) {
           </div>
         </div>
 
-        {/* FILA 2: Cliente y Bultos */}
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold text-slate-900 truncate flex-1 min-w-0" title={despacho.cliente_nombre}>
             {despacho.cliente_nombre}
           </h3>
-          <span className="text-xs font-semibold font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded-lg shrink-0">
-            {totalPiezas} bultos
-          </span>
         </div>
 
         {/* FILA 3: Selector de Vehículo de Flota Fija (4 placas) */}

@@ -33,7 +33,6 @@ export default function DispatchDetailDrawer() {
   const factura = selectedDespacho.numero_factura || selectedDespacho.codigo_factura_erp || selectedDespacho.codigo_orden;
   const direccion = selectedDespacho.direccion_entrega || selectedDespacho.zona_entrega || 'Sin dirección registrada';
   const cuadrilla = selectedDespacho.vehiculo_placa || FLOTA_VEHICULOS[0];
-  const totalBultos = selectedDespacho.total_bultos || selectedDespacho.bultos_total || selectedDespacho.items?.reduce((acc, it) => acc + (it.cantidad_solicitada || it.cantidad || 0), 0) || 1;
   const rutaAsignada = rutasVehiculos.find((r) => r.id === selectedDespacho.ruta_id) || rutasVehiculos[0];
 
   return (
@@ -115,7 +114,7 @@ export default function DispatchDetailDrawer() {
               }`}
             >
               <Package className="h-4 w-4" />
-              <span>Materiales ({totalBultos})</span>
+              <span>Materiales</span>
             </button>
 
             <button
@@ -151,13 +150,7 @@ export default function DispatchDetailDrawer() {
               <div className="space-y-3">
                 
                 {/* Resumen de Bultos + Botón Imprimir Tirilla */}
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-2">
-                  <div>
-                    <span className="text-xs text-slate-500 font-bold block">Total Bultos / Piezas:</span>
-                    <div className="font-mono text-sm font-bold text-slate-800">
-                      {totalBultos} bulto{totalBultos !== 1 ? 's' : ''} ({selectedDespacho.items?.length || 1} {selectedDespacho.items?.length ? 'líneas' : 'entrega'})
-                    </div>
-                  </div>
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-end gap-2">
 
                   <button
                     onClick={() => setShowTirilla(true)}
@@ -210,7 +203,7 @@ export default function DispatchDetailDrawer() {
 
                           <div className="text-right font-mono shrink-0">
                             <span className="font-bold text-base text-slate-800">
-                              {item.cantidad_solicitada || item.cantidad || totalBultos}
+                              {item.cantidad_solicitada || item.cantidad || 1}
                             </span>
                             <span className="text-xs text-slate-400 ml-1">{item.unidad || 'UND'}</span>
                           </div>
@@ -219,7 +212,7 @@ export default function DispatchDetailDrawer() {
                     ) : (
                       <div className="p-4 text-center text-sm text-slate-500 space-y-1">
                         <p className="font-semibold text-slate-700">Pedido registrado por remisión general</p>
-                        <p className="text-xs text-slate-400">Total {totalBultos} bulto{totalBultos !== 1 ? 's' : ''} preparado para despacho directo</p>
+                        <p className="text-xs text-slate-400">Preparado para despacho directo</p>
                       </div>
                     )}
                   </div>

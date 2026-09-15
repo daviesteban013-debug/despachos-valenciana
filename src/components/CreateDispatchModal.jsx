@@ -35,7 +35,6 @@ const INITIAL_FORM = {
   jornada: new Date().getHours() < 12 ? 'AM' : 'PM',
   vehiculo_placa: FLOTA_VEHICULOS[0],
   bodega_id: '01',
-  total_bultos: 1,
   observaciones: ''
 };
 
@@ -84,7 +83,6 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
     if (!form.cliente_nombre.trim()) newErrors.cliente_nombre = 'Nombre del cliente requerido';
     if (!form.direccion_entrega.trim()) newErrors.direccion_entrega = 'Dirección de entrega requerida';
     if (!form.valor_factura || Number(form.valor_factura) <= 0) newErrors.valor_factura = 'Ingrese un valor válido';
-    if (!form.total_bultos || Number(form.total_bultos) < 1) newErrors.total_bultos = 'Mínimo 1 bulto';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -100,7 +98,6 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
       jornada: form.jornada,
       vehiculo_placa: form.vehiculo_placa,
       bodega_id: form.bodega_id,
-      total_bultos: Number(form.total_bultos) || 1,
       observaciones: form.observaciones?.trim() || ''
     };
 
@@ -113,7 +110,6 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
           ...prev,
           numero_factura: '',
           valor_factura: '',
-          total_bultos: 1,
           observaciones: ''
         }));
         setErrors({});
@@ -319,46 +315,23 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
             </select>
           </div>
 
-          {/* 7 y 8. Bodega de Salida + Total Bultos */}
-          <div className="grid grid-cols-5 gap-2">
-            {/* 7. Bodega de Salida (bodega_id): 5 sedes */}
-            <div className="col-span-3">
-              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
-                <Warehouse className="h-3.5 w-3.5 text-slate-400" />
-                Bodega de Salida
-              </label>
-              <select
-                value={form.bodega_id}
-                onChange={(e) => handleChange('bodega_id', e.target.value)}
-                className="w-full h-11 px-3 rounded-xl border border-slate-300 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all"
-              >
-                {BODEGAS_SALIDA.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 8. Total Bultos (total_bultos): numérico entero >= 1 */}
-            <div className="col-span-2">
-              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
-                <Package className="h-3.5 w-3.5 text-slate-400" />
-                Total Bultos *
-              </label>
-              <input
-                type="number"
-                inputMode="numeric"
-                min="1"
-                step="1"
-                value={form.total_bultos}
-                onChange={(e) => handleChange('total_bultos', Math.max(1, parseInt(e.target.value, 10) || 1))}
-                className={`w-full h-11 px-3 rounded-xl border text-sm font-bold font-mono text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all ${
-                  errors.total_bultos ? 'border-red-400 ring-1 ring-red-400' : 'border-slate-300'
-                }`}
-              />
-              {errors.total_bultos && <p className="text-xs text-red-600 mt-0.5 font-semibold">{errors.total_bultos}</p>}
-            </div>
+          {/* 7. Bodega de Salida (bodega_id): 5 sedes */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+              <Warehouse className="h-3.5 w-3.5 text-slate-400" />
+              Bodega de Salida
+            </label>
+            <select
+              value={form.bodega_id}
+              onChange={(e) => handleChange('bodega_id', e.target.value)}
+              className="w-full h-11 px-3 rounded-xl border border-slate-300 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all"
+            >
+              {BODEGAS_SALIDA.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.nombre}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* 9. Observaciones (observaciones) */}

@@ -39,7 +39,7 @@ export default function IncidentsView() {
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Despachos bloqueados por faltantes, peso en báscula o rotulado
+              Despachos bloqueados por faltantes o rotulado
             </p>
           </div>
         </div>
@@ -56,7 +56,7 @@ export default function IncidentsView() {
 
       {/* Filtros de Tipo */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-        {['ALL', 'DIVERGENCIA_PESO', 'FALTANTE', 'AVERIA', 'ERROR_GUIA'].map((tipo) => (
+        {['ALL', 'FALTANTE', 'AVERIA', 'ERROR_GUIA'].map((tipo) => (
           <button
             key={tipo}
             onClick={() => setActiveFilter(tipo)}

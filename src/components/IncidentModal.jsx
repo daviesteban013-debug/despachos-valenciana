@@ -5,12 +5,10 @@ import {
   AlertTriangle, 
   CheckCircle2, 
   PackageX, 
-  Scale, 
   FileWarning 
 } from 'lucide-react';
 
 const INCIDENT_TYPES = [
-  { id: 'DIVERGENCIA_PESO', label: 'Divergencia de Peso en Báscula (> ±3%)', icon: Scale, desc: 'Diferencia detectada entre báscula y peso teórico' },
   { id: 'FALTANTE', label: 'Faltante de Inventario / Stock en Rack', icon: PackageX, desc: 'Unidades físicas inferiores a las facturadas' },
   { id: 'AVERIA', label: 'Avería / Bulto Roto o Dañado', icon: AlertTriangle, desc: 'Empaque roto o producto con daño' },
   { id: 'ERROR_GUIA', label: 'Error en Guía / Rótulo', icon: FileWarning, desc: 'Rótulo ilegible o dirección errónea' }
@@ -23,7 +21,7 @@ export default function IncidentModal() {
 
   const isResolving = Boolean(incidentModalTarget.incidencia_activa);
 
-  const [selectedType, setSelectedType] = useState('DIVERGENCIA_PESO');
+  const [selectedType, setSelectedType] = useState('FALTANTE');
   const [description, setDescription] = useState(
     isResolving ? 'Se verificó físicamente el producto y se regularizó la novedad con el supervisor de bodega.' : ''
   );

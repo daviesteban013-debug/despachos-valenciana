@@ -468,7 +468,6 @@ export function WmsProvider({ children }) {
       const cliente = (payload.cliente_nombre || '').trim();
       const direccion = (payload.direccion_entrega || '').trim();
       const valor = Number(payload.valor_factura) || 0;
-      const bultos = Number(payload.total_bultos || payload.bultos) || 1;
       const vehiculo = payload.vehiculo_placa || FLOTA_VEHICULOS[0];
       const jornada = payload.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM');
       const bodega = payload.bodega_id || '01';
@@ -480,11 +479,11 @@ export function WmsProvider({ children }) {
         {
           id: `it-${Date.now()}`,
           sku: 'SKU-PEDIDO',
-          descripcion_producto: `Despacho ${factura} — ${bultos} bulto${bultos > 1 ? 's' : ''}`,
-          cantidad_solicitada: bultos,
-          cantidad_auditada: bultos,
+          descripcion_producto: `Despacho ${factura}`,
+          cantidad_solicitada: 1,
+          cantidad_auditada: 1,
           ubicacion_bodega: 'DESPACHO',
-          unidad: 'BUL'
+          unidad: 'UND'
         }
       ];
 
@@ -500,7 +499,6 @@ export function WmsProvider({ children }) {
           vehiculo_placa: vehiculo,
           bodega_id: bodega,
           valor_total: valor,
-          bultos_total: bultos,
           observaciones: obs,
           fecha_despacho: fechaDespacho,
           items: items

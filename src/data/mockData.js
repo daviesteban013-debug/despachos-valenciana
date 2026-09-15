@@ -6,11 +6,11 @@
 import { FLOTA_VEHICULOS } from './flota';
 
 export const MOCK_BODEGAS = [
-  { id: '00', codigo: '00', nombre: '00 - Patio Materiales Pesados (Atalaya)', direccion: 'Atalaya, Cúcuta', capacidad_bahias: 6 },
-  { id: '01', codigo: '01', nombre: '01 - Principal (Cúcuta Centro)', direccion: 'Av. 5 #10-45 Centro', capacidad_bahias: 8 },
-  { id: '02', codigo: '02', nombre: '02 - Almacén Central (Zona Franca)', direccion: 'Km 8 Vía Aeropuerto', capacidad_bahias: 12 },
+  { id: '00', codigo: '00', nombre: '00 - Patio Materiales Pesados (Atalaya)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 6 },
+  { id: '01', codigo: '01', nombre: '01 - Principal (Cúcuta Centro)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 8 },
+  { id: '02', codigo: '02', nombre: '02 - Almacén Central (Zona Franca)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 12 },
   { id: '03', codigo: '03', nombre: '03 - Bodega Los Patios', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 6 },
-  { id: '04', codigo: '04', nombre: '04 - Bodega El Zulia', direccion: 'El Zulia, N. de Santander', capacidad_bahias: 4 }
+  { id: '04', codigo: '04', nombre: '04 - Bodega El Zulia', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 4 }
 ];
 
 export const MOCK_VEHICULOS_RUTAS = [
@@ -379,9 +379,9 @@ export const INITIAL_DESPACHOS = [
     valor_total: 3100000,
     incidencia_activa: {
       id: 'inc-101',
-      tipo: 'DIVERGENCIA_PESO',
-      descripcion: 'Báscula marca 24.2 kg pero peso teórico es 18.0 kg (+34% exceso). Posible producto no facturado.',
-      reportado_por: 'Alberto Rojas (Báscula)',
+      tipo: 'FALTANTE',
+      descripcion: 'Falta 1 unidad de Cerradura Sobreponer Yale en el pallet recibido. Stock físico en estante agotado.',
+      reportado_por: 'Alberto Rojas',
       fecha_reporte: subMinutes(10),
       resuelta: false
     },
@@ -390,7 +390,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-21', sku: 'SKU-CER-YAL', descripcion_producto: 'Cerradura Sobreponer Yale Clásica Derecha 110', cantidad_solicitada: 15, cantidad_auditada: 15, ubicacion_bodega: 'P02-E04-N3', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-113', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 180, timestamp: subMinutes(10), nota: 'Novedad registrada: Divergencia de peso > ±3% detectada' }
+      { id: 'h-113', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 180, timestamp: subMinutes(10), nota: 'Novedad registrada: Faltante reportado' }
     ]
   },
   {
