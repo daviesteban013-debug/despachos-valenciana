@@ -14,23 +14,20 @@ const keyFilePath = path.resolve(__dirname, '../config/google-service-account.js
 
 const auth = new google.auth.GoogleAuth({
   keyFile: keyFilePath,
-  scopes: ['https://www.googleapis.com/auth/drive.file']
+  scopes: ['https://www.googleapis.com/auth/drive']
 });
 
 const drive = google.drive({ version: 'v3', auth });
 
 /**
- * Convierte un Buffer binario en un Readable Stream para la API de Google Drive
+ * Convierte un Buffer binario en un Readable Stream nativo para Google Drive API
  */
 function bufferToStream(buffer) {
-  const stream = new Readable();
-  stream.push(buffer);
-  stream.push(null);
-  return stream;
+  return Readable.from(buffer);
 }
 
 /**
- * Busca si el archivo Excel ya existe en la carpeta configurada
+ * Busca de forma flexible el archivo Excel dentro de la carpeta
  */
 export async function buscarArchivoEnDrive(nombreArchivo = process.env.NOMBRE_ARCHIVO_EXCEL) {
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
@@ -38,34 +35,55 @@ export async function buscarArchivoEnDrive(nombreArchivo = process.env.NOMBRE_AR
     throw new Error('GOOGLE_DRIVE_FOLDER_ID no está configurado en .env');
   }
 
+  const nombreLimpio = (nombreArchivo || '').replace(/['"]+/g, '').trim().toLowerCase();
+
   const res = await drive.files.list({
-    q: `'${folderId}' in parents and name = '${nombreArchivo}' and trashed = false`,
-    fields: 'files(id, name, webViewLink)',
-    spaces: 'drive'
+    q: `'${folderId}' in parents and trashed = false`,
+    fields: 'files(id, name, webViewLink, mimeType)',
+    spaces: 'drive',
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true
   });
 
-  return res.data.files && res.data.files.length > 0 ? res.data.files[0] : null;
+  const archivos = res.data.files || [];
+  console.log(`[DRIVE-DEBUG] Archivos visibles en la carpeta (${archivos.length}):`, archivos.map(a => a.name));
+
+  if (archivos.length === 0) return null;
+
+  // 1. Buscar coincidencia por nombre
+  let match = archivos.find(a => a.name.replace(/['"]+/g, '').trim().toLowerCase() === nombreLimpio);
+
+  // 2. Si no coincide exacto, buscar cualquier archivo Excel o con palabra clave
+  if (!match) {
+    match = archivos.find(a =>
+      a.name.toLowerCase().includes('control') ||
+      a.name.toLowerCase().includes('plantilla') ||
+      a.name.endsWith('.xlsx')
+    );
+  }
+
+  return match || archivos[0];
 }
 
 /**
- * Descarga el buffer actual del archivo Excel desde Google Drive
+ * Descarga el buffer del archivo Excel actual desde Google Drive
  */
 export async function descargarExcelDesdeDrive(fileId) {
   const res = await drive.files.get(
-    { fileId, alt: 'media' },
+    { fileId, alt: 'media', supportsAllDrives: true },
     { responseType: 'arraybuffer' }
   );
   return Buffer.from(res.data);
 }
 
 /**
- * Sube o actualiza el archivo Excel en Google Drive (Operación Upsert Atómica)
+ * Sube o actualiza el archivo Excel en Google Drive (Upsert)
  */
 export async function sincronizarConGoogleDrive(bufferExcel, nombreArchivo = process.env.NOMBRE_ARCHIVO_EXCEL) {
   try {
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
     if (!folderId) {
-      throw new Error('GOOGLE_DRIVE_FOLDER_ID no está definido en variables de entorno');
+      throw new Error('GOOGLE_DRIVE_FOLDER_ID no está definido');
     }
 
     const media = {
@@ -76,14 +94,14 @@ export async function sincronizarConGoogleDrive(bufferExcel, nombreArchivo = pro
     const archivoExistente = await buscarArchivoEnDrive(nombreArchivo);
 
     if (archivoExistente) {
-      // Si ya existe, actualizar el contenido binario preservando el ID
       const updateRes = await drive.files.update({
         fileId: archivoExistente.id,
         media: media,
-        fields: 'id, name, webViewLink, modifiedTime'
+        fields: 'id, name, webViewLink, modifiedTime',
+        supportsAllDrives: true
       });
 
-      console.log(`[DRIVE-SYNC] Archivo actualizado exitosamente: ${archivoExistente.id}`);
+      console.log(`[DRIVE-SYNC] Archivo actualizado con éxito: ${archivoExistente.name} (${archivoExistente.id})`);
       return {
         success: true,
         fileId: updateRes.data.id,
@@ -91,17 +109,17 @@ export async function sincronizarConGoogleDrive(bufferExcel, nombreArchivo = pro
         accion: 'ACTUALIZADO'
       };
     } else {
-      // Si no existe, crearlo en la carpeta designada
       const createRes = await drive.files.create({
         requestBody: {
-          name: nombreArchivo,
+          name: (nombreArchivo || 'CONTROL ENTREGAS AGOSTO 2026.xlsx').replace(/['"]+/g, ''),
           parents: [folderId]
         },
         media: media,
-        fields: 'id, name, webViewLink, modifiedTime'
+        fields: 'id, name, webViewLink, modifiedTime',
+        supportsAllDrives: true
       });
 
-      console.log(`[DRIVE-SYNC] Archivo creado exitosamente en Google Drive: ${createRes.data.id}`);
+      console.log(`[DRIVE-SYNC] Archivo creado con éxito en Drive: ${createRes.data.id}`);
       return {
         success: true,
         fileId: createRes.data.id,

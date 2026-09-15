@@ -16,7 +16,7 @@ export default function BottomDock() {
   } = useWms();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl py-1 px-4">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl py-1 px-4">
       <div className="max-w-md mx-auto flex items-center justify-around gap-2">
 
         {/* Tab 1: Tablero de Despachos (2 Estados: Pendiente / Despachado) */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWms } from '../context/WmsContext';
 import { 
   AlertTriangle, 
@@ -27,6 +27,11 @@ export default function DispatchCard({ despacho }) {
   const [placaSeleccionada, setPlacaSeleccionada] = useState(
     despacho.vehiculo_placa || FLOTA_VEHICULOS[0]
   );
+
+  useEffect(() => {
+    setPlacaSeleccionada(despacho.vehiculo_placa || FLOTA_VEHICULOS[0]);
+  }, [despacho.vehiculo_placa]);
+
   const [errorSinPlaca, setErrorSinPlaca] = useState(false);
   const [reintentando, setReintentando] = useState(false);
   const [showTirilla, setShowTirilla] = useState(false);
@@ -75,7 +80,7 @@ export default function DispatchCard({ despacho }) {
     <>
       <div
         onClick={() => setSelectedDespachoId(despacho.id)}
-        className={`w-full bg-white rounded-2xl border p-4 space-y-3 cursor-pointer transition-all shadow-sm active:scale-[0.99] select-none ${
+        className={`w-full bg-white rounded-xl border p-5 space-y-3 cursor-pointer transition-all active:scale-[0.99] select-none ${
           tieneIncidencia
             ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300'
             : isUrgent && despacho.estado_actual !== 'DESPACHADO'
@@ -96,7 +101,7 @@ export default function DispatchCard({ despacho }) {
 
           <div className="flex items-center gap-1.5 shrink-0">
             {isUrgent && (
-              <span className="px-2 py-0.5 rounded text-xs font-bold bg-[#E11D24] text-white shrink-0">
+              <span className="px-2 py-0.5 rounded-lg text-xs font-bold bg-[#E11D24] text-white shrink-0">
                 URGENTE
               </span>
             )}
@@ -119,10 +124,10 @@ export default function DispatchCard({ despacho }) {
         <div className="pt-1">
           {despacho.estado_actual === 'PENDIENTE' ? (
             <div 
-              className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200"
+              className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 w-[400px] max-w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <Truck className="h-4 w-4 text-[#E11D24] shrink-0" />
+              <Truck className="h-4 w-4 text-slate-700 shrink-0" />
               <div className="flex-1 min-w-0">
                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block leading-tight">
                   Vehículo Asignado (Hoja Excel):
@@ -130,8 +135,8 @@ export default function DispatchCard({ despacho }) {
                 <select
                   value={placaSeleccionada}
                   onChange={handleCambiarVehiculo}
-                  className={`w-full mt-0.5 bg-white border text-xs font-bold rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#E11D24] ${
-                    errorSinPlaca ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-300 text-slate-800'
+                  className={`w-full mt-0.5 bg-white border text-xs font-bold font-mono rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-900 ${
+                    errorSinPlaca ? 'border-amber-500 ring-1 ring-amber-500' : 'border-slate-300 text-slate-800'
                   }`}
                 >
                   {FLOTA_VEHICULOS.map(v => (
@@ -175,7 +180,7 @@ export default function DispatchCard({ despacho }) {
                   e.stopPropagation();
                   setIncidentModalTarget(despacho);
                 }}
-                className="text-[11px] font-bold text-[#E11D24] hover:underline"
+                className="text-[11px] font-bold text-amber-800 hover:underline"
               >
                 Resolver
               </button>
@@ -193,21 +198,21 @@ export default function DispatchCard({ despacho }) {
               <div className="flex items-center justify-between px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900">
                 <div className="flex items-center gap-1.5 font-semibold">
                   <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                  <span>Google Drive: Sincronizado en hoja [{despacho.vehiculo_placa}]</span>
+                  <span>Google Drive: Sincronizado en hoja [<span className="font-mono">{despacho.vehiculo_placa}</span>]</span>
                 </div>
                 <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
               </div>
             ) : despacho.sync_cloud?.estado === 'ERROR_SYNC' ? (
-              <div className="flex items-center justify-between px-2.5 py-1.5 bg-red-50 border border-red-300 rounded-xl text-xs text-red-900">
+              <div className="flex items-center justify-between px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900">
                 <div className="flex items-center gap-1.5 font-semibold truncate flex-1 mr-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                   <span className="truncate">Pendiente de sincronizar con Excel</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleReintentar}
                   disabled={reintentando}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] shrink-0 active:scale-95 transition-all shadow-sm"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-700 hover:bg-amber-800 text-white font-bold text-[11px] shrink-0 active:scale-95 transition-all"
                 >
                   <RefreshCw className={`h-3 w-3 ${reintentando ? 'animate-spin' : ''}`} />
                   <span>{reintentando ? 'Sync...' : 'Reintentar'}</span>
@@ -233,26 +238,26 @@ export default function DispatchCard({ despacho }) {
               e.stopPropagation();
               setIncidentModalTarget(despacho);
             }}
-            className={`h-10 px-3 flex items-center justify-center gap-1 rounded-xl text-xs font-bold border transition-all active:scale-95 shrink-0 ${
+            className={`h-10 px-3 flex items-center justify-center gap-1.5 rounded-lg text-xs font-bold border transition-all active:scale-95 shrink-0 ${
               tieneIncidencia
                 ? 'bg-amber-100 border-amber-300 text-amber-800'
-                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600'
+                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-800'
             }`}
             title={tieneIncidencia ? 'Ver novedad activa' : 'Reportar novedad'}
           >
             <AlertTriangle className="w-4 h-4" />
-            <span className="hidden xs:inline">{tieneIncidencia ? 'Novedad' : 'Reportar'}</span>
+            <span className="hidden sm:inline">{tieneIncidencia ? 'Novedad' : 'Reportar'}</span>
           </button>
 
           {/* Botón Imprimir Tirilla */}
           <button
             type="button"
             onClick={handlePrintTirilla}
-            className="h-10 px-3 flex items-center justify-center gap-1 rounded-xl text-xs font-bold border border-slate-200 bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-all active:scale-95 shrink-0"
+            className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-all active:scale-95 shrink-0"
             title="Imprimir tirilla de despacho"
           >
             <Printer className="w-4 h-4" />
-            <span className="hidden xs:inline">Tirilla</span>
+            <span className="hidden sm:inline">Tirilla</span>
           </button>
 
           {/* Botón de Despacho Principal (Un solo toque para despachar) */}
@@ -260,10 +265,10 @@ export default function DispatchCard({ despacho }) {
             <button
               type="button"
               onClick={handleDespachar}
-              className="h-10 flex-1 flex items-center justify-center gap-2 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md transition-all active:scale-95"
+              className="h-10 flex-1 flex items-center justify-center gap-2 px-4 rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-bold transition-all active:scale-95"
             >
               <Truck className="w-4 h-4 shrink-0" />
-              <span>Despachar en {placaSeleccionada}</span>
+              <span>Despachar en <span className="font-mono">{placaSeleccionada}</span></span>
               <ArrowRight className="w-3.5 h-3.5 shrink-0" />
             </button>
           ) : (

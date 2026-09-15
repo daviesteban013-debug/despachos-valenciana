@@ -14,26 +14,26 @@ export default function Header() {
   } = useWms();
 
   return (
-    <header className="sticky top-0 z-30 w-full h-14 bg-white border-b border-slate-200 px-3 sm:px-4 flex items-center justify-between shadow-sm">
-      {/* 1. Logotipo y Título de Marca */}
-      <div className="flex items-center gap-2.5 min-w-0">
+    <header className="sticky top-0 z-30 w-full h-[68px] bg-white border-b border-slate-200 flex items-center justify-between shadow-sm">
+      {/* 1. Bloque de Marca: franja roja con logo a tamaño legible */}
+      <div className="h-full flex items-center gap-3 bg-[#E11D24] pl-3 pr-5 sm:pl-4 sm:pr-6 shrink-0">
         <img
           src={logoValenciana}
           alt="La Valenciana Ferrehogar"
-          className="h-9 w-9 object-cover rounded-lg shadow-sm flex-shrink-0"
+          className="h-11 w-11 sm:h-12 sm:w-12 object-cover rounded-lg shrink-0"
         />
         <div className="flex flex-col min-w-0">
-          <span className="text-sm font-bold text-slate-900 leading-tight truncate">
+          <span className="text-sm sm:text-base font-bold text-white leading-tight truncate">
             FERREHOGAR
           </span>
-          <span className="text-xs font-semibold text-red-600 tracking-wider uppercase leading-none">
-            Logistica Despachos
+          <span className="text-[10px] sm:text-xs font-semibold text-red-100 tracking-wider uppercase leading-none">
+            Logística Despachos
           </span>
         </div>
       </div>
 
       {/* 2. Estado En Línea y Controles Operativos */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0 pr-3 sm:pr-4">
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
           En línea

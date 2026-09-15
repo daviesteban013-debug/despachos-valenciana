@@ -44,7 +44,7 @@ export default function SelectorPage() {
         </div>
 
         {/* Tarjetas de Selección de Pantalla */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {/* Estación 1: Facturación */}
           <div className="bg-white rounded-3xl border-2 border-slate-200 hover:border-[#E11D24] transition-all p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-lg group">
             <div className="space-y-4">
@@ -209,24 +209,71 @@ export default function SelectorPage() {
               </a>
             </div>
           </div>
+
+          {/* Estación 4: Logística Despacho a Domicilio */}
+          <div className="bg-white rounded-3xl border-2 border-slate-200 hover:border-violet-600 transition-all p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-lg group">
+            <div className="space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Truck className="w-8 h-8" />
+              </div>
+
+              <div>
+                <span className="text-xs font-black text-violet-600 uppercase tracking-wider">
+                  Ruta: /wms
+                </span>
+                <h2 className="text-2xl font-black text-slate-900 mt-1">
+                  Logística Despacho a Domicilio
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                  Quien despacha a domicilio trabaja aquí. Controla el flujo completo desde la orden hasta la entrega: picking, empaque, asignación de vehículo y manejo de novedades.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs font-semibold text-slate-700">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Tablero Kanban: pendientes y despachados</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Impresión de tirilla térmica QR y Novedades</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Sincronización Cloud con Planilla de Entregas</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-6 space-y-2.5">
+              <Link
+                to="/wms"
+                className="w-full min-h-[48px] py-3.5 px-6 bg-violet-600 hover:bg-violet-700 active:scale-95 text-white rounded-xl text-sm font-black tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
+              >
+                <span>Abrir Logística Despachos</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <a
+                href="/wms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-200"
+              >
+                <span>Abrir en nueva pestaña</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
         </div>
 
-        {/* Tip de Sincronización y Enlace al WMS Previo */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+        {/* Tip de Sincronización */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 text-xs">
           <div className="flex items-center gap-2 text-slate-600">
             <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
             <span>
               <b>Sincronización en tiempo real:</b> Al crear una factura en Facturación o confirmar en Vitrina, el cambio se refleja al instante entre pestañas abiertas sin recargar.
             </span>
           </div>
-
-          <Link
-            to="/wms"
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200 transition-colors"
-          >
-            <Truck className="w-3.5 h-3.5 text-slate-500" />
-            <span>Ver WMS Despacho a Domicilio</span>
-          </Link>
         </div>
       </div>
     </div>
