@@ -12,6 +12,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import PackageLabelModal from './PackageLabelModal';
+import { FLOTA_VEHICULOS } from '../data/flota';
 
 export default function DispatchDetailDrawer() {
   const { 
@@ -31,7 +32,7 @@ export default function DispatchDetailDrawer() {
   const isDespachado = (selectedDespacho.estado || selectedDespacho.estado_actual) === 'DESPACHADO';
   const factura = selectedDespacho.numero_factura || selectedDespacho.codigo_factura_erp || selectedDespacho.codigo_orden;
   const direccion = selectedDespacho.direccion_entrega || selectedDespacho.zona_entrega || 'Sin dirección registrada';
-  const cuadrilla = selectedDespacho.vehiculo_cuadrilla || selectedDespacho.vehiculo_placa || 'Flota Fija';
+  const cuadrilla = selectedDespacho.vehiculo_placa || FLOTA_VEHICULOS[0];
   const totalBultos = selectedDespacho.total_bultos || selectedDespacho.bultos_total || selectedDespacho.items?.reduce((acc, it) => acc + (it.cantidad_solicitada || it.cantidad || 0), 0) || 1;
   const rutaAsignada = rutasVehiculos.find((r) => r.id === selectedDespacho.ruta_id) || rutasVehiculos[0];
 
@@ -84,7 +85,7 @@ export default function DispatchDetailDrawer() {
               <div className="flex items-center gap-2 text-xs text-red-100 font-medium flex-wrap pt-0.5">
                 <span className="flex items-center gap-1 bg-red-800/80 px-2 py-0.5 rounded-md text-white font-semibold">
                   <Truck className="h-3 w-3" />
-                  Cuadrilla: {cuadrilla}
+                  Vehículo: {cuadrilla}
                 </span>
                 {selectedDespacho.jornada && (
                   <span className="bg-white/20 text-white font-bold px-2 py-0.5 rounded-md">
@@ -310,13 +311,13 @@ export default function DispatchDetailDrawer() {
             {!isDespachado ? (
               <button
                 onClick={() => {
-                  despacharOrden(selectedDespacho.id, selectedDespacho.vehiculo_placa || 'WRO-482');
+                  despacharOrden(selectedDespacho.id, selectedDespacho.vehiculo_placa || FLOTA_VEHICULOS[0]);
                   setSelectedDespachoId(null);
                 }}
                 className="flex-1 min-h-[44px] bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <Truck className="h-4 w-4" />
-                <span>Despachar ({selectedDespacho.vehiculo_placa || 'WRO-482'})</span>
+                <span>Despachar ({selectedDespacho.vehiculo_placa || FLOTA_VEHICULOS[0]})</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             ) : (

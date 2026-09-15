@@ -2,6 +2,7 @@ import assert from 'assert';
 import { dbMemoria } from '../config/db.js';
 import { descontarInventario } from '../services/descuentoInventarioService.js';
 import { cambiarEstadoFactura } from '../controllers/facturasController.js';
+import { FLOTA_VEHICULOS } from '../config/flota.js';
 
 console.log('🧪 ========================================================');
 console.log('🧪 INICIANDO TEST SUITE: TRANSACCIONALIDAD, IDEMPOTENCIA Y FSM');
@@ -158,7 +159,7 @@ function testFsmDespachos() {
     codigo_orden: 'PVSW-TEST',
     codigo_factura_erp: 'FE-80297',
     estado_actual: 'PENDIENTE',
-    vehiculo_placa: 'WRO-482',
+    vehiculo_placa: FLOTA_VEHICULOS[0],
     incidencia_activa: null,
     history: []
   };
@@ -194,16 +195,16 @@ function testFsmDespachos() {
   console.log('  ✓ Despacho bloqueado si no hay vehículo asignado.');
 
   // 2. PENDIENTE -> DESPACHADO con vehículo
-  let res = avanzar(despacho, 'WRO-482');
+  let res = avanzar(despacho, FLOTA_VEHICULOS[0]);
   assert.strictEqual(res.success, true);
   assert.strictEqual(res.despacho.estado_actual, 'DESPACHADO');
-  assert.strictEqual(res.despacho.vehiculo_placa, 'WRO-482');
+  assert.strictEqual(res.despacho.vehiculo_placa, FLOTA_VEHICULOS[0]);
   assert(res.despacho.fechaDespacho, 'Debe registrar fechaDespacho');
   despacho = res.despacho;
   console.log('  ✓ Transición PENDIENTE -> DESPACHADO completada exitosamente.');
 
   // 3. Intento de avanzar más allá de DESPACHADO (debe ser rechazado)
-  res = avanzar(despacho, 'WRO-482');
+  res = avanzar(despacho, FLOTA_VEHICULOS[0]);
   assert.strictEqual(res.success, false, 'No se puede avanzar más allá del estado terminal DESPACHADO');
   assert.strictEqual(res.reason, 'INVALID_TRANSITION');
   console.log('  ✓ Estado terminal DESPACHADO protegido contra transiciones secundarias.');

@@ -12,13 +12,7 @@ import {
   Printer
 } from 'lucide-react';
 import PackageLabelModal from './PackageLabelModal';
-
-const VEHICULOS_INFO = [
-  { placa: 'WRO-482', modelo: 'Camión NHR 4.5T' },
-  { placa: 'STZ-910', modelo: 'Camioneta D-Max 1.8T' },
-  { placa: 'ENV-301', modelo: 'Hino Dutro 7.5T' },
-  { placa: 'MC-441',  modelo: 'Motocarro 500kg' }
-];
+import { FLOTA_VEHICULOS } from '../data/flota';
 
 export default function DispatchCard({ despacho }) {
   const { 
@@ -27,12 +21,11 @@ export default function DispatchCard({ despacho }) {
     asignarVehiculo,
     reintentarSyncOneDrive,
     restaurarAPendiente,
-    setIncidentModalTarget, 
-    placasFlotaFija
+    setIncidentModalTarget
   } = useWms();
 
   const [placaSeleccionada, setPlacaSeleccionada] = useState(
-    despacho.vehiculo_placa || 'WRO-482'
+    despacho.vehiculo_placa || FLOTA_VEHICULOS[0]
   );
   const [errorSinPlaca, setErrorSinPlaca] = useState(false);
   const [reintentando, setReintentando] = useState(false);
@@ -146,9 +139,9 @@ export default function DispatchCard({ despacho }) {
                     errorSinPlaca ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-300 text-slate-800'
                   }`}
                 >
-                  {VEHICULOS_INFO.map(v => (
-                    <option key={v.placa} value={v.placa}>
-                      {v.placa} — {v.modelo}
+                  {FLOTA_VEHICULOS.map(v => (
+                    <option key={v} value={v}>
+                      {v}
                     </option>
                   ))}
                 </select>

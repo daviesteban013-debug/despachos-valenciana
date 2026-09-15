@@ -13,14 +13,7 @@ export default function PackageLabelModal({ despacho, onClose }) {
 
   const totalBultos = despacho.items?.reduce((acc, it) => acc + (it.cantidad_solicitada || 0), 0) || despacho.bultos_total || 0;
 
-  // Cuadrillas reales de La Valenciana
-  const CUADRILLAS = {
-    'WRO-482': 'LEO - JULIAN',
-    'STZ-910': 'ANDERSON - JHOAN',
-    'ENV-301': 'JEFFERSON - MAURICIO',
-    'MC-441':  'JESUS - ALEJANDRO'
-  };
-  const cuadrilla = CUADRILLAS[despacho.vehiculo_placa] || despacho.vehiculo_placa || 'Sin asignar';
+  const vehiculoAsignado = despacho.vehiculo_placa || 'Sin asignar';
 
   const qrData = encodeURIComponent(despacho.id || despacho.codigo_orden);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}`;
@@ -157,11 +150,11 @@ export default function PackageLabelModal({ despacho, onClose }) {
 
             <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }} />
 
-            {/* Cuadrilla / Vehículo */}
+            {/* Vehículo */}
             <div>
-              <span style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase' }}>Cuadrilla / Vehículo:</span>
+              <span style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase' }}>Vehículo Asignado:</span>
               <div style={{ fontWeight: 'bold', fontSize: '12px' }}>
-                {cuadrilla} ({despacho.vehiculo_placa || 'N/A'})
+                {vehiculoAsignado}
               </div>
             </div>
 

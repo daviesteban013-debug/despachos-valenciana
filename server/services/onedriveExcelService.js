@@ -2,18 +2,21 @@ import ExcelJS from 'exceljs';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { FLOTA_VEHICULOS } from '../config/flota.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Las 4 placas fijas e invariables de la flota Valenciana
-export const PLACAS_FLOTA = ['WRO-482', 'STZ-910', 'ENV-301', 'MC-441'];
-
-// Encabezados base informados (a validar contra plantilla física antes de producción)
+// Encabezados reales requeridos por tesorería (8 columnas)
 export const ENCABEZADOS_COLUMNAS = [
-  { header: 'Número de factura', key: 'numero_factura', width: 22 },
-  { header: 'Fecha', key: 'fecha', width: 20 },
-  { header: 'Valor de la factura', key: 'valor_factura', width: 22 }
+  { header: 'Nombre del cliente', key: 'cliente_nombre', width: 30 },
+  { header: 'Dirección', key: 'direccion', width: 30 },
+  { header: 'AM', key: 'am', width: 5 },
+  { header: 'PM', key: 'pm', width: 5 },
+  { header: 'Número de Factura', key: 'numero_factura', width: 22 },
+  { header: 'Valor de la factura', key: 'valor_factura', width: 22 },
+  { header: 'Observaciones', key: 'observaciones', width: 35 },
+  { header: 'Firma de Recibido', key: 'firma', width: 25 }
 ];
 
 // Ruta de almacenamiento local para modo simulación / fallback y desarrollo offline
@@ -33,6 +36,33 @@ function enqueue(task) {
 }
 
 /**
+ * Escribe el membrete corporativo (4 filas) al inicio de una hoja.
+ */
+function escribirMembreteCorporativo(worksheet) {
+  // Configurar las columnas primero para tener anchos y keys disponibles
+  worksheet.columns = ENCABEZADOS_COLUMNAS;
+
+  // Fila 1: Título principal
+  const row1 = worksheet.getRow(1);
+  row1.getCell(1).value = 'CONTROL DE DESPACHO A CLIENTES';
+  row1.getCell(1).font = { bold: true, size: 16 };
+  row1.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+  worksheet.mergeCells(1, 1, 1, 8);
+  row1.height = 30;
+
+  // Fila 2: Versión
+  const row2 = worksheet.getRow(2);
+  row2.getCell(1).value = 'Versión: 1';
+  row2.getCell(1).font = { italic: true, size: 10 };
+  row2.getCell(1).alignment = { horizontal: 'right' };
+  worksheet.mergeCells(2, 1, 2, 8);
+
+  // Fila 3 y 4 en blanco para separación
+  worksheet.getRow(3).height = 15;
+  worksheet.getRow(4).height = 15;
+}
+
+/**
  * Inicializa un libro ExcelJS con las 4 hojas fijas correspondientes a la flota
  */
 export async function crearPlantillaBase() {
@@ -41,25 +71,12 @@ export async function crearPlantillaBase() {
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  for (const placa of PLACAS_FLOTA) {
+  for (const placa of FLOTA_VEHICULOS) {
     const sheet = workbook.addWorksheet(placa, {
       views: [{ showGridLines: true }]
     });
-
-    sheet.columns = ENCABEZADOS_COLUMNAS;
-
-    // Estilo elegante para el encabezado
-    const headerRow = sheet.getRow(1);
-    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-    headerRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE11D24' } // Rojo Valenciana
-    };
-    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-    headerRow.height = 26;
-
-    headerRow.commit();
+    
+    escribirMembreteCorporativo(sheet);
   }
 
   return workbook;
@@ -76,7 +93,7 @@ export async function asegurarPlantillaLocal() {
   if (!fs.existsSync(LOCAL_TEMPLATE_PATH)) {
     const workbook = await crearPlantillaBase();
     await workbook.xlsx.writeFile(LOCAL_TEMPLATE_PATH);
-    console.log(`📁 Plantilla Excel inicializada localmente con 4 hojas en: ${LOCAL_TEMPLATE_PATH}`);
+    console.log(`📁 Plantilla Excel inicializada localmente con ${FLOTA_VEHICULOS.length} hojas en: ${LOCAL_TEMPLATE_PATH}`);
   }
 }
 
@@ -116,9 +133,7 @@ async function obtenerGraphAccessToken() {
 }
 
 /**
- * Obtiene el buffer del archivo Excel actual:
- * - Desde OneDrive vía Microsoft Graph API si hay credenciales
- * - O desde el archivo local en modo fallback
+ * Obtiene el buffer del archivo Excel actual
  */
 export async function obtenerBufferPlantilla() {
   const token = await obtenerGraphAccessToken();
@@ -142,8 +157,7 @@ export async function obtenerBufferPlantilla() {
     });
 
     if (res.status === 404) {
-      // El archivo no existe aún en OneDrive, crear nuevo y subirlo
-      console.log('ℹ️ Archivo no encontrado en OneDrive. Creando plantilla base de 4 hojas...');
+      console.log('ℹ️ Archivo no encontrado en OneDrive. Creando plantilla base...');
       const workbook = await crearPlantillaBase();
       const buffer = await workbook.xlsx.writeBuffer();
       await subirBufferPlantilla(buffer, token);
@@ -208,26 +222,49 @@ export async function subirBufferPlantilla(buffer, tokenOverride = null) {
 }
 
 /**
- * Registra automáticamente un despacho en la hoja correspondiente a la placa del vehículo.
- * Ejecuta a través de la cola secuencial en memoria para evitar condiciones de carrera.
- * 
- * @param {Object} params
- * @param {string} params.placa - Una de las 4 placas fijas ('WRO-482', 'STZ-910', 'ENV-301', 'MC-441')
- * @param {string} params.numeroFactura - Código o número de factura ERP
- * @param {string|Date} [params.fecha] - Fecha del despacho (por defecto now)
- * @param {number} params.valorFactura - Valor total de la factura
+ * Registra automáticamente un despacho en la hoja correspondiente al vehículo,
+ * agrupando por fecha y con fila de subtotal dinámica.
  */
-export async function registrarDespachoEnPlantilla({ placa, numeroFactura, fecha = new Date(), valorFactura = 0 }) {
-  if (!placa) {
-    throw new Error('Debe especificar la placa del vehículo asignado para el registro en la plantilla.');
+export async function registrarDespachoEnPlantilla({ 
+  vehiculo, 
+  numeroFactura, 
+  clienteNombre, 
+  direccion, 
+  jornada, 
+  valorFactura, 
+  observaciones, 
+  fechaDespacho 
+}) {
+  if (!vehiculo) {
+    throw new Error('Debe especificar el vehículo asignado para el registro en la plantilla.');
   }
 
-  const placaNormalizada = placa.trim().toUpperCase();
-  if (!PLACAS_FLOTA.includes(placaNormalizada)) {
-    throw new Error(`Placa "${placaNormalizada}" no reconocida en la flota fija. Placas permitidas: ${PLACAS_FLOTA.join(', ')}`);
+  const vehiculoNormalizado = vehiculo.trim();
+  if (!FLOTA_VEHICULOS.map(v => v.trim()).includes(vehiculoNormalizado)) {
+    throw new Error(`Vehículo "${vehiculoNormalizado}" no reconocido en la flota. Vehículos permitidos: ${FLOTA_VEHICULOS.join(', ')}`);
   }
 
-  // Encolar la operación atómica de lectura -> adición de fila -> escritura
+  // Formato de fecha para el bloque (DD/MM/YYYY)
+  let fechaBloqueStr = '';
+  if (fechaDespacho) {
+    const d = new Date(fechaDespacho);
+    // Verificar validez y formatear localmente
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      fechaBloqueStr = `${day}/${month}/${year}`;
+    }
+  }
+  if (!fechaBloqueStr) {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    fechaBloqueStr = `${day}/${month}/${year}`;
+  }
+
+  // Encolar la operación atómica
   return enqueue(async () => {
     // 1. Obtener buffer actual (OneDrive o local)
     const currentBuffer = await obtenerBufferPlantilla();
@@ -236,55 +273,141 @@ export async function registrarDespachoEnPlantilla({ placa, numeroFactura, fecha
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(currentBuffer);
 
-    // 3. Ubicar o crear la hoja correspondiente a la placa
-    let worksheet = workbook.getWorksheet(placaNormalizada);
+    // 3. Ubicar o crear la hoja correspondiente
+    let worksheet = null;
+    workbook.eachSheet((s) => {
+      if (s.name.trim() === vehiculoNormalizado) {
+        worksheet = s;
+      }
+    });
+
     if (!worksheet) {
-      console.warn(`⚠️ Hoja para placa ${placaNormalizada} no existía. Creándola...`);
-      worksheet = workbook.addWorksheet(placaNormalizada);
+      console.warn(`⚠️ Hoja para vehículo ${vehiculoNormalizado} no existía. Creándola...`);
+      worksheet = workbook.addWorksheet(vehiculoNormalizado, { views: [{ showGridLines: true }] });
+      escribirMembreteCorporativo(worksheet);
+    } else {
+      // Asegurar configuración de columnas en caso de cargar archivo existente
+      if (!worksheet.columns || worksheet.columns.length === 0) {
+        worksheet.columns = ENCABEZADOS_COLUMNAS;
+      }
     }
 
-    // Asegurar encabezados si la hoja está vacía
-    if (worksheet.rowCount === 0) {
-      worksheet.columns = ENCABEZADOS_COLUMNAS;
-      const headerRow = worksheet.getRow(1);
-      headerRow.values = ['Número de factura', 'Fecha', 'Valor de la factura'];
+    // 4. Buscar si existe el bloque para esta fecha
+    let filaSubtotalExistente = -1;
+    let sumaActualSubtotal = 0;
+    
+    // Recorremos buscando la fila que diga "Fecha: DD/MM/YYYY" en la celda 1
+    // y luego buscando su correspondiente "SUBTOTAL"
+    let enBloque = false;
+    for (let r = 1; r <= worksheet.rowCount; r++) {
+      const row = worksheet.getRow(r);
+      const val1 = String(row.getCell(1).value || '').trim();
+      
+      if (val1.includes(`Fecha: ${fechaBloqueStr}`)) {
+        enBloque = true;
+      } else if (enBloque && val1.toUpperCase() === 'SUBTOTAL') {
+        filaSubtotalExistente = r;
+        sumaActualSubtotal = row.getCell(6).result || row.getCell(6).value || 0; // Col 6: valor_factura
+        break; // Encontramos el final del bloque
+      }
+    }
+
+    const valorNumerico = Number(valorFactura) || 0;
+    const esAM = jornada === 'AM' ? 'X' : '';
+    const esPM = jornada === 'PM' ? 'X' : '';
+    
+    const rowData = [
+      clienteNombre || 'S/N',
+      direccion || 'S/D',
+      esAM,
+      esPM,
+      numeroFactura || 'S/F',
+      valorNumerico,
+      observaciones || '',
+      '' // Firma
+    ];
+
+    if (filaSubtotalExistente > -1) {
+      // INSERCIÓN EN BLOQUE EXISTENTE
+      // Insertamos una fila *antes* de la fila del subtotal
+      worksheet.spliceRows(filaSubtotalExistente, 0, rowData);
+      
+      // Aplicar formato a la fila insertada
+      const newRow = worksheet.getRow(filaSubtotalExistente);
+      newRow.getCell(3).alignment = { horizontal: 'center' };
+      newRow.getCell(4).alignment = { horizontal: 'center' };
+      
+      const valorCell = newRow.getCell(6);
+      valorCell.numFmt = '"$"#,##0';
+      valorCell.alignment = { horizontal: 'right' };
+
+      // Actualizar el valor numérico (evitando fórmulas complejas y dependencias del motor de Excel)
+      const nuevaSuma = Number(sumaActualSubtotal) + valorNumerico;
+      const subRow = worksheet.getRow(filaSubtotalExistente + 1);
+      
+      // El subtotal está en la col 6
+      const subCell = subRow.getCell(6);
+      subCell.value = nuevaSuma;
+      subCell.numFmt = '"$"#,##0';
+      subCell.font = { bold: true };
+      subRow.commit();
+      newRow.commit();
+      
+    } else {
+      // CREACIÓN DE BLOQUE NUEVO (Al final)
+      const lastRow = worksheet.rowCount;
+      const nextStart = lastRow > 4 ? lastRow + 2 : 5; // Dejar espacio si ya hay bloques
+      
+      // Fila de Fecha y Vehículo
+      const titleRow = worksheet.getRow(nextStart);
+      titleRow.getCell(1).value = `Fecha: ${fechaBloqueStr}`;
+      titleRow.getCell(5).value = `Vehículo: ${vehiculoNormalizado}`;
+      titleRow.font = { bold: true };
+      titleRow.commit();
+      
+      // Fila de Encabezados
+      const headerRow = worksheet.getRow(nextStart + 1);
+      headerRow.values = [
+        'Nombre del cliente',
+        'Dirección',
+        'AM',
+        'PM',
+        'Número de Factura',
+        'Valor de la factura',
+        'Observaciones',
+        'Firma de Recibido'
+      ];
       headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFE11D24' }
+        fgColor: { argb: 'FFE11D24' } // Rojo Valenciana
       };
       headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-      headerRow.height = 26;
+      headerRow.height = 20;
       headerRow.commit();
+      
+      // Fila de Datos
+      const dataRow = worksheet.getRow(nextStart + 2);
+      dataRow.values = rowData;
+      dataRow.getCell(3).alignment = { horizontal: 'center' };
+      dataRow.getCell(4).alignment = { horizontal: 'center' };
+      const valCell = dataRow.getCell(6);
+      valCell.numFmt = '"$"#,##0';
+      valCell.alignment = { horizontal: 'right' };
+      dataRow.commit();
+      
+      // Fila de Subtotal
+      const subRow = worksheet.getRow(nextStart + 3);
+      subRow.getCell(1).value = 'SUBTOTAL';
+      subRow.getCell(1).font = { bold: true };
+      subRow.getCell(1).alignment = { horizontal: 'right' };
+      const subValCell = subRow.getCell(6);
+      subValCell.value = valorNumerico;
+      subValCell.numFmt = '"$"#,##0';
+      subValCell.font = { bold: true };
+      subRow.commit();
     }
-
-    // 4. Formatear valores de fila
-    const fechaFormateada = typeof fecha === 'string' 
-      ? fecha 
-      : fecha.toISOString().replace('T', ' ').substring(0, 19);
-
-    const valorNumerico = Number(valorFactura) || 0;
-
-    // 5. Anexar la nueva fila por valores posicionales sin sobreescribir las existentes
-    const newRow = worksheet.addRow([
-      numeroFactura || 'S/F',
-      fechaFormateada,
-      valorNumerico
-    ]);
-
-    // Formato de celda por índice posicional (1: Factura, 2: Fecha, 3: Valor)
-    const facturaCell = newRow.getCell(1);
-    facturaCell.alignment = { horizontal: 'center' };
-
-    const fechaCell = newRow.getCell(2);
-    fechaCell.alignment = { horizontal: 'center' };
-
-    const valorCell = newRow.getCell(3);
-    valorCell.numFmt = '"$"#,##0';
-    valorCell.alignment = { horizontal: 'right' };
-
-    newRow.commit();
 
     // 6. Generar buffer actualizado
     const updatedBuffer = await workbook.xlsx.writeBuffer();
@@ -292,14 +415,15 @@ export async function registrarDespachoEnPlantilla({ placa, numeroFactura, fecha
     // 7. Guardar en OneDrive o archivo local
     const resultadoGuardado = await subirBufferPlantilla(Buffer.from(updatedBuffer));
 
-    console.log(`✅ Fila agregada en hoja [${placaNormalizada}]: Factura ${numeroFactura}, Valor $${valorNumerico.toLocaleString('es-CO')} (${resultadoGuardado.destino})`);
+    console.log(`✅ Fila agregada en hoja [${vehiculoNormalizado}]: Factura ${numeroFactura}, Valor $${valorNumerico.toLocaleString('es-CO')} (${resultadoGuardado.destino})`);
 
     return {
       success: true,
-      placa: placaNormalizada,
+      placa: vehiculoNormalizado, // Mantenemos el campo de retorno por compatibilidad 
+      vehiculo: vehiculoNormalizado,
       fila: {
         numeroFactura,
-        fecha: fechaFormateada,
+        fecha: fechaBloqueStr,
         valorFactura: valorNumerico
       },
       destino: resultadoGuardado.destino,
@@ -322,8 +446,15 @@ export async function calibrarPlantillaReferencia(bufferArchivo) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(bufferArchivo);
 
-  // Validar que contenga al menos las 4 hojas de placas
-  const hojasFaltantes = PLACAS_FLOTA.filter((placa) => !workbook.getWorksheet(placa));
+  // Validar que contenga al menos las 4 hojas de la flota
+  const hojasFaltantes = FLOTA_VEHICULOS.filter(v => {
+    let encontrada = false;
+    workbook.eachSheet((s) => {
+      if (s.name.trim() === v.trim()) encontrada = true;
+    });
+    return !encontrada;
+  });
+
   if (hojasFaltantes.length > 0) {
     throw new Error(`La plantilla cargada no contiene todas las hojas requeridas. Faltan: ${hojasFaltantes.join(', ')}`);
   }
@@ -333,6 +464,6 @@ export async function calibrarPlantillaReferencia(bufferArchivo) {
   return {
     success: true,
     mensaje: 'Plantilla de referencia calibrada exitosamente.',
-    hojasValidadas: PLACAS_FLOTA
+    hojasValidadas: FLOTA_VEHICULOS
   };
 }

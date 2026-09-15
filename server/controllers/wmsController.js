@@ -2,9 +2,9 @@ import { dbMemoria } from '../config/db.js';
 import { 
   registrarDespachoEnPlantilla, 
   exportarPlantillaBuffer, 
-  calibrarPlantillaReferencia,
-  PLACAS_FLOTA 
+  calibrarPlantillaReferencia
 } from '../services/onedriveExcelService.js';
+import { FLOTA_VEHICULOS } from '../config/flota.js';
 
 // ============================================================================
 // DOMINIO WMS: MODELO SIMPLIFICADO DE 2 ESTADOS (PENDIENTE / DESPACHADO)
@@ -23,15 +23,17 @@ const ORDENES_DEMO = [
     codigo_orden: 'PVSW-6307',
     codigo_factura_erp: 'FE-80297',
     cliente_nombre: 'Ferretería La Campana S.A.S.',
+    direccion_entrega: 'Av 5 # 10-45',
+    jornada: 'AM',
     estado_actual: 'PENDIENTE',
     prioridad: 1,
     transportadora: 'Flota Propia',
-    vehiculo_placa: 'WRO-482',
+    vehiculo_placa: 'WDO-069 ANDERSON',
     valor_total: 5840000,
-    peso_total_kg: 324.5,
     bultos_total: 12,
+    observaciones: '',
+    fecha_despacho: new Date().toISOString().slice(0,10),
     bahia_asignada: 'Bodega A-01',
-    horario_corte: new Date(Date.now() + 25 * 60000).toISOString(),
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
@@ -44,15 +46,17 @@ const ORDENES_DEMO = [
     codigo_orden: 'PVSW-6308',
     codigo_factura_erp: 'FE-80298',
     cliente_nombre: 'Obras y Estructuras Metálicas SAS',
+    direccion_entrega: 'Calle 15 # 2-30',
+    jornada: 'PM',
     estado_actual: 'PENDIENTE',
     prioridad: 2,
     transportadora: 'Flota Propia',
-    vehiculo_placa: 'STZ-910',
+    vehiculo_placa: 'TJP-653 GRIS',
     valor_total: 3950000,
-    peso_total_kg: 180.0,
     bultos_total: 6,
+    observaciones: '',
+    fecha_despacho: new Date().toISOString().slice(0,10),
     bahia_asignada: 'Bodega A-02',
-    horario_corte: new Date(Date.now() + 60 * 60000).toISOString(),
     incidencia_activa: null,
     sync_onedrive: null,
     items: [
@@ -65,15 +69,17 @@ const ORDENES_DEMO = [
     codigo_orden: 'PVSW-6309',
     codigo_factura_erp: 'FE-80299',
     cliente_nombre: 'Construcciones del Norte SAS',
+    direccion_entrega: 'Zona Industrial Lote 4',
+    jornada: 'AM',
     estado_actual: 'PENDIENTE',
     prioridad: 1,
     transportadora: 'Flota Propia',
-    vehiculo_placa: 'ENV-301',
+    vehiculo_placa: 'A20BB5E JEFERSON',
     valor_total: 8200000,
-    peso_total_kg: 740.0,
     bultos_total: 24,
+    observaciones: 'Entregar antes de mediodía',
+    fecha_despacho: new Date().toISOString().slice(0,10),
     bahia_asignada: 'Bodega B-01',
-    horario_corte: new Date(Date.now() + 15 * 60000).toISOString(),
     incidencia_activa: {
       tipo: 'DIVERGENCIA_PESO',
       descripcion: 'Báscula registró +4% sobrepeso en bultos de varilla. Pendiente re-pesaje.',
@@ -89,22 +95,24 @@ const ORDENES_DEMO = [
     codigo_orden: 'PVSW-6310',
     codigo_factura_erp: 'FE-80300',
     cliente_nombre: 'Pinturas y Acabados Los Patios',
+    direccion_entrega: 'Av 10 Los Patios',
+    jornada: 'PM',
     estado_actual: 'DESPACHADO',
     prioridad: 3,
     transportadora: 'Flota Propia',
-    vehiculo_placa: 'MC-441',
+    vehiculo_placa: 'WDP-097 JESUS',
     valor_total: 1250000,
-    peso_total_kg: 65.0,
     bultos_total: 4,
+    observaciones: '',
+    fecha_despacho: new Date().toISOString().slice(0,10),
     bahia_asignada: 'Bodega B-03',
-    horario_corte: new Date(Date.now() - 40 * 60000).toISOString(),
     hora_salida: new Date(Date.now() - 30 * 60000).toISOString(),
     despachado_por: 'Líder Despachos',
     incidencia_activa: null,
     sync_onedrive: {
       estado: 'SINCRONIZADO',
       fecha: new Date(Date.now() - 30 * 60000).toISOString(),
-      placa: 'MC-441',
+      placa: 'WDP-097 JESUS',
       error: null
     },
     items: [
@@ -125,6 +133,63 @@ export async function listarDespachos(req, res) {
   try {
     const despachos = Array.from(dbMemoria.despachos.values());
     return res.json(despachos);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
+// POST /api/despachos
+export async function crearDespacho(req, res) {
+  try {
+    const {
+      codigo_orden,
+      codigo_factura_erp,
+      cliente_nombre,
+      direccion_entrega,
+      jornada,
+      vehiculo_placa,
+      bodega_id,
+      valor_total,
+      bultos_total,
+      observaciones,
+      fecha_despacho,
+      items
+    } = req.body;
+
+    if (!cliente_nombre || !direccion_entrega) {
+      return res.status(400).json({ error: 'cliente_nombre y direccion_entrega son requeridos.' });
+    }
+    
+    if (!FLOTA_VEHICULOS.map(v => v.trim()).includes((vehiculo_placa || '').trim())) {
+      return res.status(400).json({ error: `Vehículo no válido: "${vehiculo_placa}".` });
+    }
+    
+    if (jornada !== 'AM' && jornada !== 'PM') {
+      return res.status(400).json({ error: 'jornada debe ser "AM" o "PM".' });
+    }
+
+    const id = `dsp-${Date.now().toString().slice(-6)}`;
+    const nuevoDespacho = {
+      id,
+      codigo_orden: codigo_orden || id.toUpperCase(),
+      codigo_factura_erp: codigo_factura_erp || '',
+      cliente_nombre,
+      direccion_entrega,
+      jornada,
+      estado_actual: 'PENDIENTE',
+      vehiculo_placa,
+      bodega_id: bodega_id || null,
+      valor_total: Number(valor_total) || 0,
+      bultos_total: Number(bultos_total) || 1,
+      observaciones: observaciones || '',
+      fecha_despacho: fecha_despacho || new Date().toISOString().slice(0, 10),
+      incidencia_activa: null,
+      sync_onedrive: null,
+      items: items || []
+    };
+
+    dbMemoria.despachos.set(id, nuevoDespacho);
+    return res.status(201).json(nuevoDespacho);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -170,10 +235,10 @@ export async function cambiarEstadoDespacho(req, res) {
         });
       }
 
-      if (!PLACAS_FLOTA.includes(placaAsignada)) {
+      if (!FLOTA_VEHICULOS.map(v => v.trim()).includes(placaAsignada)) {
         return res.status(400).json({
-          error: `Placa "${placaAsignada}" inválida. Solo se permite una de las 4 placas fijas: ${PLACAS_FLOTA.join(', ')}`,
-          placasPermitidas: PLACAS_FLOTA
+          error: `Vehículo "${placaAsignada}" inválido. Solo se permite una de las 4 opciones: ${FLOTA_VEHICULOS.join(', ')}`,
+          placasPermitidas: FLOTA_VEHICULOS
         });
       }
 
@@ -185,10 +250,14 @@ export async function cambiarEstadoDespacho(req, res) {
       // Automatización: registrar fila en la hoja de esa placa en OneDrive
       try {
         const resExcel = await registrarDespachoEnPlantilla({
-          placa: placaAsignada,
+          vehiculo: placaAsignada,
           numeroFactura: despacho.codigo_factura_erp || despacho.codigo_orden,
-          fecha: despacho.hora_salida,
-          valorFactura: despacho.valor_total || 0
+          clienteNombre: despacho.cliente_nombre,
+          direccion: despacho.direccion_entrega || despacho.zona_entrega,
+          jornada: despacho.jornada || 'AM',
+          fechaDespacho: despacho.fecha_despacho,
+          valorFactura: despacho.valor_total || 0,
+          observaciones: despacho.observaciones
         });
 
         despacho.sync_onedrive = {
@@ -252,17 +321,21 @@ export async function reintentarSincronizacionOneDrive(req, res) {
       return res.status(400).json({ error: 'Solo se pueden sincronizar órdenes que ya estén en estado DESPACHADO.' });
     }
 
-    const placa = despacho.vehiculo_placa;
-    if (!placa || !PLACAS_FLOTA.includes(placa)) {
-      return res.status(400).json({ error: `Placa no válida o no asignada: "${placa}".` });
+    const placa = (despacho.vehiculo_placa || '').trim().toUpperCase();
+    if (!placa || !FLOTA_VEHICULOS.map(v => v.trim()).includes(placa)) {
+      return res.status(400).json({ error: `Vehículo no válido o no asignado: "${placa}".` });
     }
 
     try {
       const resExcel = await registrarDespachoEnPlantilla({
-        placa,
+        vehiculo: placa,
         numeroFactura: despacho.codigo_factura_erp || despacho.codigo_orden,
-        fecha: despacho.hora_salida || new Date().toISOString(),
-        valorFactura: despacho.valor_total || 0
+        clienteNombre: despacho.cliente_nombre,
+        direccion: despacho.direccion_entrega || despacho.zona_entrega,
+        jornada: despacho.jornada || 'AM',
+        fechaDespacho: despacho.fecha_despacho,
+        valorFactura: despacho.valor_total || 0,
+        observaciones: despacho.observaciones
       });
 
       despacho.sync_onedrive = {

@@ -17,12 +17,7 @@ import {
   Check
 } from 'lucide-react';
 
-const CUADRILLAS = [
-  { id: 'LEO - JULIAN', nombre: 'LEO - JULIAN', placa: 'WRO-482' },
-  { id: 'ANDERSON - JHOAN', nombre: 'ANDERSON - JHOAN', placa: 'STZ-910' },
-  { id: 'JEFFERSON - MAURICIO', nombre: 'JEFFERSON - MAURICIO', placa: 'ENV-301' },
-  { id: 'JESUS - ALEJANDRO', nombre: 'JESUS - ALEJANDRO', placa: 'MC-441' }
-];
+import { FLOTA_VEHICULOS } from '../data/flota';
 
 const BODEGAS_SALIDA = [
   { id: '00', nombre: '00 - Patio Materiales Pesados (Atalaya)' },
@@ -38,7 +33,7 @@ const INITIAL_FORM = {
   direccion_entrega: '',
   valor_factura: '',
   jornada: new Date().getHours() < 12 ? 'AM' : 'PM',
-  vehiculo_cuadrilla: 'LEO - JULIAN',
+  vehiculo_placa: FLOTA_VEHICULOS[0],
   bodega_id: '01',
   total_bultos: 1,
   observaciones: ''
@@ -94,10 +89,8 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const guardar = (crearOtro = false) => {
+  const guardar = async (crearOtro) => {
     if (!validate()) return;
-
-    const cuadrillaSel = CUADRILLAS.find(c => c.id === form.vehiculo_cuadrilla) || CUADRILLAS[0];
 
     const payload = {
       numero_factura: form.numero_factura.trim().toUpperCase(),
@@ -105,33 +98,37 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
       direccion_entrega: form.direccion_entrega.trim(),
       valor_factura: Number(form.valor_factura) || 0,
       jornada: form.jornada,
-      vehiculo_cuadrilla: cuadrillaSel.nombre,
-      vehiculo_placa: cuadrillaSel.placa,
+      vehiculo_placa: form.vehiculo_placa,
       bodega_id: form.bodega_id,
       total_bultos: Number(form.total_bultos) || 1,
       observaciones: form.observaciones?.trim() || ''
     };
 
-    const ordenCreada = crearNuevoDespacho(payload);
+    try {
+      const ordenCreada = await crearNuevoDespacho(payload);
 
-    if (crearOtro) {
-      // Limpia ÚNICAMENTE Factura y Valor, manteniendo Cliente, Dirección y Cuadrilla
-      setForm(prev => ({
-        ...prev,
-        numero_factura: '',
-        valor_factura: '',
-        total_bultos: 1,
-        observaciones: ''
-      }));
-      setErrors({});
-      showToast(`Despacho ${ordenCreada.numero_factura} creado. Listo para la siguiente factura.`, 'success');
-      setTimeout(() => {
-        if (facturaInputRef.current) facturaInputRef.current.focus();
-      }, 100);
-    } else {
-      setForm({ ...INITIAL_FORM });
-      setErrors({});
-      onClose();
+      if (crearOtro) {
+        // Limpia ÚNICAMENTE Factura y Valor, manteniendo Cliente, Dirección y Vehículo
+        setForm(prev => ({
+          ...prev,
+          numero_factura: '',
+          valor_factura: '',
+          total_bultos: 1,
+          observaciones: ''
+        }));
+        setErrors({});
+        showToast(`Despacho ${ordenCreada.numero_factura || ordenCreada.codigo_factura_erp} creado. Listo para la siguiente factura.`, 'success');
+        setTimeout(() => {
+          if (facturaInputRef.current) facturaInputRef.current.focus();
+        }, 100);
+      } else {
+        setForm({ ...INITIAL_FORM, vehiculo_placa: FLOTA_VEHICULOS[0] });
+        setErrors({});
+        onClose();
+      }
+    } catch (error) {
+      // El error ya lo muestra WmsContext en su catch, aquí solo evitamos cerrar el modal si hubo error
+      console.warn("Creación abortada por error:", error.message);
     }
   };
 
@@ -144,7 +141,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
     }
   };
 
-  const cuadrillaActual = CUADRILLAS.find(c => c.id === form.vehiculo_cuadrilla) || CUADRILLAS[0];
+
 
   return (
     <div 
@@ -303,20 +300,20 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
             </div>
           </div>
 
-          {/* 6. Cuadrilla / Vehículo (vehiculo_cuadrilla): Selector desplegable 4 cuadrillas */}
+          {/* 6. Vehículo (vehiculo_placa): Selector desplegable FLOTA_VEHICULOS */}
           <div>
             <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
               <Truck className="h-3.5 w-3.5 text-slate-400" />
-              Cuadrilla / Vehículo
+              Vehículo Asignado
             </label>
             <select
-              value={form.vehiculo_cuadrilla}
-              onChange={(e) => handleChange('vehiculo_cuadrilla', e.target.value)}
+              value={form.vehiculo_placa}
+              onChange={(e) => handleChange('vehiculo_placa', e.target.value)}
               className="w-full h-11 px-3 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all"
             >
-              {CUADRILLAS.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre} — {c.placa}
+              {FLOTA_VEHICULOS.map((v) => (
+                <option key={v} value={v}>
+                  {v}
                 </option>
               ))}
             </select>
@@ -379,14 +376,14 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
             />
           </div>
 
-          {/* Resumen de la Cuadrilla y Hoja Excel */}
+          {/* Resumen del Vehículo y Hoja Excel */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between text-xs text-slate-600">
             <div className="flex items-center gap-2">
               <Truck className="h-4 w-4 text-[#E11D24]" />
-              <span>Vehículo: <strong className="text-slate-900">{cuadrillaActual.placa}</strong></span>
+              <span>Vehículo: <strong className="text-slate-900">{form.vehiculo_placa}</strong></span>
             </div>
             <span className="font-mono text-[11px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">
-              Hoja Excel: {cuadrillaActual.placa}
+              Hoja Excel: {form.vehiculo_placa}
             </span>
           </div>
 

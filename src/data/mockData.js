@@ -3,7 +3,7 @@
 // Dominio: Ferretería, Materiales de Construcción y Hogar
 // ============================================================================
 
-export const PLACAS_FLOTA_FIJA = ['WRO-482', 'STZ-910', 'ENV-301', 'MC-441'];
+import { FLOTA_VEHICULOS } from './flota';
 
 export const MOCK_BODEGAS = [
   { id: '00', codigo: '00', nombre: '00 - Patio Materiales Pesados (Atalaya)', direccion: 'Atalaya, Cúcuta', capacidad_bahias: 6 },
@@ -19,7 +19,7 @@ export const MOCK_VEHICULOS_RUTAS = [
     codigo_ruta: 'RUTA-ATALAYA-01',
     zona: 'Atalaya Occidental',
     vehiculo: {
-      placa: 'WRO-482',
+      placa: FLOTA_VEHICULOS[0],
       tipo: 'CAMION_NHR',
       modelo: 'Chevrolet NHR Turbo 4.5T',
       capacidad_kg: 4500
@@ -37,9 +37,9 @@ export const MOCK_VEHICULOS_RUTAS = [
     codigo_ruta: 'RUTA-PATIOS-CENTRO',
     zona: 'Los Patios & Centro',
     vehiculo: {
-      placa: 'STZ-910',
+      placa: FLOTA_VEHICULOS[1],
       tipo: 'CAMIONETA',
-      modelo: 'Chevrolet D-Max 4x4 Diésel',
+      modelo: 'Chevrolet D-Max 1.8T',
       capacidad_kg: 1800
     },
     conductor: {
@@ -55,9 +55,9 @@ export const MOCK_VEHICULOS_RUTAS = [
     codigo_ruta: 'RUTA-SALADO-IND',
     zona: 'Zona Industrial El Salado',
     vehiculo: {
-      placa: 'ENV-301',
-      tipo: 'CAMION_TURBO',
-      modelo: 'Hino Dutro Pro 7.5T',
+      placa: FLOTA_VEHICULOS[2],
+      tipo: 'CAMION_DUTRO',
+      modelo: 'Hino Dutro 7.5T',
       capacidad_kg: 7500
     },
     conductor: {
@@ -73,9 +73,9 @@ export const MOCK_VEHICULOS_RUTAS = [
     codigo_ruta: 'RUTA-EXPRESS-MOTO',
     zona: 'Reparto Express Urbano',
     vehiculo: {
-      placa: 'MC-441',
-      tipo: 'MOTO',
-      modelo: 'Motocarro Bajaj Torito Carga',
+      placa: FLOTA_VEHICULOS[3],
+      tipo: 'MOTOCARRO',
+      modelo: 'Motocarro Piaggio 500kg',
       capacidad_kg: 500
     },
     conductor: {
@@ -103,7 +103,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-101',
-    vehiculo_placa: 'WRO-482',
+    vehiculo_placa: FLOTA_VEHICULOS[0],
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega A-01',
@@ -117,7 +117,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-3', sku: 'SKU-DIS-COR', descripcion_producto: 'Caja Discos Corte Metal 4.5" DeWalt (x10)', cantidad_solicitada: 2, cantidad_auditada: 2, ubicacion_bodega: 'P02-E01-N4', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-101', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 180, timestamp: subMinutes(30), nota: 'Pedido comercial aprobado con despacho en Camión NHR WRO-482' }
+      { id: 'h-101', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 180, timestamp: subMinutes(30), nota: `Pedido comercial aprobado con despacho en Camión NHR ${FLOTA_VEHICULOS[0]}` }
     ]
   },
   {
@@ -130,7 +130,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-103',
-    vehiculo_placa: 'ENV-301',
+    vehiculo_placa: FLOTA_VEHICULOS[2],
     estado_actual: 'PENDIENTE',
     prioridad: 2, // Normal
     bahia_asignada: 'Bodega B-01',
@@ -143,7 +143,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-5', sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P04-E02-N1', unidad: 'GAL' }
     ],
     history: [
-      { id: 'h-102', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 300, timestamp: subMinutes(45), nota: 'Factura crédito radicada para Hino Dutro ENV-301' }
+      { id: 'h-102', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 300, timestamp: subMinutes(45), nota: `Factura crédito radicada para Hino Dutro ${FLOTA_VEHICULOS[2]}` }
     ]
   },
   {
@@ -156,7 +156,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-102',
-    vehiculo_placa: 'STZ-910',
+    vehiculo_placa: FLOTA_VEHICULOS[1],
     estado_actual: 'PENDIENTE',
     prioridad: 3, // Consolidado
     bahia_asignada: 'Bodega A-02',
@@ -169,7 +169,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-7', sku: 'SKU-LLV-STE', descripcion_producto: 'Juego Llaves Boca Fija Stanley 8-24mm', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P02-E03-N2', unidad: 'JGO' }
     ],
     history: [
-      { id: 'h-103', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 120, timestamp: subMinutes(20), nota: 'Pedido consolidado programado en D-Max STZ-910' }
+      { id: 'h-103', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 120, timestamp: subMinutes(20), nota: `Pedido consolidado programado en D-Max ${FLOTA_VEHICULOS[1]}` }
     ]
   },
   {
@@ -182,7 +182,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-101',
-    vehiculo_placa: 'WRO-482',
+    vehiculo_placa: FLOTA_VEHICULOS[0],
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega A-01',
@@ -209,7 +209,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-103',
-    vehiculo_placa: 'ENV-301',
+    vehiculo_placa: FLOTA_VEHICULOS[2],
     estado_actual: 'PENDIENTE',
     prioridad: 2,
     bahia_asignada: 'Bodega B-01',
@@ -235,7 +235,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-104',
-    vehiculo_placa: 'MC-441',
+    vehiculo_placa: FLOTA_VEHICULOS[3],
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega B-03',
@@ -249,7 +249,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-15', sku: 'SKU-DIS-COR', descripcion_producto: 'Caja Discos Corte Metal 4.5" DeWalt (x10)', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P02-E01-N4', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-107', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Líder Bodega', tiempo_estancia_seg: 900, timestamp: subMinutes(50), nota: 'Asignado a reparto express motocarro MC-441' }
+      { id: 'h-107', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Líder Bodega', tiempo_estancia_seg: 900, timestamp: subMinutes(50), nota: `Asignado a reparto express motocarro ${FLOTA_VEHICULOS[3]}` }
     ]
   },
   {
@@ -262,7 +262,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-102',
-    vehiculo_placa: 'STZ-910',
+    vehiculo_placa: FLOTA_VEHICULOS[1],
     estado_actual: 'PENDIENTE',
     prioridad: 2,
     bahia_asignada: 'Bodega A-02',
@@ -287,7 +287,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-101',
-    vehiculo_placa: 'WRO-482',
+    vehiculo_placa: FLOTA_VEHICULOS[0],
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega A-01',
@@ -300,7 +300,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-18', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P08-E02-N1', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-110', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Líder Despacho', tiempo_estancia_seg: 920, timestamp: subMinutes(28), nota: 'Listo para cargar en camión NHR WRO-482' }
+      { id: 'h-110', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Líder Despacho', tiempo_estancia_seg: 920, timestamp: subMinutes(28), nota: `Listo para cargar en camión NHR ${FLOTA_VEHICULOS[0]}` }
     ]
   },
   {
@@ -313,7 +313,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-103',
-    vehiculo_placa: 'ENV-301',
+    vehiculo_placa: FLOTA_VEHICULOS[2],
     estado_actual: 'PENDIENTE',
     prioridad: 2,
     bahia_asignada: 'Bodega B-01',
@@ -338,7 +338,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-101',
-    vehiculo_placa: 'WRO-482',
+    vehiculo_placa: FLOTA_VEHICULOS[0],
     estado_actual: 'DESPACHADO',
     prioridad: 1,
     bahia_asignada: 'Bodega A-01',
@@ -350,7 +350,7 @@ export const INITIAL_DESPACHOS = [
     sync_onedrive: {
       estado: 'SINCRONIZADO',
       fecha: subMinutes(35),
-      placa: 'WRO-482',
+      placa: FLOTA_VEHICULOS[0],
       destino: 'OneDrive Cloud via Graph API',
       error: null
     },
@@ -358,7 +358,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-20', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 25, cantidad_auditada: 25, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' }
     ],
     history: [
-      { id: 'h-112', estado_anterior: 'PENDIENTE', estado_nuevo: 'DESPACHADO', usuario_operador: 'Líder Despachos', tiempo_estancia_seg: 450, timestamp: subMinutes(35), nota: 'Camión NHR WRO-482 despachado. Fila registrada en plantilla Excel de OneDrive.' }
+      { id: 'h-112', estado_anterior: 'PENDIENTE', estado_nuevo: 'DESPACHADO', usuario_operador: 'Líder Despachos', tiempo_estancia_seg: 450, timestamp: subMinutes(35), nota: `Camión NHR ${FLOTA_VEHICULOS[0]} despachado. Fila registrada en plantilla Excel de OneDrive.` }
     ]
   },
   {
@@ -371,7 +371,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-101',
-    vehiculo_placa: 'WRO-482',
+    vehiculo_placa: FLOTA_VEHICULOS[0],
     estado_actual: 'PENDIENTE',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega Retención R-01',
@@ -403,7 +403,7 @@ export const INITIAL_DESPACHOS = [
     bodega_origen_id: '01',
     transportadora: 'Flota Propia',
     ruta_id: 'rt-102',
-    vehiculo_placa: 'STZ-910',
+    vehiculo_placa: FLOTA_VEHICULOS[1],
     estado_actual: 'PENDIENTE',
     prioridad: 2,
     bahia_asignada: 'Bodega Retención R-02',

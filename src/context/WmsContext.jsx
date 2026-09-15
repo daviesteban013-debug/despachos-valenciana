@@ -3,9 +3,9 @@ import {
   INITIAL_DESPACHOS, 
   INITIAL_DEVOLUCIONES, 
   MOCK_VEHICULOS_RUTAS, 
-  MOCK_BODEGAS,
-  PLACAS_FLOTA_FIJA
+  MOCK_BODEGAS
 } from '../data/mockData';
+import { FLOTA_VEHICULOS } from '../data/flota';
 
 const WmsContext = createContext(null);
 
@@ -37,9 +37,9 @@ export function WmsProvider({ children }) {
               };
             }
           }
-          const placa = d.vehiculo_placa && PLACAS_FLOTA_FIJA.includes(d.vehiculo_placa)
+          const placa = d.vehiculo_placa && FLOTA_VEHICULOS.includes(d.vehiculo_placa)
             ? d.vehiculo_placa
-            : 'WRO-482';
+            : FLOTA_VEHICULOS[0];
 
           return {
             ...d,
@@ -134,8 +134,8 @@ export function WmsProvider({ children }) {
   // Asignar vehículo validando contra las 4 placas fijas
   const asignarVehiculo = (despachoId, placa) => {
     const placaNormalizada = (placa || '').trim().toUpperCase();
-    if (!PLACAS_FLOTA_FIJA.includes(placaNormalizada)) {
-      showToast(`Placa no permitida: "${placa}". Placas válidas: ${PLACAS_FLOTA_FIJA.join(', ')}`, 'warning');
+    if (!FLOTA_VEHICULOS.map(v => v.trim().toUpperCase()).includes(placaNormalizada)) {
+      showToast(`Placa no permitida: "${placa}". Placas válidas: ${FLOTA_VEHICULOS.join(', ')}`, 'warning');
       return;
     }
 
@@ -153,9 +153,9 @@ export function WmsProvider({ children }) {
 
     const placaFinal = (vehiculoPlacaOverride || targetDespacho.vehiculo_placa || '').trim().toUpperCase();
 
-    if (!placaFinal || !PLACAS_FLOTA_FIJA.includes(placaFinal)) {
+    if (!placaFinal || !FLOTA_VEHICULOS.map(v => v.trim().toUpperCase()).includes(placaFinal)) {
       playBeep(440, 'sawtooth');
-      showToast(`Debe seleccionar una de las 4 placas fijas (${PLACAS_FLOTA_FIJA.join(', ')}) para despachar.`, 'warning');
+      showToast(`Debe seleccionar uno de los vehículos permitidos (${FLOTA_VEHICULOS.join(', ')}) para despachar.`, 'warning');
       return false;
     }
 
@@ -438,7 +438,7 @@ export function WmsProvider({ children }) {
       bodega_origen_id: activeBodega,
       transportadora: 'Flota Propia',
       ruta_id: 'rt-101',
-      vehiculo_placa: 'WRO-482',
+      vehiculo_placa: FLOTA_VEHICULOS[0],
       estado_actual: 'PENDIENTE',
       prioridad: 1, // Urgente
       bahia_asignada: 'Bodega A-01',
@@ -452,68 +452,31 @@ export function WmsProvider({ children }) {
         { id: `it-sim-3`, sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 1, cantidad_auditada: 1, ubicacion_bodega: 'P04-E02-N1', unidad: 'GAL' }
       ],
       history: [
-        { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: 'Pedido express ferretería programado para WRO-482' }
+        { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: `Pedido express ferretería programado para ${FLOTA_VEHICULOS[0]}` }
       ]
     };
 
     setDespachos((prev) => [newOrder, ...prev]);
     playBeep(880, 'triangle');
-    showToast(`⚡ Nuevo pedido crítico: ${newOrder.codigo_orden} (Asignado a WRO-482)`, 'warning');
+    showToast(`⚡ Nuevo pedido crítico: ${newOrder.codigo_orden} (Asignado a ${FLOTA_VEHICULOS[0]})`, 'warning');
   };
 
-  // 1. Inserción de nueva orden
-  const crearNuevoDespacho = (payload) => {
-    const factura = (payload.numero_factura || '').trim().toUpperCase();
-    const cliente = (payload.cliente_nombre || '').trim();
-    const direccion = (payload.direccion_entrega || '').trim();
-    const valor = Number(payload.valor_factura) || 0;
-    const bultos = Number(payload.total_bultos || payload.bultos) || 1;
-    const cuadrilla = payload.vehiculo_cuadrilla || 'LEO - JULIAN';
-    const jornada = payload.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM');
-    const bodega = payload.bodega_id || '01';
-    const obs = (payload.observaciones || '').trim();
-    const placa = payload.vehiculo_placa || (
-      cuadrilla.includes('LEO') ? 'WRO-482' :
-      cuadrilla.includes('ANDERSON') ? 'STZ-910' :
-      cuadrilla.includes('JEFFERSON') ? 'ENV-301' :
-      cuadrilla.includes('JESUS') ? 'MC-441' : 'WRO-482'
-    );
-    const randomNum = Math.floor(6400 + Math.random() * 600);
-    const nowIso = new Date().toISOString();
-
-    const nuevaOrden = {
-      id: `ORD-${Date.now().toString().slice(-4)}`,
-      numero_factura: factura,
-      cliente_nombre: cliente,
-      direccion_entrega: direccion,
-      valor_factura: valor,
-      jornada: jornada,
-      vehiculo_cuadrilla: cuadrilla,
-      bodega_id: bodega,
-      total_bultos: bultos,
-      observaciones: obs,
-      estado: 'PENDIENTE',
-      tiene_incidencia: false,
-      fecha_creacion: nowIso,
-
-      // Compatibilidad y soporte completo para tablero y reportes
-      codigo_orden: `PVSW-${randomNum}`,
-      codigo_factura_erp: factura,
-      cliente_codigo: `CL-${Math.floor(7000000 + Math.random() * 3000000)}`,
-      zona_entrega: direccion,
-      bodega_origen_id: bodega,
-      transportadora: 'Flota Propia',
-      ruta_id: 'rt-101',
-      vehiculo_placa: placa,
-      estado_actual: 'PENDIENTE',
-      prioridad: 2,
-      bahia_asignada: 'Bodega A-01',
-      numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
-      valor_total: valor,
-      bultos_total: bultos,
-      incidencia_activa: null,
-      sync_onedrive: null,
-      items: [
+  // 1. Inserción de nueva orden conectada al backend
+  const crearNuevoDespacho = async (payload) => {
+    try {
+      const factura = (payload.numero_factura || '').trim().toUpperCase();
+      const cliente = (payload.cliente_nombre || '').trim();
+      const direccion = (payload.direccion_entrega || '').trim();
+      const valor = Number(payload.valor_factura) || 0;
+      const bultos = Number(payload.total_bultos || payload.bultos) || 1;
+      const vehiculo = payload.vehiculo_placa || FLOTA_VEHICULOS[0];
+      const jornada = payload.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM');
+      const bodega = payload.bodega_id || '01';
+      const obs = (payload.observaciones || '').trim();
+      const fechaDespacho = payload.fecha_despacho || new Date().toISOString().slice(0, 10);
+      const randomNum = Math.floor(6400 + Math.random() * 600);
+      
+      const items = [
         {
           id: `it-${Date.now()}`,
           sku: 'SKU-PEDIDO',
@@ -523,24 +486,69 @@ export function WmsProvider({ children }) {
           ubicacion_bodega: 'DESPACHO',
           unidad: 'BUL'
         }
-      ],
-      history: [
-        {
-          id: `h-${Date.now()}`,
-          estado_anterior: null,
-          estado_nuevo: 'PENDIENTE',
-          usuario_operador: 'Coordinador Logística',
-          tiempo_estancia_seg: 0,
-          timestamp: nowIso,
-          nota: `Pedido registrado. Cuadrilla: ${cuadrilla}. Jornada: ${jornada}. Obs: ${obs || 'Sin observaciones'}`
-        }
-      ]
-    };
+      ];
 
-    setDespachos((prev) => [nuevaOrden, ...prev]);
-    playBeep(880, 'triangle');
-    showToast(`✅ Despacho ${nuevaOrden.numero_factura} creado con éxito.`, 'success');
-    return nuevaOrden;
+      const res = await fetch(`${API_URL}/despachos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          codigo_orden: `PVSW-${randomNum}`,
+          codigo_factura_erp: factura,
+          cliente_nombre: cliente,
+          direccion_entrega: direccion,
+          jornada: jornada,
+          vehiculo_placa: vehiculo,
+          bodega_id: bodega,
+          valor_total: valor,
+          bultos_total: bultos,
+          observaciones: obs,
+          fecha_despacho: fechaDespacho,
+          items: items
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Error creando el despacho en el servidor');
+      }
+
+      const nuevaOrden = await res.json();
+
+      // Completar datos de UI que no vienen del backend o que se manejan localmente para compatibilidad
+      const ordenCompleta = {
+        ...nuevaOrden,
+        cliente_codigo: `CL-${Math.floor(7000000 + Math.random() * 3000000)}`,
+        zona_entrega: direccion,
+        bodega_origen_id: bodega,
+        transportadora: 'Flota Propia',
+        ruta_id: 'rt-101',
+        prioridad: 2,
+        bahia_asignada: 'Bodega A-01',
+        numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
+        history: [
+          {
+            id: `h-${Date.now()}`,
+            estado_anterior: null,
+            estado_nuevo: 'PENDIENTE',
+            usuario_operador: 'Coordinador Logística',
+            tiempo_estancia_seg: 0,
+            timestamp: new Date().toISOString(),
+            nota: `Pedido registrado. Vehículo: ${vehiculo}. Jornada: ${jornada}. Obs: ${obs || 'Sin observaciones'}`
+          }
+        ]
+      };
+
+      setDespachos((prev) => [ordenCompleta, ...prev]);
+      playBeep(880, 'triangle');
+      showToast(`✅ Despacho ${ordenCompleta.codigo_factura_erp || ordenCompleta.codigo_orden} creado con éxito.`, 'success');
+      return ordenCompleta;
+      
+    } catch (error) {
+      console.error('Error al crear despacho:', error);
+      showToast(`Fallo crítico creando despacho: ${error.message}`, 'error');
+      // No se bloquea la ejecución para devolver un error pero NO se crea el registro localmente.
+      throw error;
+    }
   };
 
   // 2. Transición de estado a DESPACHADO
@@ -549,7 +557,7 @@ export function WmsProvider({ children }) {
     setDespachos((prev) =>
       prev.map((orden) => {
         if (orden.id === despachoId || orden.numero_factura === despachoId || orden.codigo_factura_erp === despachoId) {
-          const placa = orden.vehiculo_placa || 'WRO-482';
+          const placa = orden.vehiculo_placa || FLOTA_VEHICULOS[0];
           return {
             ...orden,
             estado: 'DESPACHADO',
@@ -628,7 +636,7 @@ export function WmsProvider({ children }) {
         devoluciones,
         bodegas: MOCK_BODEGAS,
         rutasVehiculos: MOCK_VEHICULOS_RUTAS,
-        placasFlotaFija: PLACAS_FLOTA_FIJA,
+        flotaVehiculos: FLOTA_VEHICULOS,
         activeBodega,
         setActiveBodega,
         activeTurno,

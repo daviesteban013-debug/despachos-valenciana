@@ -79,6 +79,7 @@ app.patch('/api/facturas/:id/estado', cambiarEstadoFactura);
 // RUTAS DE WMS DESPACHO A DOMICILIO (MODELO SIMPLIFICADO 2 ESTADOS + ONEDRIVE)
 // ----------------------------------------------------------------------------
 app.get('/api/despachos', listarDespachos);
+app.post('/api/despachos', crearDespacho);
 app.get('/api/despachos/exportar-plantilla', exportarPlantillaExcel);
 app.patch('/api/despachos/:id/estado', cambiarEstadoDespacho);
 app.post('/api/despachos/:id/reintentar-onedrive', reintentarSincronizacionOneDrive);
