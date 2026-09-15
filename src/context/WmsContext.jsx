@@ -199,7 +199,7 @@ export function WmsProvider({ children }) {
 
     // 2. Disparo de guardado automático en la hoja de esa placa en OneDrive
     try {
-      const response = await fetch(`/api/despachos/${despachoId}/estado`, {
+      const response = await fetch(`${API_URL}/api/despachos/${despachoId}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -260,7 +260,7 @@ export function WmsProvider({ children }) {
     showToast(`Reintentando sincronización de ${d.codigo_orden} con OneDrive...`, 'info');
 
     try {
-      const response = await fetch(`/api/despachos/${despachoId}/reintentar-onedrive`, {
+      const response = await fetch(`${API_URL}/api/despachos/${despachoId}/reintentar-onedrive`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -288,7 +288,7 @@ export function WmsProvider({ children }) {
   const exportarCopiaExcel = async () => {
     showToast('Generando copia de la plantilla Excel de vehículos...', 'info');
     try {
-      const response = await fetch('/api/despachos/exportar-plantilla');
+      const response = await fetch(`${API_URL}/api/despachos/exportar-plantilla`);
       if (!response.ok) {
         throw new Error(`Error en servidor (${response.status})`);
       }
@@ -374,7 +374,7 @@ export function WmsProvider({ children }) {
     showToast(`Novedad registrada en la orden: [${tipo}]`, 'warning');
 
     try {
-      await fetch(`/api/despachos/${despachoId}/incidencia`, {
+      await fetch(`${API_URL}/api/despachos/${despachoId}/incidencia`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion: 'REGISTRAR', tipo, descripcion, reportado_por: metadataOperador })
@@ -414,7 +414,7 @@ export function WmsProvider({ children }) {
     showToast(`Novedad resuelta y despejada de la orden.`, 'success');
 
     try {
-      await fetch(`/api/despachos/${despachoId}/incidencia`, {
+      await fetch(`${API_URL}/api/despachos/${despachoId}/incidencia`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion: 'RESOLVER', solucion, reportado_por: metadataOperador })
@@ -487,7 +487,7 @@ export function WmsProvider({ children }) {
         }
       ];
 
-      const res = await fetch('http://localhost:3001/api/despachos', {
+      const res = await fetch(`${API_URL}/api/despachos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
