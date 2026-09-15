@@ -488,7 +488,7 @@ export function WmsProvider({ children }) {
         }
       ];
 
-      const res = await fetch(`${API_URL}/despachos`, {
+      const res = await fetch('http://localhost:3001/api/despachos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
