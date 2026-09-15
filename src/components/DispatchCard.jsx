@@ -19,7 +19,7 @@ export default function DispatchCard({ despacho }) {
     setSelectedDespachoId, 
     despacharOrden, 
     asignarVehiculo,
-    reintentarSyncOneDrive,
+    reintentarSyncDrive,
     restaurarAPendiente,
     setIncidentModalTarget
   } = useWms();
@@ -55,7 +55,7 @@ export default function DispatchCard({ despacho }) {
   const handleReintentar = async (e) => {
     e.stopPropagation();
     setReintentando(true);
-    await reintentarSyncOneDrive(despacho.id);
+    await reintentarSyncDrive(despacho.id);
     setReintentando(false);
   };
 
@@ -186,18 +186,18 @@ export default function DispatchCard({ despacho }) {
           </div>
         )}
 
-        {/* FILA 5: Estado de Sincronización con OneDrive (en Despachados) */}
+        {/* FILA 5: Estado de Sincronización con Google Drive (en Despachados) */}
         {despacho.estado_actual === 'DESPACHADO' && (
           <div className="pt-1">
-            {despacho.sync_onedrive?.estado === 'SINCRONIZADO' ? (
+            {despacho.sync_cloud?.estado === 'SINCRONIZADO' ? (
               <div className="flex items-center justify-between px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900">
                 <div className="flex items-center gap-1.5 font-semibold">
                   <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                  <span>OneDrive: Sincronizado en hoja [{despacho.vehiculo_placa}]</span>
+                  <span>Google Drive: Sincronizado en hoja [{despacho.vehiculo_placa}]</span>
                 </div>
                 <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
               </div>
-            ) : despacho.sync_onedrive?.estado === 'PENDIENTE' ? (
+            ) : despacho.sync_cloud?.estado === 'ERROR_SYNC' ? (
               <div className="flex items-center justify-between px-2.5 py-1.5 bg-red-50 border border-red-300 rounded-xl text-xs text-red-900">
                 <div className="flex items-center gap-1.5 font-semibold truncate flex-1 mr-2">
                   <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0" />
@@ -217,7 +217,7 @@ export default function DispatchCard({ despacho }) {
               <div className="flex items-center justify-between px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
                 <span className="font-semibold flex items-center gap-1.5">
                   <RefreshCw className="h-3.5 w-3.5 animate-spin text-blue-600" />
-                  Guardando en plantilla de OneDrive...
+                  Guardando en plantilla de Google Drive...
                 </span>
               </div>
             )}

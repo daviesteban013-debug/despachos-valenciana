@@ -3,7 +3,7 @@ import {
   registrarDespachoEnPlantilla, 
   exportarPlantillaBuffer, 
   calibrarPlantillaReferencia
-} from '../services/onedriveExcelService.js';
+} from '../services/plantillaExcelService.js';
 import { FLOTA_VEHICULOS } from '../config/flota.js';
 
 // ============================================================================
@@ -34,7 +34,7 @@ const ORDENES_DEMO = [
     fecha_despacho: new Date().toISOString().slice(0,10),
     bahia_asignada: 'Bodega A-01',
     incidencia_activa: null,
-    sync_onedrive: null,
+    sync_cloud: null,
     items: [
       { sku: 'MAT-001', nombre: 'Cemento Gris 50kg Argos', cantidad: 10 },
       { sku: 'PIN-001', nombre: 'Esmalte Sintético Rojo Galón', cantidad: 3 }
@@ -56,7 +56,7 @@ const ORDENES_DEMO = [
     fecha_despacho: new Date().toISOString().slice(0,10),
     bahia_asignada: 'Bodega A-02',
     incidencia_activa: null,
-    sync_onedrive: null,
+    sync_cloud: null,
     items: [
       { sku: 'HER-001', nombre: 'Taladro Percutor DeWalt', cantidad: 2 },
       { sku: 'ELE-001', nombre: 'Cable THHN #12 Rojo Rollo', cantidad: 4 }
@@ -82,7 +82,7 @@ const ORDENES_DEMO = [
       descripcion: 'Faltante reportado durante verificación física en muelle.',
       fecha: new Date().toISOString()
     },
-    sync_onedrive: null,
+    sync_cloud: null,
     items: [
       { sku: 'MAT-002', nombre: 'Varilla Corrugada 1/2 pulg 6m', cantidad: 20 }
     ]
@@ -105,7 +105,7 @@ const ORDENES_DEMO = [
     hora_salida: new Date(Date.now() - 30 * 60000).toISOString(),
     despachado_por: 'Líder Despachos',
     incidencia_activa: null,
-    sync_onedrive: {
+    sync_cloud: {
       estado: 'SINCRONIZADO',
       fecha: new Date(Date.now() - 30 * 60000).toISOString(),
       placa: 'WDP-097 JESUS',
@@ -178,7 +178,7 @@ export async function crearDespacho(req, res) {
       observaciones: observaciones || '',
       fecha_despacho: fecha_despacho || new Date().toISOString().slice(0, 10),
       incidencia_activa: null,
-      sync_onedrive: null,
+      sync_cloud: null,
       items: items || []
     };
 
@@ -254,7 +254,7 @@ export async function cambiarEstadoDespacho(req, res) {
           observaciones: despacho.observaciones
         });
 
-        despacho.sync_onedrive = {
+        despacho.sync_cloud = {
           estado: 'SINCRONIZADO',
           fecha: new Date().toISOString(),
           placa: placaAsignada,
@@ -262,10 +262,10 @@ export async function cambiarEstadoDespacho(req, res) {
           error: null
         };
       } catch (errExcel) {
-        console.error('⚠️ Error escribiendo en OneDrive (operación no bloqueante):', errExcel.message);
+        console.error('⚠️ Error escribiendo en Drive (operación no bloqueante):', errExcel.message);
         // IMPORTANTE: No se revierte el despacho. La orden queda como DESPACHADO, pero se marca pendiente de sync
-        despacho.sync_onedrive = {
-          estado: 'PENDIENTE',
+        despacho.sync_cloud = {
+          estado: 'ERROR_SYNC',
           error: errExcel.message,
           placa: placaAsignada,
           intentos: 1,
@@ -276,7 +276,7 @@ export async function cambiarEstadoDespacho(req, res) {
       return res.json({
         mensaje: `Orden ${despacho.codigo_orden} marcada como DESPACHADO.`,
         despacho,
-        syncExcel: despacho.sync_onedrive
+        syncExcel: despacho.sync_cloud
       });
     }
 
@@ -292,9 +292,9 @@ export async function cambiarEstadoDespacho(req, res) {
   }
 }
 
-// POST /api/despachos/:id/reintentar-onedrive
-// Reintenta la sincronización con OneDrive si anteriormente falló
-export async function reintentarSincronizacionOneDrive(req, res) {
+// POST /api/despachos/:id/reintentar-sync
+// Reintenta la sincronización con Drive si anteriormente falló
+export async function reintentarSincronizacionDrive(req, res) {
   try {
     const { id } = req.params;
     let despacho = dbMemoria.despachos.get(id);
@@ -332,7 +332,7 @@ export async function reintentarSincronizacionOneDrive(req, res) {
         observaciones: despacho.observaciones
       });
 
-      despacho.sync_onedrive = {
+      despacho.sync_cloud = {
         estado: 'SINCRONIZADO',
         fecha: new Date().toISOString(),
         placa,
@@ -343,20 +343,20 @@ export async function reintentarSincronizacionOneDrive(req, res) {
       return res.json({
         mensaje: `Sincronización reintentada con éxito para la orden ${despacho.codigo_orden}.`,
         despacho,
-        syncExcel: despacho.sync_onedrive
+        syncExcel: despacho.sync_cloud
       });
     } catch (err) {
-      despacho.sync_onedrive = {
-        estado: 'PENDIENTE',
+      despacho.sync_cloud = {
+        estado: 'ERROR_SYNC',
         error: err.message,
         placa,
-        intentos: ((despacho.sync_onedrive?.intentos) || 1) + 1,
+        intentos: ((despacho.sync_cloud?.intentos) || 1) + 1,
         ultimo_intento: new Date().toISOString()
       };
 
       return res.status(502).json({
-        error: `Fallo al sincronizar con OneDrive: ${err.message}`,
-        syncExcel: despacho.sync_onedrive
+        error: `Fallo al sincronizar con Drive: ${err.message}`,
+        syncExcel: despacho.sync_cloud
       });
     }
   } catch (error) {

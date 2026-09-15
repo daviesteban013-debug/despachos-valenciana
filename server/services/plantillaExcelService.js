@@ -3,6 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { FLOTA_VEHICULOS } from '../config/flota.js';
+import { 
+  buscarArchivoEnDrive, 
+  descargarExcelDesdeDrive, 
+  sincronizarConGoogleDrive 
+} from './googleDriveService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -98,127 +103,44 @@ export async function asegurarPlantillaLocal() {
 }
 
 /**
- * Obtiene el token de acceso de Microsoft Graph si las variables de entorno de Azure AD existen
- */
-async function obtenerGraphAccessToken() {
-  const tenantId = process.env.AZURE_TENANT_ID;
-  const clientId = process.env.AZURE_CLIENT_ID;
-  const clientSecret = process.env.AZURE_CLIENT_SECRET;
-
-  if (!tenantId || !clientId || !clientSecret) {
-    return null;
-  }
-
-  const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
-  const params = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    scope: 'https://graph.microsoft.com/.default',
-    grant_type: 'client_credentials'
-  });
-
-  const response = await fetch(tokenUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString()
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Error autenticando con Azure AD (${response.status}): ${errText}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
-
-/**
- * Obtiene el buffer del archivo Excel actual
+ * Obtiene el buffer del archivo Excel actual desde Google Drive
  */
 export async function obtenerBufferPlantilla() {
-  const token = await obtenerGraphAccessToken();
-
-  if (token) {
-    const driveId = process.env.ONEDRIVE_DRIVE_ID;
-    const userId = process.env.ONEDRIVE_USER_ID;
-    const filePath = process.env.ONEDRIVE_FILE_PATH || '/Plantillas/Plantilla_Despachos_Vehiculos.xlsx';
-
-    let graphUrl = '';
-    if (driveId) {
-      graphUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:${filePath}:/content`;
-    } else if (userId) {
-      graphUrl = `https://graph.microsoft.com/v1.0/users/${userId}/drive/root:${filePath}:/content`;
+  try {
+    const archivoExistente = await buscarArchivoEnDrive();
+    
+    if (archivoExistente) {
+      return await descargarExcelDesdeDrive(archivoExistente.id);
     } else {
-      graphUrl = `https://graph.microsoft.com/v1.0/me/drive/root:${filePath}:/content`;
-    }
-
-    const res = await fetch(graphUrl, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (res.status === 404) {
-      console.log('ℹ️ Archivo no encontrado en OneDrive. Creando plantilla base...');
+      console.log('ℹ️ Archivo no encontrado en Google Drive. Creando plantilla base...');
       const workbook = await crearPlantillaBase();
       const buffer = await workbook.xlsx.writeBuffer();
-      await subirBufferPlantilla(buffer, token);
+      await subirBufferPlantilla(buffer);
       return buffer;
     }
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Error descargando Excel desde OneDrive Graph API (${res.status}): ${errText}`);
-    }
-
-    const arrayBuf = await res.arrayBuffer();
-    return Buffer.from(arrayBuf);
+  } catch (error) {
+    console.warn(`⚠️ No se pudo obtener buffer desde Google Drive (${error.message}). Usando fallback local...`);
+    // Fallback local
+    await asegurarPlantillaLocal();
+    return fs.readFileSync(LOCAL_TEMPLATE_PATH);
   }
-
-  // Fallback local
-  await asegurarPlantillaLocal();
-  return fs.readFileSync(LOCAL_TEMPLATE_PATH);
 }
 
 /**
- * Sube o guarda el buffer del archivo Excel modificado
+ * Sube o guarda el buffer del archivo Excel modificado en Google Drive
  */
-export async function subirBufferPlantilla(buffer, tokenOverride = null) {
-  const token = tokenOverride || await obtenerGraphAccessToken();
-
-  if (token) {
-    const driveId = process.env.ONEDRIVE_DRIVE_ID;
-    const userId = process.env.ONEDRIVE_USER_ID;
-    const filePath = process.env.ONEDRIVE_FILE_PATH || '/Plantillas/Plantilla_Despachos_Vehiculos.xlsx';
-
-    let graphUrl = '';
-    if (driveId) {
-      graphUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:${filePath}:/content`;
-    } else if (userId) {
-      graphUrl = `https://graph.microsoft.com/v1.0/users/${userId}/drive/root:${filePath}:/content`;
-    } else {
-      graphUrl = `https://graph.microsoft.com/v1.0/me/drive/root:${filePath}:/content`;
-    }
-
-    const res = await fetch(graphUrl, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      },
-      body: buffer
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Error subiendo Excel a OneDrive Graph API (${res.status}): ${errText}`);
-    }
-
-    return { destino: 'OneDrive Cloud via Graph API' };
+export async function subirBufferPlantilla(buffer) {
+  const resSync = await sincronizarConGoogleDrive(buffer);
+  
+  if (resSync.success) {
+    return { destino: 'Google Drive Cloud' };
+  } else {
+    console.warn(`⚠️ Error sincronizando con Drive (${resSync.error}). Usando fallback local...`);
+    // Fallback local
+    await asegurarPlantillaLocal();
+    fs.writeFileSync(LOCAL_TEMPLATE_PATH, buffer);
+    return { destino: 'Servidor Local (Modo Simulación Fallback)' };
   }
-
-  // Fallback local
-  await asegurarPlantillaLocal();
-  fs.writeFileSync(LOCAL_TEMPLATE_PATH, buffer);
-  return { destino: 'Servidor Local (Modo Simulación Fallback)' };
 }
 
 /**
@@ -248,7 +170,6 @@ export async function registrarDespachoEnPlantilla({
   let fechaBloqueStr = '';
   if (fechaDespacho) {
     const d = new Date(fechaDespacho);
-    // Verificar validez y formatear localmente
     if (!isNaN(d.getTime())) {
       const day = String(d.getDate()).padStart(2, '0');
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -266,7 +187,7 @@ export async function registrarDespachoEnPlantilla({
 
   // Encolar la operación atómica
   return enqueue(async () => {
-    // 1. Obtener buffer actual (OneDrive o local)
+    // 1. Obtener buffer actual (Google Drive o local)
     const currentBuffer = await obtenerBufferPlantilla();
 
     // 2. Cargar con ExcelJS
@@ -286,7 +207,6 @@ export async function registrarDespachoEnPlantilla({
       worksheet = workbook.addWorksheet(vehiculoNormalizado, { views: [{ showGridLines: true }] });
       escribirMembreteCorporativo(worksheet);
     } else {
-      // Asegurar configuración de columnas en caso de cargar archivo existente
       if (!worksheet.columns || worksheet.columns.length === 0) {
         worksheet.columns = ENCABEZADOS_COLUMNAS;
       }
@@ -295,9 +215,6 @@ export async function registrarDespachoEnPlantilla({
     // 4. Buscar si existe el bloque para esta fecha
     let filaSubtotalExistente = -1;
     let sumaActualSubtotal = 0;
-    
-    // Recorremos buscando la fila que diga "Fecha: DD/MM/YYYY" en la celda 1
-    // y luego buscando su correspondiente "SUBTOTAL"
     let enBloque = false;
     for (let r = 1; r <= worksheet.rowCount; r++) {
       const row = worksheet.getRow(r);
@@ -328,11 +245,8 @@ export async function registrarDespachoEnPlantilla({
     ];
 
     if (filaSubtotalExistente > -1) {
-      // INSERCIÓN EN BLOQUE EXISTENTE
-      // Insertamos una fila *antes* de la fila del subtotal
       worksheet.spliceRows(filaSubtotalExistente, 0, rowData);
       
-      // Aplicar formato a la fila insertada
       const newRow = worksheet.getRow(filaSubtotalExistente);
       newRow.getCell(3).alignment = { horizontal: 'center' };
       newRow.getCell(4).alignment = { horizontal: 'center' };
@@ -341,11 +255,9 @@ export async function registrarDespachoEnPlantilla({
       valorCell.numFmt = '"$"#,##0';
       valorCell.alignment = { horizontal: 'right' };
 
-      // Actualizar el valor numérico (evitando fórmulas complejas y dependencias del motor de Excel)
       const nuevaSuma = Number(sumaActualSubtotal) + valorNumerico;
       const subRow = worksheet.getRow(filaSubtotalExistente + 1);
       
-      // El subtotal está en la col 6
       const subCell = subRow.getCell(6);
       subCell.value = nuevaSuma;
       subCell.numFmt = '"$"#,##0';
@@ -354,18 +266,15 @@ export async function registrarDespachoEnPlantilla({
       newRow.commit();
       
     } else {
-      // CREACIÓN DE BLOQUE NUEVO (Al final)
       const lastRow = worksheet.rowCount;
-      const nextStart = lastRow > 4 ? lastRow + 2 : 5; // Dejar espacio si ya hay bloques
+      const nextStart = lastRow > 4 ? lastRow + 2 : 5;
       
-      // Fila de Fecha y Vehículo
       const titleRow = worksheet.getRow(nextStart);
       titleRow.getCell(1).value = `Fecha: ${fechaBloqueStr}`;
       titleRow.getCell(5).value = `Vehículo: ${vehiculoNormalizado}`;
       titleRow.font = { bold: true };
       titleRow.commit();
       
-      // Fila de Encabezados
       const headerRow = worksheet.getRow(nextStart + 1);
       headerRow.values = [
         'Nombre del cliente',
@@ -387,7 +296,6 @@ export async function registrarDespachoEnPlantilla({
       headerRow.height = 20;
       headerRow.commit();
       
-      // Fila de Datos
       const dataRow = worksheet.getRow(nextStart + 2);
       dataRow.values = rowData;
       dataRow.getCell(3).alignment = { horizontal: 'center' };
@@ -397,7 +305,6 @@ export async function registrarDespachoEnPlantilla({
       valCell.alignment = { horizontal: 'right' };
       dataRow.commit();
       
-      // Fila de Subtotal
       const subRow = worksheet.getRow(nextStart + 3);
       subRow.getCell(1).value = 'SUBTOTAL';
       subRow.getCell(1).font = { bold: true };
@@ -412,14 +319,14 @@ export async function registrarDespachoEnPlantilla({
     // 6. Generar buffer actualizado
     const updatedBuffer = await workbook.xlsx.writeBuffer();
 
-    // 7. Guardar en OneDrive o archivo local
+    // 7. Guardar en Google Drive o archivo local
     const resultadoGuardado = await subirBufferPlantilla(Buffer.from(updatedBuffer));
 
     console.log(`✅ Fila agregada en hoja [${vehiculoNormalizado}]: Factura ${numeroFactura}, Valor $${valorNumerico.toLocaleString('es-CO')} (${resultadoGuardado.destino})`);
 
     return {
       success: true,
-      placa: vehiculoNormalizado, // Mantenemos el campo de retorno por compatibilidad 
+      placa: vehiculoNormalizado, 
       vehiculo: vehiculoNormalizado,
       fila: {
         numeroFactura,

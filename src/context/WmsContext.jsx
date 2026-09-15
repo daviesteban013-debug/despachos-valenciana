@@ -46,7 +46,7 @@ export function WmsProvider({ children }) {
             estado_actual: estado === 'DESPACHADO' ? 'DESPACHADO' : 'PENDIENTE',
             vehiculo_placa: placa,
             incidencia_activa: incidencia,
-            sync_onedrive: d.sync_onedrive || (estado === 'DESPACHADO' ? { estado: 'SINCRONIZADO', placa } : null)
+            sync_cloud: d.sync_cloud || (estado === 'DESPACHADO' ? { estado: 'SINCRONIZADO', placa } : null)
           };
         });
         localStorage.setItem('wms_valenciana_despachos_v3', JSON.stringify(migrados));
@@ -145,7 +145,7 @@ export function WmsProvider({ children }) {
     showToast(`Vehículo [${placaNormalizada}] asignado a la orden.`, 'info');
   };
 
-  // Acción principal: "Despachar" (PENDIENTE -> DESPACHADO + Guardado en plantilla Excel de OneDrive)
+  // Acción principal: "Despachar" (PENDIENTE -> DESPACHADO + Guardado en plantilla Excel de Google Drive)
   // NOTA CRÍTICA: NO DESCUENTA INVENTARIO. El inventario se descuenta solo al sellar en mostrador.
   const despacharOrden = async (despachoId, vehiculoPlacaOverride = null, metadataOperador = 'Líder Bodega Valenciana') => {
     const targetDespacho = despachos.find(d => d.id === despachoId);
@@ -174,7 +174,7 @@ export function WmsProvider({ children }) {
             usuario_operador: metadataOperador,
             tiempo_estancia_seg: 300,
             timestamp: nowIso,
-            nota: `Despachado en vehículo [${placaFinal}]. Sincronizando con plantilla OneDrive.`
+            nota: `Despachado en vehículo [${placaFinal}]. Sincronizando con plantilla Google Drive.`
           }
         ];
 
@@ -183,7 +183,7 @@ export function WmsProvider({ children }) {
           estado_actual: 'DESPACHADO',
           vehiculo_placa: placaFinal,
           hora_salida: nowIso,
-          sync_onedrive: {
+          sync_cloud: {
             estado: 'PENDIENTE',
             placa: placaFinal,
             fecha: nowIso,
@@ -197,7 +197,7 @@ export function WmsProvider({ children }) {
     playBeep(1046);
     showToast(`Orden ${targetDespacho.codigo_orden} despachada en ${placaFinal}.`, 'success');
 
-    // 2. Disparo de guardado automático en la hoja de esa placa en OneDrive
+    // 2. Disparo de guardado automático en la hoja de esa placa en Google Drive
     try {
       const response = await fetch(`${API_URL}/api/despachos/${despachoId}/estado`, {
         method: 'PATCH',
@@ -213,30 +213,30 @@ export function WmsProvider({ children }) {
 
       if (response.ok && data.syncExcel?.estado === 'SINCRONIZADO') {
         setDespachos(prev =>
-          prev.map(d => (d.id === despachoId ? { ...d, sync_onedrive: data.syncExcel } : d))
+          prev.map(d => (d.id === despachoId ? { ...d, sync_cloud: data.syncExcel } : d))
         );
-        showToast(`Fila registrada en hoja [${placaFinal}] de OneDrive.`, 'success');
+        showToast(`Fila registrada en hoja [${placaFinal}] de Google Drive.`, 'success');
       } else {
         const syncError = data.syncExcel || {
           estado: 'PENDIENTE',
-          error: data.error || 'Error al conectar con OneDrive',
+          error: data.error || 'Error al conectar con Google Drive',
           placa: placaFinal,
           intentos: 1,
           ultimo_intento: nowIso
         };
         setDespachos(prev =>
-          prev.map(d => (d.id === despachoId ? { ...d, sync_onedrive: syncError } : d))
+          prev.map(d => (d.id === despachoId ? { ...d, sync_cloud: syncError } : d))
         );
         showToast(`Orden despachada en bodega, pero pendiente de sincronizar en Excel: ${syncError.error}`, 'warning');
       }
     } catch (err) {
-      console.warn('Error en llamada a backend para sync OneDrive:', err);
+      console.warn('Error en llamada a backend para sync Google Drive:', err);
       setDespachos(prev =>
         prev.map(d => {
           if (d.id !== despachoId) return d;
           return {
             ...d,
-            sync_onedrive: {
+            sync_cloud: {
               estado: 'PENDIENTE',
               error: err.message || 'Servidor backend no disponible',
               placa: placaFinal,
@@ -253,14 +253,14 @@ export function WmsProvider({ children }) {
   };
 
   // Reintentar sincronización de orden fallida
-  const reintentarSyncOneDrive = async (despachoId) => {
+  const reintentarSyncDrive = async (despachoId) => {
     const d = despachos.find(item => item.id === despachoId);
     if (!d) return;
 
-    showToast(`Reintentando sincronización de ${d.codigo_orden} con OneDrive...`, 'info');
+    showToast(`Reintentando sincronización de ${d.codigo_orden} con Google Drive...`, 'info');
 
     try {
-      const response = await fetch(`${API_URL}/api/despachos/${despachoId}/reintentar-onedrive`, {
+      const response = await fetch(`${API_URL}/api/despachos/${despachoId}/reintentar-sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -268,13 +268,13 @@ export function WmsProvider({ children }) {
 
       if (response.ok) {
         setDespachos(prev =>
-          prev.map(item => (item.id === despachoId ? { ...item, sync_onedrive: data.syncExcel } : item))
+          prev.map(item => (item.id === despachoId ? { ...item, sync_cloud: data.syncExcel } : item))
         );
         playBeep(1046);
         showToast(`✅ Sincronizado exitosamente en plantilla Excel (${d.vehiculo_placa}).`, 'success');
       } else {
         setDespachos(prev =>
-          prev.map(item => (item.id === despachoId ? { ...item, sync_onedrive: data.syncExcel } : item))
+          prev.map(item => (item.id === despachoId ? { ...item, sync_cloud: data.syncExcel } : item))
         );
         playBeep(440, 'sawtooth');
         showToast(`Fallo al sincronizar: ${data.error || 'Error desconocido'}`, 'warning');
@@ -316,7 +316,7 @@ export function WmsProvider({ children }) {
           ...d,
           estado_actual: 'PENDIENTE',
           hora_salida: null,
-          sync_onedrive: null
+          sync_cloud: null
         };
       })
     );
@@ -445,7 +445,7 @@ export function WmsProvider({ children }) {
       numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
       valor_total: 4280000,
       incidencia_activa: null,
-      sync_onedrive: null,
+      sync_cloud: null,
       items: [
         { id: `it-sim-1`, sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' },
         { id: `it-sim-2`, sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P08-E02-N1', unidad: 'UND' },
@@ -562,7 +562,7 @@ export function WmsProvider({ children }) {
             estado_actual: 'DESPACHADO',
             fecha_despacho: nowIso,
             hora_salida: nowIso,
-            sync_onedrive: {
+            sync_cloud: {
               estado: 'PENDIENTE',
               placa: placa,
               fecha: nowIso,
@@ -621,7 +621,7 @@ export function WmsProvider({ children }) {
     despachados: despachos.filter((d) => d.estado_actual === 'DESPACHADO').length,
     conIncidencia: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
     incidencias: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
-    pendientesSyncExcel: despachos.filter((d) => d.estado_actual === 'DESPACHADO' && d.sync_onedrive?.estado === 'PENDIENTE').length
+    pendientesSyncExcel: despachos.filter((d) => d.estado_actual === 'DESPACHADO' && d.sync_cloud?.estado === 'PENDIENTE').length
   };
 
   const selectedDespacho = despachos.find((d) => d.id === selectedDespachoId) || null;
@@ -663,7 +663,7 @@ export function WmsProvider({ children }) {
         despacharOrden,
         marcarComoDespachado,
         asignarVehiculo,
-        reintentarSyncOneDrive,
+        reintentarSyncDrive,
         exportarCopiaExcel,
         restaurarAPendiente,
         registrarIncidencia,

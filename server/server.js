@@ -19,7 +19,7 @@ import {
   listarDespachos,
   crearDespacho,
   cambiarEstadoDespacho,
-  reintentarSincronizacionOneDrive,
+  reintentarSincronizacionDrive,
   gestionarIncidenciaDespacho,
   exportarPlantillaExcel,
   cargarPlantillaReferenciaController
@@ -83,7 +83,7 @@ app.get('/api/despachos', listarDespachos);
 app.post('/api/despachos', crearDespacho);
 app.get('/api/despachos/exportar-plantilla', exportarPlantillaExcel);
 app.patch('/api/despachos/:id/estado', cambiarEstadoDespacho);
-app.post('/api/despachos/:id/reintentar-onedrive', reintentarSincronizacionOneDrive);
+app.post('/api/despachos/:id/reintentar-sync', reintentarSincronizacionDrive);
 app.post('/api/despachos/:id/incidencia', gestionarIncidenciaDespacho);
 app.post('/api/despachos/cargar-plantilla-referencia', upload.single('archivo'), cargarPlantillaReferenciaController);
 
