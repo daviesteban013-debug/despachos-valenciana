@@ -205,8 +205,8 @@ export default function KanbanBoard() {
               {pendientes.length === 0 ? (
                 <div className="h-44 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center p-4 text-center space-y-1.5">
                   <CheckCircle className="h-8 w-8 text-emerald-500" />
-                  <p className="text-sm font-bold text-slate-700">Sin órdenes pendientes</p>
-                  <p className="text-xs text-slate-500">Todo el flujo de despacho se encuentra al día.</p>
+                  <p className="text-sm font-bold text-slate-700">No hay despachos pendientes</p>
+                  <p className="text-xs text-slate-500">Crea el primero usando el botón "+ Nuevo Despacho".</p>
                 </div>
               ) : (
                 pendientes.map((despacho) => (

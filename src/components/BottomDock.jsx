@@ -3,7 +3,8 @@ import { useWms } from '../context/WmsContext';
 import {
   Layers,
   AlertOctagon,
-  Undo2
+  Undo2,
+  History
 } from 'lucide-react';
 
 export default function BottomDock() {
@@ -64,7 +65,7 @@ export default function BottomDock() {
         {/* Tab 3: Logística Inversa (Devoluciones) */}
         <button
           onClick={() => setReturnsDrawerOpen(true)}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-all h-12 text-slate-500 hover:text-slate-800 font-medium active:scale-95"
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-2xl transition-all h-12 text-slate-500 hover:text-slate-800 font-medium active:scale-95"
           aria-label="Abrir panel de Logística Inversa"
         >
           <div className="relative">
@@ -75,7 +76,23 @@ export default function BottomDock() {
               </span>
             )}
           </div>
-          <span className="text-xs">Devoluciones</span>
+          <span className="text-[10px] sm:text-xs">Devoluciones</span>
+        </button>
+
+        {/* Tab 4: Historial Global */}
+        <button
+          onClick={() => setActiveDockTab('history')}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-2xl transition-all h-12 active:scale-95 ${
+            activeDockTab === 'history'
+              ? 'text-[#E11D24] font-bold bg-red-50'
+              : 'text-slate-500 hover:text-slate-800 font-medium'
+          }`}
+          aria-label="Historial Global"
+        >
+          <div className="relative">
+            <History className="h-5 w-5" />
+          </div>
+          <span className="text-[10px] sm:text-xs">Historial</span>
         </button>
 
       </div>

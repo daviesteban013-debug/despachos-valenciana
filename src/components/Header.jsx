@@ -14,7 +14,7 @@ export default function Header() {
   } = useWms();
 
   return (
-    <header className="sticky top-0 z-30 w-full h-[68px] bg-white border-b border-slate-200 flex items-center justify-between shadow-sm">
+    <header className="w-full h-[68px] bg-white border-b border-slate-200 flex items-center justify-between shadow-sm">
       {/* 1. Bloque de Marca: franja roja con logo a tamaño legible */}
       <div className="h-full flex items-center gap-3 bg-[#E11D24] pl-3 pr-5 sm:pl-4 sm:pr-6 shrink-0">
         <img

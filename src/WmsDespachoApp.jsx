@@ -10,7 +10,8 @@ import IncidentModal from './components/IncidentModal';
 import ReturnsDrawer from './components/ReturnsDrawer';
 import ToastNotification from './components/ToastNotification';
 import CreateDispatchModal from './components/CreateDispatchModal';
-import { Layers, AlertOctagon, Undo2 } from 'lucide-react';
+import HistorialView from './components/HistorialView';
+import { Layers, AlertOctagon, Undo2, History } from 'lucide-react';
 
 function AppContent() {
   const { 
@@ -25,7 +26,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col selection:bg-red-600 selection:text-white">
-      {/* 1. Header Desktop-First (h-[68px]) con bloque de marca */}
+      {/* Contenedor Superior Sticky (Header + Pestañas + ControlBar) */}
+      <div className="sticky top-0 z-30 bg-slate-100 pb-2 shadow-sm">
+        {/* 1. Header Desktop-First (h-[68px]) con bloque de marca */}
       <Header />
 
       {/* Desktop Navigation Tabs (Hidden on mobile) */}
@@ -76,15 +79,29 @@ function AppContent() {
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => setActiveDockTab('history')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            activeDockTab === 'history'
+              ? 'bg-slate-900 text-white'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <History className="h-4 w-4" />
+          <span>Historial</span>
+        </button>
       </div>
 
       {/* 2. Barra de Control con Búsqueda Compacta y Filtros Desplegables */}
       <ControlBar />
+      </div>
 
       {/* 4. Contenido Principal con pb-24 para despejar el BottomDock */}
       <main className="flex-1 w-full max-w-[1600px] mx-auto pb-24">
         {activeDockTab === 'waves' && <KanbanBoard />}
         {activeDockTab === 'incidents' && <IncidentsView />}
+        {activeDockTab === 'history' && <HistorialView />}
       </main>
 
       {/* 5. Dock Inferior Táctil */}
