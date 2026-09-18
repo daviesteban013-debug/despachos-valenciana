@@ -1,4 +1,4 @@
-import { dbMemoria } from '../config/db.js';
+import { getDbClient } from '../config/db.js';
 import {
   procesarImportacionExcel,
   resolverDiferenciaInventario,
@@ -7,58 +7,61 @@ import {
 
 // GET /api/inventario?seccion=...&sku=...&buscar=...
 export async function listarInventario(req, res) {
+  const client = await getDbClient();
   try {
     const { seccion, sku, buscar } = req.query;
 
-    let resultado = [];
+    let queryArgs = [];
+    let whereClauses = [];
 
-    // Mapear cada producto con su stock total y desglose por bodega
-    for (const [s, prod] of dbMemoria.productos.entries()) {
-      // Filtro por SKU exacto
-      if (sku && s.toUpperCase() !== sku.toUpperCase()) {
-        continue;
-      }
-
-      // Filtro por sección/categoría
-      if (seccion && seccion !== 'todas' && prod.categoria_slug !== seccion) {
-        continue;
-      }
-
-      // Filtro por búsqueda de texto (nombre, SKU, descripción)
-      if (buscar) {
-        const q = buscar.toLowerCase();
-        const coincide =
-          prod.nombre.toLowerCase().includes(q) ||
-          prod.sku.toLowerCase().includes(q) ||
-          (prod.descripcion && prod.descripcion.toLowerCase().includes(q));
-        if (!coincide) continue;
-      }
-
-      // Desglose por bodega
-      const desgloseBodegas = dbMemoria.bodegas.map((b) => {
-        const stockFila = dbMemoria.obtenerStockFila(prod.sku, b.id);
-        return {
-          bodega_id: b.id,
-          codigo_bodega: b.codigo,
-          nombre_bodega: b.nombre,
-          seccion_slug: b.seccion_slug,
-          cantidad: stockFila ? stockFila.cantidad : 0
-        };
-      });
-
-      const stockTotal = desgloseBodegas.reduce((acc, b) => acc + b.cantidad, 0);
-
-      resultado.push({
-        ...prod,
-        stock_total: stockTotal,
-        stockTotal: stockTotal,
-        stock: stockTotal,
-        desglose_bodegas: desgloseBodegas
-      });
+    if (sku) {
+      queryArgs.push(sku.toUpperCase());
+      whereClauses.push(`p.sku = $${queryArgs.length}`);
+    }
+    if (seccion && seccion !== 'todas') {
+      queryArgs.push(seccion);
+      whereClauses.push(`p.categoria_slug = $${queryArgs.length}`);
+    }
+    if (buscar) {
+      queryArgs.push(`%${buscar}%`);
+      whereClauses.push(`(p.nombre ILIKE $${queryArgs.length} OR p.sku ILIKE $${queryArgs.length} OR p.descripcion ILIKE $${queryArgs.length})`);
     }
 
-    // Ordenar alfabéticamente por SKU
-    resultado.sort((a, b) => a.sku.localeCompare(b.sku));
+    const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const { rows: productos } = await client.query(`
+      SELECT p.*,
+             COALESCE(SUM(s.cantidad), 0)::int AS stock_total
+      FROM productos p
+      LEFT JOIN inventario_por_bodega s ON p.sku = s.sku
+      ${whereString}
+      GROUP BY p.sku
+      ORDER BY p.sku ASC
+    `, queryArgs);
+
+    const { rows: desglose } = await client.query(`
+      SELECT s.sku, s.bodega_id, b.codigo AS codigo_bodega, b.nombre AS nombre_bodega, b.seccion_slug, s.cantidad AS cantidad
+      FROM inventario_por_bodega s
+      JOIN bodegas b ON s.bodega_id = b.id
+    `);
+
+    const resultado = productos.map(p => {
+      const desg = desglose.filter(d => d.sku === p.sku).map(d => ({
+        bodega_id: d.bodega_id,
+        codigo_bodega: d.codigo_bodega,
+        nombre_bodega: d.nombre_bodega,
+        seccion_slug: d.seccion_slug,
+        cantidad: d.cantidad
+      }));
+      
+      // Asegurar que bodegas vacías aparezcan con cantidad 0 si se desea
+      return {
+        ...p,
+        stockTotal: p.stock_total,
+        stock: p.stock_total,
+        desglose_bodegas: desg
+      };
+    });
 
     return res.json({
       total: resultado.length,
@@ -67,39 +70,47 @@ export async function listarInventario(req, res) {
   } catch (error) {
     console.error('Error listando inventario:', error);
     return res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
   }
 }
 
 // GET /api/inventario/:sku
 export async function detalleProducto(req, res) {
+  const client = await getDbClient();
   try {
     const { sku } = req.params;
-    const prod = dbMemoria.productos.get(sku.toUpperCase());
+    
+    const { rows: productos } = await client.query(`
+      SELECT p.*, COALESCE(SUM(s.cantidad), 0)::int AS stock_total
+      FROM productos p
+      LEFT JOIN inventario_por_bodega s ON p.sku = s.sku
+      WHERE p.sku = $1
+      GROUP BY p.sku
+    `, [sku.toUpperCase()]);
 
-    if (!prod) {
+    if (productos.length === 0) {
       return res.status(404).json({ error: `Producto con SKU "${sku}" no encontrado.` });
     }
+    
+    const prod = productos[0];
 
-    const desgloseBodegas = dbMemoria.bodegas.map((b) => {
-      const stockFila = dbMemoria.obtenerStockFila(prod.sku, b.id);
-      return {
-        bodega_id: b.id,
-        nombre_bodega: b.nombre,
-        seccion_slug: b.seccion_slug,
-        cantidad: stockFila ? stockFila.cantidad : 0
-      };
-    });
-
-    const stockTotal = desgloseBodegas.reduce((acc, b) => acc + b.cantidad, 0);
+    const { rows: desglose } = await client.query(`
+      SELECT s.bodega_id, b.nombre AS nombre_bodega, b.seccion_slug, s.cantidad AS cantidad
+      FROM inventario_por_bodega s
+      JOIN bodegas b ON s.bodega_id = b.id
+      WHERE s.sku = $1
+    `, [prod.sku]);
 
     return res.json({
       ...prod,
-      stock_total: stockTotal,
-      desglose_bodegas: desgloseBodegas
+      desglose_bodegas: desglose
     });
   } catch (error) {
     console.error('Error obteniendo detalle de producto:', error);
     return res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
   }
 }
 
@@ -140,7 +151,7 @@ export async function importarDemoExcel(req, res) {
       return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
     }
 
-    const bufferPrueba = generarExcelPruebaBuffer();
+    const bufferPrueba = await generarExcelPruebaBuffer();
     const resultado = await procesarImportacionExcel(bufferPrueba, 'ERP_Valenciana_Simulado.xlsx', 'admin_demo');
     return res.json(resultado);
   } catch (error) {
@@ -151,15 +162,16 @@ export async function importarDemoExcel(req, res) {
 
 // GET /api/inventario/diferencias (Solo rol admin)
 export async function listarDiferencias(req, res) {
+  const client = await getDbClient();
   try {
     const rol = req.headers['x-user-role'] || 'admin';
     if (rol !== 'admin') {
       return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden ver diferencias de inventario.' });
     }
 
-    const pendientes = dbMemoria.diferencias.filter((d) => d.estado === 'pendiente');
-    const historial = dbMemoria.diferencias.filter((d) => d.estado !== 'pendiente');
-    const importaciones = [...dbMemoria.importaciones].reverse();
+    const { rows: pendientes } = await client.query("SELECT * FROM diferencias_inventario WHERE estado = 'pendiente' ORDER BY created_at DESC");
+    const { rows: historial } = await client.query("SELECT * FROM diferencias_inventario WHERE estado != 'pendiente' ORDER BY resuelto_en DESC");
+    const { rows: importaciones } = await client.query("SELECT * FROM importaciones_inventario ORDER BY fecha DESC");
 
     return res.json({
       pendientes,
@@ -169,6 +181,8 @@ export async function listarDiferencias(req, res) {
   } catch (error) {
     console.error('Error listando diferencias:', error);
     return res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
   }
 }
 

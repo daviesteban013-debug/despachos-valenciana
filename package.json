@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "node server/server.js",
     "server": "node server/server.js",
     "test:concurrencia": "node server/tests/concurrencia.test.js",
     "build": "vite build",

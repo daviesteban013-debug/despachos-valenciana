@@ -79,6 +79,7 @@ CREATE TABLE despachos (
     estado_actual estado_despacho NOT NULL DEFAULT 'COLA',
     prioridad SMALLINT NOT NULL DEFAULT 2 CHECK (prioridad IN (1, 2, 3)), -- 1: Urgente, 2: Normal, 3: Consolidado
     horario_corte TIMESTAMPTZ NOT NULL,
+    vehiculo_placa VARCHAR(100),
     bahia_asignada VARCHAR(20),
     numero_guia VARCHAR(100),
     valor_total NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
@@ -87,6 +88,9 @@ CREATE TABLE despachos (
     packing_mesa VARCHAR(50),
     manifiesto_despacho VARCHAR(100),
     hora_salida TIMESTAMPTZ,
+    jornada VARCHAR(5) DEFAULT 'AM',
+    observaciones TEXT,
+    fecha_despacho DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -1,19 +1,12 @@
 import * as XLSX from 'xlsx';
-import { dbMemoria } from '../config/db.js';
+import { getDbClient } from '../config/db.js';
 
-// ============================================================================
-// CONFIGURACIÓN CLARA DE ESTRATEGIA DE LLAVE DE PRODUCTO (REQUISITO EXPLÍCITO)
-// ============================================================================
 export const CONFIG_IMPORTACION = {
-  // Si es true, usa la columna de código/SKU del Excel siempre que venga informada
   USAR_SKU_EXCEL_SI_EXISTE: true,
-  // Prefijo para códigos internos estables generados cuando el Excel no trae SKU confiable
   PREFIJO_CODIGO_INTERNO: 'INT-',
-  // Longitud de dígitos con ceros a la izquierda
   LONGITUD_CODIGO_INTERNO: 5
 };
 
-// Normalizar texto para matching de productos sin SKU
 function normalizarTexto(txt) {
   if (!txt) return '';
   return txt
@@ -26,20 +19,6 @@ function normalizarTexto(txt) {
     .trim();
 }
 
-/**
- * Procesa un archivo Excel (.xlsx) para upsert de catálogo y conciliación de stock.
- * 
- * Reglas de negocio:
- * 1. Catálogo (productos): Upsert por SKU o match de nombre+descripción.
- *    Los códigos internos generados (INT-XXXXX) son permanentes y no se regeneran.
- * 2. Stock (inventario_por_bodega): NUNCA sobrescribe ciegamente.
- *    Calcula diferencia = Excel - Sistema. Si es != 0, reporta a diferencias_inventario.
- * 3. Registra la corrida en importaciones_inventario para auditoría.
- * 
- * @param {Buffer | string} bufferOPath
- * @param {string} nombreArchivo
- * @param {string} [usuarioAdmin='admin']
- */
 export async function procesarImportacionExcel(bufferOPath, nombreArchivo, usuarioAdmin = 'admin') {
   let workbook;
   if (Buffer.isBuffer(bufferOPath)) {
@@ -56,228 +35,232 @@ export async function procesarImportacionExcel(bufferOPath, nombreArchivo, usuar
     throw new Error('El archivo Excel no contiene filas o está vacío.');
   }
 
-  let productosNuevos = 0;
-  let productosActualizados = 0;
-  const diferenciasDetectadas = [];
+  const client = await getDbClient();
+  if (!client) throw new Error('Base de datos no disponible');
 
-  const importacionId = dbMemoria.secuenciaImportacion++;
-  const fechaImportacion = new Date();
+  try {
+    await client.query('BEGIN');
 
-  // Mapear bodegas por código y por id para match flexible
-  const mapaBodegas = new Map();
-  dbMemoria.bodegas.forEach((b) => {
-    mapaBodegas.set(b.id, b.id);
-    mapaBodegas.set(b.codigo.toUpperCase(), b.id);
-    mapaBodegas.set(b.seccion_slug.toLowerCase(), b.id);
-    mapaBodegas.set(normalizarTexto(b.nombre), b.id);
-  });
+    // Mapear bodegas
+    const { rows: bodegas } = await client.query('SELECT * FROM bodegas');
+    const mapaBodegas = new Map();
+    bodegas.forEach((b) => {
+      mapaBodegas.set(b.id, b.id);
+      mapaBodegas.set(b.codigo.toUpperCase(), b.id);
+      mapaBodegas.set(b.seccion_slug.toLowerCase(), b.id);
+      mapaBodegas.set(normalizarTexto(b.nombre), b.id);
+    });
 
-  // Procesar cada fila del Excel
-  for (const fila of filas) {
-    // Extraer campos tolerando variaciones típicas de encabezados de ERP
-    const codigoRaw = fila['SKU'] || fila['Código'] || fila['Codigo'] || fila['Código Artículo'] || fila['Codigo Articulo'] || fila['ItemCode'] || '';
-    const nombre = (fila['Nombre'] || fila['Descripción'] || fila['Descripcion'] || fila['Producto'] || '').toString().trim();
-    const descripcion = (fila['Detalle'] || fila['Especificación'] || fila['Notas'] || nombre).toString().trim();
-    const categoriaSlug = (fila['Categoría'] || fila['Categoria'] || fila['Sección'] || fila['Seccion'] || 'ferreteria_general').toString().trim().toLowerCase();
-    const unidadMedida = (fila['Unidad'] || fila['Unidad Medida'] || fila['UOM'] || 'UNIDAD').toString().trim().toUpperCase();
-    const precioUnitario = Number(fila['Precio'] || fila['Precio Unitario'] || fila['Valor'] || 0);
-    const pesoUnitarioKg = Number(fila['Peso'] || fila['Peso Kg'] || fila['Peso Unitario'] || 0);
+    // Mapear productos
+    const { rows: productosRows } = await client.query('SELECT sku, nombre, descripcion, es_codigo_interno FROM productos');
+    
+    // Obtener la secuencia interna max si necesitamos generar nuevos (INT-00001)
+    let maxSecuenciaInterna = 0;
+    productosRows.forEach(p => {
+      if (p.es_codigo_interno && p.sku.startsWith(CONFIG_IMPORTACION.PREFIJO_CODIGO_INTERNO)) {
+        const num = parseInt(p.sku.replace(CONFIG_IMPORTACION.PREFIJO_CODIGO_INTERNO, ''), 10);
+        if (!isNaN(num) && num > maxSecuenciaInterna) maxSecuenciaInterna = num;
+      }
+    });
 
-    // Identificación de bodega
-    const bodegaRaw = fila['Bodega'] || fila['Bodega ID'] || fila['Código Bodega'] || fila['Sección Bodega'] || 1;
-    let bodegaId = mapaBodegas.get(Number(bodegaRaw)) || mapaBodegas.get(bodegaRaw.toString().trim().toUpperCase()) || mapaBodegas.get(normalizarTexto(bodegaRaw)) || 1;
+    let productosNuevos = 0;
+    let productosActualizados = 0;
+    const diferenciasDetectadas = [];
 
-    // Cantidad reportada por el Excel del ERP
-    const cantidadExcel = Math.max(0, parseInt(fila['Cantidad'] || fila['Stock'] || fila['Existencias'] || 0, 10));
+    // Insertar el log de importacion
+    const { rows: impRows } = await client.query(`
+      INSERT INTO importaciones_inventario (archivo, total_filas, usuario_admin) 
+      VALUES ($1, $2, $3) RETURNING id
+    `, [nombreArchivo, filas.length, usuarioAdmin]);
+    const importacionId = impRows[0].id;
 
-    if (!nombre) continue; // Saltar filas en blanco
+    for (const fila of filas) {
+      const codigoRaw = fila['SKU'] || fila['Código'] || fila['Codigo'] || fila['Código Artículo'] || fila['Codigo Articulo'] || fila['ItemCode'] || '';
+      const nombre = (fila['Nombre'] || fila['Descripción'] || fila['Descripcion'] || fila['Producto'] || '').toString().trim();
+      const descripcion = (fila['Detalle'] || fila['Especificación'] || fila['Notas'] || nombre).toString().trim();
+      const categoriaSlug = (fila['Categoría'] || fila['Categoria'] || fila['Sección'] || fila['Seccion'] || 'ferreteria_general').toString().trim().toLowerCase();
+      const unidadMedida = (fila['Unidad'] || fila['Unidad Medida'] || fila['UOM'] || 'UNIDAD').toString().trim().toUpperCase();
+      const precioUnitario = Number(fila['Precio'] || fila['Precio Unitario'] || fila['Valor'] || 0);
+      const pesoUnitarioKg = Number(fila['Peso'] || fila['Peso Kg'] || fila['Peso Unitario'] || 0);
 
-    // ------------------------------------------------------------------------
-    // 1. DETERMINACIÓN DE LA LLAVE PERMANENTE (SKU)
-    // ------------------------------------------------------------------------
-    let skuFinal = null;
-    let esCodigoInterno = false;
+      const bodegaRaw = fila['Bodega'] || fila['Bodega ID'] || fila['Código Bodega'] || fila['Sección Bodega'] || 1;
+      let bodegaId = mapaBodegas.get(Number(bodegaRaw)) || mapaBodegas.get(bodegaRaw.toString().trim().toUpperCase()) || mapaBodegas.get(normalizarTexto(bodegaRaw)) || 1;
 
-    if (CONFIG_IMPORTACION.USAR_SKU_EXCEL_SI_EXISTE && codigoRaw && codigoRaw.toString().trim().length > 0) {
-      skuFinal = codigoRaw.toString().trim().toUpperCase();
-    } else {
-      // Buscar match por nombre + descripción en productos ya existentes
-      const firmaBuscada = normalizarTexto(`${nombre} ${descripcion}`);
-      for (const [skuExistente, prodExistente] of dbMemoria.productos.entries()) {
-        const firmaExistente = normalizarTexto(`${prodExistente.nombre} ${prodExistente.descripcion}`);
-        if (firmaBuscada === firmaExistente || normalizarTexto(prodExistente.nombre) === normalizarTexto(nombre)) {
-          skuFinal = skuExistente;
-          esCodigoInterno = prodExistente.es_codigo_interno;
-          break;
+      const cantidadExcel = Math.max(0, parseInt(fila['Cantidad'] || fila['Stock'] || fila['Existencias'] || 0, 10));
+
+      if (!nombre) continue;
+
+      let skuFinal = null;
+      let esCodigoInterno = false;
+
+      if (CONFIG_IMPORTACION.USAR_SKU_EXCEL_SI_EXISTE && codigoRaw && codigoRaw.toString().trim().length > 0) {
+        skuFinal = codigoRaw.toString().trim().toUpperCase();
+      } else {
+        const firmaBuscada = normalizarTexto(`${nombre} ${descripcion}`);
+        for (const prodExistente of productosRows) {
+          const firmaExistente = normalizarTexto(`${prodExistente.nombre} ${prodExistente.descripcion}`);
+          if (firmaBuscada === firmaExistente || normalizarTexto(prodExistente.nombre) === normalizarTexto(nombre)) {
+            skuFinal = prodExistente.sku;
+            esCodigoInterno = prodExistente.es_codigo_interno;
+            break;
+          }
+        }
+        if (!skuFinal) {
+          maxSecuenciaInterna++;
+          skuFinal = `${CONFIG_IMPORTACION.PREFIJO_CODIGO_INTERNO}${String(maxSecuenciaInterna).padStart(CONFIG_IMPORTACION.LONGITUD_CODIGO_INTERNO, '0')}`;
+          esCodigoInterno = true;
         }
       }
 
-      // Si no existe, generar un código interno permanente y estable (INT-00001)
-      if (!skuFinal) {
-        skuFinal = `${CONFIG_IMPORTACION.PREFIJO_CODIGO_INTERNO}${String(dbMemoria.secuenciaCodigoInterno++).padStart(CONFIG_IMPORTACION.LONGITUD_CODIGO_INTERNO, '0')}`;
-        esCodigoInterno = true;
+      // Upsert producto
+      const pIndex = productosRows.findIndex(p => p.sku === skuFinal);
+      if (pIndex >= 0) {
+        await client.query(`
+          UPDATE productos 
+          SET nombre = $1, descripcion = $2, unidad_medida = $3, precio_unitario = CASE WHEN $4 > 0 THEN $4 ELSE precio_unitario END, peso_unitario_kg = CASE WHEN $5 > 0 THEN $5 ELSE peso_unitario_kg END, updated_at = NOW()
+          WHERE sku = $6
+        `, [nombre, descripcion, unidadMedida, precioUnitario, pesoUnitarioKg, skuFinal]);
+        productosActualizados++;
+      } else {
+        await client.query(`
+          INSERT INTO productos (sku, nombre, descripcion, categoria_slug, unidad_medida, precio_unitario, peso_unitario_kg, es_codigo_interno)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `, [skuFinal, nombre, descripcion, categoriaSlug, unidadMedida, precioUnitario, pesoUnitarioKg, esCodigoInterno]);
+        productosRows.push({ sku: skuFinal, nombre, descripcion, es_codigo_interno: esCodigoInterno });
+        productosNuevos++;
+      }
+
+      // Consultar stock actual (cantidad en BD) - Solo lectura para calcular la diferencia, NO actualizamos
+      const { rows: stockRows } = await client.query('SELECT cantidad FROM inventario_por_bodega WHERE sku = $1 AND bodega_id = $2', [skuFinal, bodegaId]);
+      const cantidadSistema = stockRows.length > 0 ? stockRows[0].cantidad : 0;
+      const diferencia = cantidadExcel - cantidadSistema;
+
+      if (diferencia !== 0) {
+        const bodegaNombre = bodegas.find((b) => b.id === bodegaId)?.nombre || `Bodega ${bodegaId}`;
+        const { rows: difRows } = await client.query(`
+          INSERT INTO diferencias_inventario (importacion_id, sku, bodega_id, cantidad_sistema, cantidad_excel, diferencia, estado)
+          VALUES ($1, $2, $3, $4, $5, $6, 'pendiente') RETURNING id
+        `, [importacionId, skuFinal, bodegaId, cantidadSistema, cantidadExcel, diferencia]);
+        
+        diferenciasDetectadas.push({
+          id: difRows[0].id,
+          importacion_id: importacionId,
+          sku: skuFinal,
+          producto_nombre: nombre,
+          bodega_id: bodegaId,
+          bodega_nombre: bodegaNombre,
+          cantidad_sistema: cantidadSistema,
+          cantidad_excel: cantidadExcel,
+          diferencia,
+          estado: 'pendiente'
+        });
       }
     }
 
-    // ------------------------------------------------------------------------
-    // 2. UPSERT EN CATÁLOGO (PRODUCTOS)
-    // ------------------------------------------------------------------------
-    const productoExistente = dbMemoria.productos.get(skuFinal);
-    if (productoExistente) {
-      // Actualizar campos descriptivos sin tocar el SKU
-      productoExistente.nombre = nombre;
-      productoExistente.descripcion = descripcion;
-      productoExistente.unidad_medida = unidadMedida;
-      if (precioUnitario > 0) productoExistente.precio_unitario = precioUnitario;
-      if (pesoUnitarioKg > 0) productoExistente.peso_unitario_kg = pesoUnitarioKg;
-      productoExistente.updated_at = new Date();
-      productosActualizados++;
-    } else {
-      // Crear nuevo producto en catálogo
-      dbMemoria.productos.set(skuFinal, {
-        sku: skuFinal,
-        nombre,
-        descripcion,
-        categoria_slug: categoriaSlug,
-        unidad_medida: unidadMedida,
-        precio_unitario: precioUnitario,
-        peso_unitario_kg: pesoUnitarioKg,
-        es_codigo_interno: esCodigoInterno,
-        created_at: new Date(),
-        updated_at: new Date()
-      });
-      productosNuevos++;
-    }
+    await client.query(`
+      UPDATE importaciones_inventario 
+      SET productos_nuevos = $1, productos_actualizados = $2, diferencias_detectadas = $3 
+      WHERE id = $4
+    `, [productosNuevos, productosActualizados, diferenciasDetectadas.length, importacionId]);
 
-    // ------------------------------------------------------------------------
-    // 3. CONCILIACIÓN DE STOCK (NUNCA SOBRESCRIBIR CIEGAMENTE)
-    // ------------------------------------------------------------------------
-    const stockFila = dbMemoria.obtenerStockFila(skuFinal, bodegaId);
-    const cantidadSistema = stockFila ? stockFila.cantidad : 0;
-    const diferencia = cantidadExcel - cantidadSistema;
+    const { rows: resumenRows } = await client.query('SELECT * FROM importaciones_inventario WHERE id = $1', [importacionId]);
 
-    // Si hay diferencia, se registra para revisión de admin. NO se actualiza inventario_por_bodega.
-    if (diferencia !== 0) {
-      const difItem = {
-        id: dbMemoria.secuenciaDiferencia++,
-        importacion_id: importacionId,
-        sku: skuFinal,
-        producto_nombre: nombre,
-        bodega_id: bodegaId,
-        bodega_nombre: dbMemoria.bodegas.find((b) => b.id === bodegaId)?.nombre || `Bodega ${bodegaId}`,
-        cantidad_sistema: cantidadSistema,
-        cantidad_excel: cantidadExcel,
-        diferencia,
-        estado: 'pendiente',
-        resuelto_por: null,
-        resuelto_en: null
-      };
-
-      dbMemoria.diferencias.push(difItem);
-      diferenciasDetectadas.push(difItem);
-    }
+    await client.query('COMMIT');
+    
+    return {
+      resumen: resumenRows[0],
+      diferencias: diferenciasDetectadas
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  // --------------------------------------------------------------------------
-  // 4. REGISTRO DEL LOG DE IMPORTACIÓN
-  // --------------------------------------------------------------------------
-  const logImportacion = {
-    id: importacionId,
-    fecha: fechaImportacion,
-    archivo: nombreArchivo,
-    total_filas: filas.length,
-    productos_nuevos: productosNuevos,
-    productos_actualizados: productosActualizados,
-    diferencias_detectadas: diferenciasDetectadas.length,
-    estado: 'COMPLETADO',
-    usuario_admin: usuarioAdmin
-  };
-
-  dbMemoria.importaciones.push(logImportacion);
-
-  console.info(`📊 [IMPORTACIÓN CONCILIADA] Archivo: ${nombreArchivo}, Filas: ${filas.length}, Nuevos: ${productosNuevos}, Actualizados: ${productosActualizados}, Diferencias: ${diferenciasDetectadas.length}`);
-
-  return {
-    resumen: logImportacion,
-    diferencias: diferenciasDetectadas
-  };
 }
 
-/**
- * Resolver una diferencia de conciliación puntual (Rol Admin)
- * @param {number} diferenciaId
- * @param {'aplicar' | 'descartar'} accion
- * @param {string} usuarioAdmin
- */
 export async function resolverDiferenciaInventario(diferenciaId, accion, usuarioAdmin = 'admin') {
-  const dif = dbMemoria.diferencias.find((d) => d.id === Number(diferenciaId));
-  if (!dif) {
-    throw new Error(`No se encontró la diferencia de inventario con ID ${diferenciaId}`);
-  }
+  const client = await getDbClient();
+  if (!client) throw new Error('Base de datos no disponible');
 
-  if (dif.estado !== 'pendiente') {
-    throw new Error(`La diferencia con ID ${diferenciaId} ya fue resuelta previamente como "${dif.estado}"`);
-  }
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query('SELECT * FROM diferencias_inventario WHERE id = $1 FOR UPDATE', [diferenciaId]);
+    
+    if (rows.length === 0) {
+      throw new Error(`No se encontró la diferencia con ID ${diferenciaId}`);
+    }
+    
+    const dif = rows[0];
+    
+    if (dif.estado !== 'pendiente') {
+      throw new Error(`La diferencia ya fue resuelta como "${dif.estado}"`);
+    }
 
-  if (accion === 'aplicar') {
-    // El admin autoriza ajustar el valor del sistema al que reportó el Excel
-    dbMemoria.actualizarStock(dif.sku, dif.bodega_id, dif.cantidad_excel);
-    dif.estado = 'aplicada';
-    dif.resuelto_por = usuarioAdmin;
-    dif.resuelto_en = new Date();
-    console.info(`✅ [DIFERENCIA APLICADA] SKU: ${dif.sku}, Bodega: ${dif.bodega_id} ajustado de ${dif.cantidad_sistema} a ${dif.cantidad_excel} por ${usuarioAdmin}`);
-  } else if (accion === 'descartar') {
-    // El admin determina que el Excel estaba desactualizado y se conserva el valor del sistema
-    dif.estado = 'descartada';
-    dif.resuelto_por = usuarioAdmin;
-    dif.resuelto_en = new Date();
-    console.info(`🚫 [DIFERENCIA DESCARTADA] SKU: ${dif.sku}, Bodega: ${dif.bodega_id} se mantiene en ${dif.cantidad_sistema} por ${usuarioAdmin}`);
-  } else {
-    throw new Error(`Acción no reconocida: ${accion}. Debe ser 'aplicar' o 'descartar'.`);
-  }
+    if (accion === 'aplicar') {
+      await client.query(`
+        INSERT INTO inventario_por_bodega (sku, bodega_id, cantidad, actualizado_en)
+        VALUES ($1, $2, $3, NOW())
+        ON CONFLICT (sku, bodega_id) DO UPDATE SET cantidad = $3, actualizado_en = NOW()
+      `, [dif.sku, dif.bodega_id, dif.cantidad_excel]);
+      
+      await client.query(`
+        UPDATE diferencias_inventario SET estado = 'aplicada', resuelto_por = $1, resuelto_en = NOW() WHERE id = $2
+      `, [usuarioAdmin, diferenciaId]);
+    } else if (accion === 'descartar') {
+      await client.query(`
+        UPDATE diferencias_inventario SET estado = 'descartada', resuelto_por = $1, resuelto_en = NOW() WHERE id = $2
+      `, [usuarioAdmin, diferenciaId]);
+    } else {
+      throw new Error(`Acción no reconocida: ${accion}`);
+    }
 
-  return dif;
+    await client.query('COMMIT');
+    const { rows: updated } = await client.query('SELECT * FROM diferencias_inventario WHERE id = $1', [diferenciaId]);
+    return updated[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
-/**
- * Genera un buffer Excel (.xlsx) de prueba con catálogo real y discrepancias inducidas para testing
- */
-export function generarExcelPruebaBuffer() {
+export async function generarExcelPruebaBuffer() {
+  const client = await getDbClient();
   const filasExcel = [];
 
-  // Tomar una muestra representativa de 35 productos del catálogo
-  const muestra = Array.from(dbMemoria.productos.values()).slice(0, 35);
+  try {
+    const { rows: productos } = await client.query('SELECT * FROM productos LIMIT 35');
+    const { rows: bodegas } = await client.query('SELECT * FROM bodegas');
+    
+    for (let i = 0; i < productos.length; i++) {
+      const p = productos[i];
+      const bodega = bodegas.find((b) => b.seccion_slug === p.categoria_slug) || bodegas[0];
+      const { rows: stockRows } = await client.query('SELECT cantidad FROM inventario_por_bodega WHERE sku = $1 AND bodega_id = $2', [p.sku, bodega.id]);
+      const stockActual = stockRows.length > 0 ? stockRows[0].cantidad : 50;
 
-  muestra.forEach((p, index) => {
-    // Asignar a su bodega correspondiente según categoría
-    const bodega = dbMemoria.bodegas.find((b) => b.seccion_slug === p.categoria_slug) || dbMemoria.bodegas[0];
-    const stockActual = dbMemoria.obtenerStockFila(p.sku, bodega.id)?.cantidad || 50;
+      let stockExcel = stockActual;
+      if (i === 2) stockExcel = stockActual + 15;
+      else if (i === 5) stockExcel = Math.max(0, stockActual - 10);
+      else if (i === 8) stockExcel = stockActual + 50;
 
-    let stockExcel = stockActual;
-
-    // Inducir diferencias deliberadas en algunos productos para probar la conciliación
-    if (index === 2) {
-      stockExcel = stockActual + 15; // ERP reporta 15 más
-    } else if (index === 5) {
-      stockExcel = Math.max(0, stockActual - 10); // ERP reporta 10 menos
-    } else if (index === 8) {
-      stockExcel = stockActual + 50; // Quiebre no reportado en ERP
+      filasExcel.push({
+        'SKU': p.sku,
+        'Nombre': p.nombre,
+        'Descripción': p.descripcion,
+        'Categoría': p.categoria_slug,
+        'Unidad': p.unidad_medida,
+        'Precio Unitario': Number(p.precio_unitario),
+        'Peso Kg': Number(p.peso_unitario_kg),
+        'Bodega': bodega.nombre,
+        'Stock': stockExcel
+      });
     }
+  } finally {
+    if (client) client.release();
+  }
 
-    filasExcel.push({
-      'SKU': p.sku,
-      'Nombre': p.nombre,
-      'Descripción': p.descripcion,
-      'Categoría': p.categoria_slug,
-      'Unidad': p.unidad_medida,
-      'Precio Unitario': p.precio_unitario,
-      'Peso Kg': p.peso_unitario_kg,
-      'Bodega': bodega.nombre,
-      'Stock': stockExcel
-    });
-  });
-
-  // Agregar 2 productos nuevos sin SKU para probar la generación de código interno estable (INT-XXXXX)
   filasExcel.push({
     'SKU': '', // Sin SKU
     'Nombre': 'Foco Halógeno Decorativo Vintage 40W E27',

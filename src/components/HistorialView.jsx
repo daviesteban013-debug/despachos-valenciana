@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useWms } from '../context/WmsContext';
 import DispatchCard from './DispatchCard';
 import { FLOTA_VEHICULOS } from '../data/flota';
-import { History, Calendar, Truck, Search, Clock } from 'lucide-react';
+import { History, Calendar, Truck, Search, Clock, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function HistorialView() {
   const { despachos } = useWms();
@@ -66,12 +67,63 @@ export default function HistorialView() {
     });
   }, [despachos, dateRange, customStartDate, customEndDate, selectedVehiculo, searchQuery]);
 
+  const handleExportExcel = () => {
+    if (filteredHistory.length === 0) return;
+
+    // Formatear datos para Excel (Tabla plana)
+    const dataToExport = filteredHistory.map(d => ({
+      'Fecha Despacho': d.fecha_despacho ? new Date(d.fecha_despacho).toLocaleDateString() : 'N/A',
+      'Hora Salida': d.hora_salida ? new Date(d.hora_salida).toLocaleTimeString() : 'N/A',
+      'Código Orden': d.codigo_orden || 'N/A',
+      'Factura ERP': d.codigo_factura_erp || 'N/A',
+      'Cliente': d.cliente_nombre || 'N/A',
+      'Ciudad': d.cliente_ciudad || 'Bogotá D.C.',
+      'Dirección': d.cliente_direccion || 'N/A',
+      'Vehículo Placa': d.vehiculo_placa || 'N/A',
+      'Jornada': d.jornada || 'AM',
+      'Valor Total': d.valor_total || 0,
+      'Estado Actual': d.estado_actual,
+      'Operador Picking': d.picking_operario || 'N/A',
+      'Mesa Packing': d.packing_mesa || 'N/A',
+      'Transportadora': d.transportadora || 'N/A',
+      'Notas': d.observaciones || ''
+    }));
+
+    // Crear hoja de cálculo
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    // Ajustar anchos de columna automáticamente
+    worksheet['!cols'] = [
+      { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 30 },
+      { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 10 }, { wch: 15 },
+      { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 30 }
+    ];
+
+    // Crear libro de trabajo y exportar
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Historial Despachos');
+    
+    // Nombre del archivo
+    const fileName = `Historial_Despachos_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   return (
     <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 py-4 space-y-4">
       {/* Cabecera de la sección */}
-      <div className="flex items-center gap-2">
-        <History className="h-6 w-6 text-slate-700" />
-        <h2 className="text-lg font-bold text-slate-900">Historial Global de Despachos</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <History className="h-6 w-6 text-slate-700" />
+          <h2 className="text-lg font-bold text-slate-900">Historial Global de Despachos</h2>
+        </div>
+        <button
+          onClick={handleExportExcel}
+          disabled={filteredHistory.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download className="h-4 w-4" />
+          Exportar a Excel
+        </button>
       </div>
 
       {/* Panel de Filtros */}

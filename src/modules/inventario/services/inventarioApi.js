@@ -1,7 +1,7 @@
 import { CATALOGO_PRODUCTOS_350, STOCK_INICIAL_POR_BODEGA } from '../data/catalogo350.js';
 
 // Cliente de API HTTP hacia el backend Express en la nube / localhost
-const API_BASE = '/api/inventario';
+const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/inventario`;
 const LOCAL_STORAGE_STOCK_KEY = 'valenciana_inventario_stock_v1';
 const LOCAL_STORAGE_DIFERENCIAS_KEY = 'valenciana_inventario_diferencias_v1';
 

@@ -10,7 +10,8 @@ import {
   RefreshCw, 
   LayoutGrid, 
   Columns2,
-  CheckCircle
+  CheckCircle,
+  Clock
 } from 'lucide-react';
 
 export default function KanbanBoard() {
@@ -29,7 +30,7 @@ export default function KanbanBoard() {
 
   // Segmentación en los 2 estados
   const pendientes = filteredDespachos
-    .filter((d) => d.estado_actual === 'PENDIENTE')
+    .filter((d) => d.estado_actual === 'COLA')
     .filter((d) => (soloConIncidencia ? Boolean(d.incidencia_activa) : true))
     .sort((a, b) => a.prioridad - b.prioridad);
 

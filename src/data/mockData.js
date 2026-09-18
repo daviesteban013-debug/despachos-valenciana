@@ -104,7 +104,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-101',
     vehiculo_placa: FLOTA_VEHICULOS[0],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0918',
@@ -117,7 +117,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-3', sku: 'SKU-DIS-COR', descripcion_producto: 'Caja Discos Corte Metal 4.5" DeWalt (x10)', cantidad_solicitada: 2, cantidad_auditada: 2, ubicacion_bodega: 'P02-E01-N4', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-101', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 180, timestamp: subMinutes(30), nota: `Pedido comercial aprobado con despacho en Camión NHR ${FLOTA_VEHICULOS[0]}` }
+      { id: 'h-101', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 180, timestamp: subMinutes(30), nota: `Pedido comercial aprobado con despacho en Camión NHR ${FLOTA_VEHICULOS[0]}` }
     ]
   },
   {
@@ -131,7 +131,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-103',
     vehiculo_placa: FLOTA_VEHICULOS[2],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 2, // Normal
     bahia_asignada: 'Bodega B-01',
     numero_guia: 'GUIA-VAL-448190',
@@ -143,7 +143,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-5', sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P04-E02-N1', unidad: 'GAL' }
     ],
     history: [
-      { id: 'h-102', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 300, timestamp: subMinutes(45), nota: `Factura crédito radicada para Hino Dutro ${FLOTA_VEHICULOS[2]}` }
+      { id: 'h-102', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 300, timestamp: subMinutes(45), nota: `Factura crédito radicada para Hino Dutro ${FLOTA_VEHICULOS[2]}` }
     ]
   },
   {
@@ -157,7 +157,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-102',
     vehiculo_placa: FLOTA_VEHICULOS[1],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 3, // Consolidado
     bahia_asignada: 'Bodega A-02',
     numero_guia: 'GUIA-VAL-0922',
@@ -169,7 +169,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-7', sku: 'SKU-LLV-STE', descripcion_producto: 'Juego Llaves Boca Fija Stanley 8-24mm', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P02-E03-N2', unidad: 'JGO' }
     ],
     history: [
-      { id: 'h-103', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 120, timestamp: subMinutes(20), nota: `Pedido consolidado programado en D-Max ${FLOTA_VEHICULOS[1]}` }
+      { id: 'h-103', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'ERP Servintec', tiempo_estancia_seg: 120, timestamp: subMinutes(20), nota: `Pedido consolidado programado en D-Max ${FLOTA_VEHICULOS[1]}` }
     ]
   },
   {
@@ -183,7 +183,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-101',
     vehiculo_placa: FLOTA_VEHICULOS[0],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0915',
@@ -196,7 +196,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-10', sku: 'SKU-GRI-CNA', descripcion_producto: 'Grifería Lavamanos Cuello Cisne Grival', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P03-E02-N3', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-104', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'ERP', tiempo_estancia_seg: 600, timestamp: subMinutes(80), nota: 'Listo para cargue en muelle' }
+      { id: 'h-104', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'ERP', tiempo_estancia_seg: 600, timestamp: subMinutes(80), nota: 'Listo para cargue en muelle' }
     ]
   },
   {
@@ -210,7 +210,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-103',
     vehiculo_placa: FLOTA_VEHICULOS[2],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 2,
     bahia_asignada: 'Bodega B-01',
     numero_guia: 'GUIA-VAL-992014',
@@ -222,7 +222,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-12', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 2, cantidad_auditada: 2, ubicacion_bodega: 'P08-E02-N1', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-106', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Bodega Central', tiempo_estancia_seg: 420, timestamp: subMinutes(18), nota: 'Estiba lista en bahía de cargue' }
+      { id: 'h-106', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'Bodega Central', tiempo_estancia_seg: 420, timestamp: subMinutes(18), nota: 'Estiba lista en bahía de cargue' }
     ]
   },
   {
@@ -236,7 +236,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-104',
     vehiculo_placa: FLOTA_VEHICULOS[3],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega B-03',
     numero_guia: 'GUIA-VAL-0909',
@@ -249,7 +249,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-15', sku: 'SKU-DIS-COR', descripcion_producto: 'Caja Discos Corte Metal 4.5" DeWalt (x10)', cantidad_solicitada: 6, cantidad_auditada: 6, ubicacion_bodega: 'P02-E01-N4', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-107', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Líder Bodega', tiempo_estancia_seg: 900, timestamp: subMinutes(50), nota: `Asignado a reparto express motocarro ${FLOTA_VEHICULOS[3]}` }
+      { id: 'h-107', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'Líder Bodega', tiempo_estancia_seg: 900, timestamp: subMinutes(50), nota: `Asignado a reparto express motocarro ${FLOTA_VEHICULOS[3]}` }
     ]
   },
   {
@@ -263,7 +263,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-102',
     vehiculo_placa: FLOTA_VEHICULOS[1],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 2,
     bahia_asignada: 'Bodega A-02',
     numero_guia: 'GUIA-VAL-0912',
@@ -274,7 +274,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-16', sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 10, cantidad_auditada: 10, ubicacion_bodega: 'P04-E02-N1', unidad: 'GAL' }
     ],
     history: [
-      { id: 'h-109', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 480, timestamp: subMinutes(15), nota: 'Paletizado y listo en muelle' }
+      { id: 'h-109', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 480, timestamp: subMinutes(15), nota: 'Paletizado y listo en muelle' }
     ]
   },
   {
@@ -288,7 +288,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-101',
     vehiculo_placa: FLOTA_VEHICULOS[0],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega A-01',
     numero_guia: 'GUIA-VAL-0899',
@@ -300,7 +300,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-18', sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 8, cantidad_auditada: 8, ubicacion_bodega: 'P08-E02-N1', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-110', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Líder Despacho', tiempo_estancia_seg: 920, timestamp: subMinutes(28), nota: `Listo para cargar en camión NHR ${FLOTA_VEHICULOS[0]}` }
+      { id: 'h-110', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'Líder Despacho', tiempo_estancia_seg: 920, timestamp: subMinutes(28), nota: `Listo para cargar en camión NHR ${FLOTA_VEHICULOS[0]}` }
     ]
   },
   {
@@ -314,7 +314,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-103',
     vehiculo_placa: FLOTA_VEHICULOS[2],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 2,
     bahia_asignada: 'Bodega B-01',
     numero_guia: 'GUIA-VAL-448102',
@@ -325,7 +325,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-19', sku: 'SKU-TUB-PVC', descripcion_producto: 'Tubo PVC Sanitario 3" x 3m Pavco', cantidad_solicitada: 25, cantidad_auditada: 25, ubicacion_bodega: 'P05-E05-N1', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-111', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 600, timestamp: subMinutes(35), nota: 'Preparado para despacho en ruta' }
+      { id: 'h-111', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 600, timestamp: subMinutes(35), nota: 'Preparado para despacho en ruta' }
     ]
   },
   {
@@ -358,7 +358,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-20', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 25, cantidad_auditada: 25, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' }
     ],
     history: [
-      { id: 'h-112', estado_anterior: 'PENDIENTE', estado_nuevo: 'DESPACHADO', usuario_operador: 'Líder Despachos', tiempo_estancia_seg: 450, timestamp: subMinutes(35), nota: `Camión NHR ${FLOTA_VEHICULOS[0]} despachado. Fila registrada en plantilla Excel de OneDrive.` }
+      { id: 'h-112', estado_anterior: 'COLA', estado_nuevo: 'DESPACHADO', usuario_operador: 'Líder Despachos', tiempo_estancia_seg: 450, timestamp: subMinutes(35), nota: `Camión NHR ${FLOTA_VEHICULOS[0]} despachado. Fila registrada en plantilla Excel de OneDrive.` }
     ]
   },
   {
@@ -372,7 +372,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-101',
     vehiculo_placa: FLOTA_VEHICULOS[0],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 1, // Urgente
     bahia_asignada: 'Bodega Retención R-01',
     numero_guia: 'GUIA-VAL-0919',
@@ -390,7 +390,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-21', sku: 'SKU-CER-YAL', descripcion_producto: 'Cerradura Sobreponer Yale Clásica Derecha 110', cantidad_solicitada: 15, cantidad_auditada: 15, ubicacion_bodega: 'P02-E04-N3', unidad: 'UND' }
     ],
     history: [
-      { id: 'h-113', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 180, timestamp: subMinutes(10), nota: 'Novedad registrada: Faltante reportado' }
+      { id: 'h-113', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'Alberto Rojas', tiempo_estancia_seg: 180, timestamp: subMinutes(10), nota: 'Novedad registrada: Faltante reportado' }
     ]
   },
   {
@@ -404,7 +404,7 @@ export const INITIAL_DESPACHOS = [
     transportadora: 'Flota Propia',
     ruta_id: 'rt-102',
     vehiculo_placa: FLOTA_VEHICULOS[1],
-    estado_actual: 'PENDIENTE',
+    estado_actual: 'COLA',
     prioridad: 2,
     bahia_asignada: 'Bodega Retención R-02',
     numero_guia: 'GUIA-VAL-881290',
@@ -422,7 +422,7 @@ export const INITIAL_DESPACHOS = [
       { id: 'it-22', sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 2, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' }
     ],
     history: [
-      { id: 'h-114', estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Sandra Torres', tiempo_estancia_seg: 240, timestamp: subMinutes(14), nota: 'Novedad registrada: Faltante de 1 saco de 50kg' }
+      { id: 'h-114', estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'Sandra Torres', tiempo_estancia_seg: 240, timestamp: subMinutes(14), nota: 'Novedad registrada: Faltante de 1 saco de 50kg' }
     ]
   }
 ];

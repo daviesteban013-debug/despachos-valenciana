@@ -140,7 +140,7 @@ export default function VitrinaPage() {
                 : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'
             }`}
           >
-            <span>PENDIENTES ({conteoPendientes})</span>
+            <span>EN COLA ({conteoPendientes})</span>
           </button>
 
           <button
