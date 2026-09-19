@@ -129,7 +129,7 @@ export default function VitrinaPage() {
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>ACTIVAS EN COLA ({conteoPendientes + conteoEnVitrina})</span>
+            <span>ACTIVAS EN PENDIENTE ({conteoPendientes + conteoEnVitrina})</span>
           </button>
 
           <button
@@ -140,7 +140,7 @@ export default function VitrinaPage() {
                 : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'
             }`}
           >
-            <span>EN COLA ({conteoPendientes})</span>
+            <span>EN PENDIENTE ({conteoPendientes})</span>
           </button>
 
           <button
@@ -233,7 +233,7 @@ export default function VitrinaPage() {
                 No hay facturas con los filtros seleccionados
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                Prueba seleccionando "Todas las Secciones" o la pestaña de "ACTIVAS EN COLA".
+                Prueba seleccionando "Todas las Secciones" o la pestaña de "ACTIVAS EN PENDIENTE".
               </p>
             </div>
           ) : (

@@ -298,26 +298,26 @@ export function WmsProvider({ children }) {
     }
   };
 
-  // Restaurar a COLA (en caso de error operacional en muelle)
+  // Restaurar a PENDIENTE (en caso de error operacional en muelle)
   const restaurarACola = async (despachoId) => {
     setDespachos(prev =>
       prev.map(d => {
         if (d.id !== despachoId) return d;
         return {
           ...d,
-          estado_actual: 'COLA',
+          estado_actual: 'PENDIENTE',
           hora_salida: null,
           sync_cloud: null
         };
       })
     );
-    showToast('Orden devuelta a COLA.', 'info');
+    showToast('Orden devuelta a PENDIENTE.', 'info');
 
     try {
       await fetch(`${API_URL}/api/despachos/${despachoId}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nuevoEstado: 'COLA' })
+        body: JSON.stringify({ nuevoEstado: 'PENDIENTE' })
       });
     } catch (err) {
       console.warn('Error restaurando estado en el backend:', err);
@@ -451,7 +451,7 @@ export function WmsProvider({ children }) {
       transportadora: 'Flota Propia',
       ruta_id: 'rt-101',
       vehiculo_placa: FLOTA_VEHICULOS[0],
-      estado_actual: 'COLA',
+      estado_actual: 'PENDIENTE',
       prioridad: 1, // Urgente
       bahia_asignada: 'Bodega A-01',
       numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -464,7 +464,7 @@ export function WmsProvider({ children }) {
         { id: `it-sim-3`, sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 1, cantidad_auditada: 1, ubicacion_bodega: 'P04-E02-N1', unidad: 'GAL' }
       ],
       history: [
-        { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'COLA', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: `Pedido express ferretería programado para ${FLOTA_VEHICULOS[0]}` }
+        { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: `Pedido express ferretería programado para ${FLOTA_VEHICULOS[0]}` }
       ]
     };
 
@@ -539,7 +539,7 @@ export function WmsProvider({ children }) {
           {
             id: `h-${Date.now()}`,
             estado_anterior: null,
-            estado_nuevo: 'COLA',
+            estado_nuevo: 'PENDIENTE',
             usuario_operador: 'Coordinador Logística',
             tiempo_estancia_seg: 0,
             timestamp: new Date().toISOString(),
@@ -627,8 +627,8 @@ export function WmsProvider({ children }) {
 
   // Métricas calculadas para la barra superior y control de 2 estados
   const kpis = {
-    pendientesTotal: despachos.filter((d) => d.estado_actual === 'COLA').length,
-    pendientesHoy: despachos.filter((d) => d.estado_actual === 'COLA').length,
+    pendientesTotal: despachos.filter((d) => d.estado_actual === 'PENDIENTE').length,
+    pendientesHoy: despachos.filter((d) => d.estado_actual === 'PENDIENTE').length,
     despachadosTotal: despachos.filter((d) => d.estado_actual === 'DESPACHADO').length,
     despachados: despachos.filter((d) => d.estado_actual === 'DESPACHADO').length,
     conIncidencia: despachos.filter((d) => Boolean(d.incidencia_activa)).length,

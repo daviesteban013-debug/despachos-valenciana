@@ -51,7 +51,7 @@ export default function DispatchDetailDrawer() {
             <div className="w-12 h-1.5 bg-white/40 rounded-full mx-auto" />
           </div>
 
-          {/* 1. CABECERA: CLIENTE, FACTURA, DIRECCIÓN, CUADRILLA Y ESTADO (COLA / DESPACHADO) */}
+          {/* 1. CABECERA: CLIENTE, FACTURA, DIRECCIÓN, CUADRILLA Y ESTADO (PENDIENTE / DESPACHADO) */}
           <div className="bg-[#E11D24] text-white px-4 py-3 flex items-start justify-between gap-3 shadow-sm">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -68,7 +68,7 @@ export default function DispatchDetailDrawer() {
                     ? 'bg-emerald-600 text-white' 
                     : 'bg-red-800 text-white'
                 }`}>
-                  {isDespachado ? 'DESPACHADO' : 'COLA'}
+                  {isDespachado ? 'DESPACHADO' : 'PENDIENTE'}
                 </span>
               </div>
 

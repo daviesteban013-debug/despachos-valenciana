@@ -109,10 +109,7 @@ export default function IncidentsView() {
                     </p>
                   </div>
 
-                  <span className="text-xs font-bold text-[#E11D24] flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    Corte: {new Date(ord.horario_corte).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+
                 </div>
 
                 {/* Motivo y Causa del Bloqueo */}

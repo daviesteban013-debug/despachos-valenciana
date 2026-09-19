@@ -76,9 +76,9 @@ export async function crearDespacho(req, res) {
     const { rows: dRows } = await client.query(`
       INSERT INTO despachos (
         codigo_orden, codigo_factura_erp, cliente_nombre, cliente_direccion, 
-        transportadora, estado_actual, horario_corte, vehiculo_placa, valor_total, fecha_despacho, jornada, observaciones
+        transportadora, estado_actual, vehiculo_placa, valor_total, fecha_despacho, jornada, observaciones
       ) VALUES (
-        $1, $2, $3, $4, 'Flota Propia', 'COLA', NOW() + interval '4 hours', $5, $6, $7, $8, $9
+        $1, $2, $3, $4, 'Flota Propia', 'PENDIENTE', $5, $6, $7, $8, $9
       ) RETURNING *
     `, [
       codigo_orden || `PVSW-${Math.floor(Math.random() * 10000)}`,
@@ -141,7 +141,7 @@ export async function cambiarEstadoDespacho(req, res) {
     const despacho = findRows[0];
     const estadoUpper = (nuevoEstado || '').toUpperCase();
     
-    if (estadoUpper !== 'COLA' && estadoUpper !== 'DESPACHADO') {
+    if (estadoUpper !== 'PENDIENTE' && estadoUpper !== 'DESPACHADO') {
       return res.status(400).json({ error: 'Estado no permitido.' });
     }
 
@@ -167,8 +167,8 @@ export async function cambiarEstadoDespacho(req, res) {
       return res.json({ mensaje: 'Orden despachada', despacho: { ...despacho, estado_actual: 'DESPACHADO', vehiculo_placa: placaAsignada }, syncExcel: sync_cloud });
     }
 
-    await client.query('UPDATE despachos SET estado_actual = $1 WHERE id = $2', ['COLA', despacho.id]);
-    return res.json({ mensaje: 'Restaurada a cola', despacho: { ...despacho, estado_actual: 'COLA' } });
+    await client.query('UPDATE despachos SET estado_actual = $1 WHERE id = $2', ['PENDIENTE', despacho.id]);
+    return res.json({ mensaje: 'Restaurada a pendiente', despacho: { ...despacho, estado_actual: 'PENDIENTE' } });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   } finally {

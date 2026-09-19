@@ -9,12 +9,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. TIPOS ENUMERADOS (ENUMS DE DOMINIO)
 -- ----------------------------------------------------------------------------
 CREATE TYPE estado_despacho AS ENUM (
-    'COLA', 
-    'PICKING', 
-    'PACKING', 
-    'LISTO', 
-    'DESPACHADO', 
-    'INCIDENCIA'
+    'PENDIENTE', 
+    'DESPACHADO'
 );
 
 CREATE TYPE estado_ruta AS ENUM (
@@ -76,17 +72,12 @@ CREATE TABLE despachos (
     cliente_ciudad VARCHAR(100) NOT NULL DEFAULT 'Bogotá D.C.',
     transportadora VARCHAR(100) NOT NULL,
     ruta_id UUID REFERENCES rutas(id) ON DELETE SET NULL,
-    estado_actual estado_despacho NOT NULL DEFAULT 'COLA',
+    estado_actual estado_despacho NOT NULL DEFAULT 'PENDIENTE',
     prioridad SMALLINT NOT NULL DEFAULT 2 CHECK (prioridad IN (1, 2, 3)), -- 1: Urgente, 2: Normal, 3: Consolidado
-    horario_corte TIMESTAMPTZ NOT NULL,
     vehiculo_placa VARCHAR(100),
-    bahia_asignada VARCHAR(20),
     numero_guia VARCHAR(100),
     valor_total NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
     peso_total_kg NUMERIC(8, 2) NOT NULL DEFAULT 0.00,
-    picking_operario VARCHAR(100),
-    packing_mesa VARCHAR(50),
-    manifiesto_despacho VARCHAR(100),
     hora_salida TIMESTAMPTZ,
     jornada VARCHAR(5) DEFAULT 'AM',
     observaciones TEXT,
@@ -200,7 +191,7 @@ BEGIN
         INSERT INTO historial_estados_despacho (
             despacho_id, estado_anterior, estado_nuevo, usuario_operador, tiempo_estancia_seg, nota
         ) VALUES (
-            NEW.id, OLD.estado_actual, NEW.estado_actual, COALESCE(NEW.picking_operario, 'LIDER_BODEGA'), v_estancia_seg, 
+            NEW.id, OLD.estado_actual, NEW.estado_actual, 'SISTEMA', v_estancia_seg, 
             'Transición de estado: ' || OLD.estado_actual || ' -> ' || NEW.estado_actual
         );
     END IF;

@@ -67,7 +67,7 @@ export default function DispatchCard({ despacho }) {
 
   const handleRestaurar = (e) => {
     e.stopPropagation();
-    if (window.confirm(`¿Devolver la orden ${despacho.codigo_orden} a COLA?`)) {
+    if (window.confirm(`¿Devolver la orden ${despacho.codigo_orden} a PENDIENTE?`)) {
       restaurarACola(despacho.id);
     }
   };
@@ -123,7 +123,7 @@ export default function DispatchCard({ despacho }) {
 
         {/* FILA 3: Selector de Vehículo de Flota Fija (4 placas) */}
         <div className="pt-1">
-          {despacho.estado_actual === 'COLA' ? (
+          {despacho.estado_actual === 'PENDIENTE' ? (
             <div 
               className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 w-[400px] max-w-full"
               onClick={(e) => e.stopPropagation()}
@@ -262,7 +262,7 @@ export default function DispatchCard({ despacho }) {
           </button>
 
           {/* Botón de Despacho Principal (Un solo toque para despachar) */}
-          {despacho.estado_actual === 'COLA' ? (
+          {despacho.estado_actual === 'PENDIENTE' ? (
             <button
               type="button"
               onClick={handleDespachar}
