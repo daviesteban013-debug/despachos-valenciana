@@ -151,7 +151,7 @@ export default function WmsDespachoApp() {
               <Truck className="w-10 h-10 text-[#E11D24]" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-800">Acceso a Logística WMS</h2>
+              <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Acceso a Logística Valenciana</h2>
               <p className="text-sm text-slate-500 mt-2">
                 Inicia sesión con tu cuenta de Google autorizada para ingresar al panel de despachos de La Valenciana.
               </p>
