@@ -6,11 +6,11 @@
 import { FLOTA_VEHICULOS } from './flota';
 
 export const MOCK_BODEGAS = [
-  { id: '00', codigo: '00', nombre: '00 - Patio Materiales Pesados (Atalaya)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 6 },
-  { id: '01', codigo: '01', nombre: '01 - Principal (Cúcuta Centro)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 8 },
-  { id: '02', codigo: '02', nombre: '02 - Almacén Central (Zona Franca)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 12 },
-  { id: '03', codigo: '03', nombre: '03 - Bodega Los Patios', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 6 },
-  { id: '04', codigo: '04', nombre: '04 - Bodega El Zulia', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 4 }
+  { id: '00', codigo: '00', nombre: '00 - Patio Materiales Pesados (Los Patios)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 6 },
+  { id: '01', codigo: '01', nombre: '01 - Principal (Los Patios)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 8 },
+  { id: '02', codigo: '02', nombre: '02 - Almacén Central (Los Patios)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 12 },
+  { id: '03', codigo: '03', nombre: '03 - Bodega 1 (Los Patios)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 6 },
+  { id: '04', codigo: '04', nombre: '04 - Bodega 2 (Los Patios)', direccion: 'Los Patios, N. de Santander', capacidad_bahias: 4 }
 ];
 
 export const MOCK_VEHICULOS_RUTAS = [
