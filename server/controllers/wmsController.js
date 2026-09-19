@@ -5,6 +5,7 @@ import {
   calibrarPlantillaReferencia
 } from '../services/plantillaExcelService.js';
 import { FLOTA_VEHICULOS } from '../config/flota.js';
+import { io } from '../server.js';
 
 // GET /api/despachos
 export async function listarDespachos(req, res) {
@@ -113,6 +114,7 @@ export async function crearDespacho(req, res) {
     }
 
     await client.query('COMMIT');
+    io.emit('wms_update_event', { action: 'DESPACHO_CREADO', id: nuevoDespacho.id });
     return res.status(201).json(nuevoDespacho);
   } catch (error) {
     await client.query('ROLLBACK');
@@ -164,10 +166,12 @@ export async function cambiarEstadoDespacho(req, res) {
       } catch (errExcel) {
         sync_cloud = { estado: 'ERROR_SYNC', error: errExcel.message };
       }
+      io.emit('wms_update_event', { action: 'DESPACHO_ACTUALIZADO', id: despacho.id, estado: 'DESPACHADO' });
       return res.json({ mensaje: 'Orden despachada', despacho: { ...despacho, estado_actual: 'DESPACHADO', vehiculo_placa: placaAsignada }, syncExcel: sync_cloud });
     }
 
     await client.query('UPDATE despachos SET estado_actual = $1 WHERE id = $2', ['PENDIENTE', despacho.id]);
+    io.emit('wms_update_event', { action: 'DESPACHO_ACTUALIZADO', id: despacho.id, estado: 'PENDIENTE' });
     return res.json({ mensaje: 'Restaurada a pendiente', despacho: { ...despacho, estado_actual: 'PENDIENTE' } });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -194,10 +198,12 @@ export async function gestionarIncidenciaDespacho(req, res) {
 
     if (accion === 'RESOLVER') {
       await client.query('UPDATE incidencias_despacho SET resuelta = TRUE, fecha_resolucion = NOW(), resuelto_por = $1, solucion_aplicada = $2 WHERE despacho_id = $3 AND resuelta = FALSE', [usuario, solucion, dId]);
+      io.emit('wms_update_event', { action: 'INCIDENCIA_RESUELTA', id: dId });
       return res.json({ mensaje: 'Incidencia resuelta' });
     }
 
     await client.query('INSERT INTO incidencias_despacho (despacho_id, tipo, descripcion, reportado_por) VALUES ($1, $2, $3, $4)', [dId, tipo || 'FALTANTE', descripcion, usuario]);
+    io.emit('wms_update_event', { action: 'INCIDENCIA_REPORTADA', id: dId });
     return res.json({ mensaje: 'Incidencia reportada' });
   } finally {
     if (client) client.release();
@@ -252,6 +258,7 @@ export async function procesarDevolucion(req, res) {
       notas,
       id
     ]);
+    io.emit('wms_update_event', { action: 'DEVOLUCION_PROCESADA', id: rows[0].id });
     return res.json({ mensaje: 'Devolucion procesada', devolucion: rows[0] });
   } finally {
     if (client) client.release();

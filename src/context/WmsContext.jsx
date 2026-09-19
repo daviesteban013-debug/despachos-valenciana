@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import {
   INITIAL_DESPACHOS,
   INITIAL_DEVOLUCIONES,
@@ -9,6 +10,23 @@ import { FLOTA_VEHICULOS } from '../data/flota';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const WmsContext = createContext(null);
 
+const getGoogleToken = () => {
+  try {
+    const u = JSON.parse(localStorage.getItem('wms_google_user'));
+    return u ? u.credential : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const apiFetch = async (url, options = {}) => {
+  const token = getGoogleToken();
+  const headers = {
+    ...options.headers,
+    ...(token && { Authorization: `Bearer ${token}` })
+  };
+  return fetch(url, { ...options, headers });
+};
 export function WmsProvider({ children }) {
   // Despachos con modelo de 2 estados: PENDIENTE / DESPACHADO
   const [despachos, setDespachos] = useState(() => {
@@ -26,7 +44,7 @@ export function WmsProvider({ children }) {
   // Fetch initial despachos from backend
   const fetchDespachos = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/despachos`);
+      const res = await apiFetch(`${API_URL}/api/despachos`);
       if (res.ok) {
         const data = await res.json();
         setDespachos(data || []);
@@ -40,7 +58,7 @@ export function WmsProvider({ children }) {
 
   const fetchDevoluciones = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/devoluciones`);
+      const res = await apiFetch(`${API_URL}/api/devoluciones`);
       if (res.ok) {
         const data = await res.json();
         setDevoluciones(data || []);
@@ -53,6 +71,18 @@ export function WmsProvider({ children }) {
   useEffect(() => {
     fetchDespachos();
     fetchDevoluciones();
+
+    // Iniciar WebSockets
+    const socket = io(API_URL);
+    socket.on('wms_update_event', (data) => {
+      console.log('⚡ WMS WebSocket Update:', data);
+      fetchDespachos();
+      if (data.action && data.action.includes('DEVOLUCION')) {
+        fetchDevoluciones();
+      }
+    });
+
+    return () => socket.disconnect();
   }, [fetchDespachos, fetchDevoluciones]);
 
   // Navegación Bottom Dock: 'waves' (Despachos) | 'incidents' (Novedades)
@@ -190,7 +220,7 @@ export function WmsProvider({ children }) {
 
     // 2. Disparo de guardado automático en la hoja de esa placa en Google Drive
     try {
-      const response = await fetch(`${API_URL}/api/despachos/${despachoId}/estado`, {
+      const response = await apiFetch(`${API_URL}/api/despachos/${despachoId}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -251,7 +281,7 @@ export function WmsProvider({ children }) {
     showToast(`Reintentando sincronización de ${d.codigo_orden} con Google Drive...`, 'info');
 
     try {
-      const response = await fetch(`${API_URL}/api/despachos/${despachoId}/reintentar-sync`, {
+      const response = await apiFetch(`${API_URL}/api/despachos/${despachoId}/reintentar-sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -279,7 +309,7 @@ export function WmsProvider({ children }) {
   const exportarCopiaExcel = async () => {
     showToast('Generando copia de la plantilla Excel de vehículos...', 'info');
     try {
-      const response = await fetch(`${API_URL}/api/despachos/exportar-plantilla`);
+      const response = await apiFetch(`${API_URL}/api/despachos/exportar-plantilla`);
       if (!response.ok) {
         throw new Error(`Error en servidor (${response.status})`);
       }
@@ -314,7 +344,7 @@ export function WmsProvider({ children }) {
     showToast('Orden devuelta a PENDIENTE.', 'info');
 
     try {
-      await fetch(`${API_URL}/api/despachos/${despachoId}/estado`, {
+      await apiFetch(`${API_URL}/api/despachos/${despachoId}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nuevoEstado: 'PENDIENTE' })
@@ -337,7 +367,7 @@ export function WmsProvider({ children }) {
     showToast(`Devolución gestionada con éxito.`, 'info');
 
     try {
-      await fetch(`${API_URL}/api/devoluciones/${devolucionId}/procesar`, {
+      await apiFetch(`${API_URL}/api/devoluciones/${devolucionId}/procesar`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion, notas })
@@ -386,7 +416,7 @@ export function WmsProvider({ children }) {
     showToast(`Novedad registrada en la orden: [${tipo}]`, 'warning');
 
     try {
-      await fetch(`${API_URL}/api/despachos/${despachoId}/incidencia`, {
+      await apiFetch(`${API_URL}/api/despachos/${despachoId}/incidencia`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion: 'REGISTRAR', tipo, descripcion, reportado_por: metadataOperador })
@@ -426,7 +456,7 @@ export function WmsProvider({ children }) {
     showToast(`Novedad resuelta y despejada de la orden.`, 'success');
 
     try {
-      await fetch(`${API_URL}/api/despachos/${despachoId}/incidencia`, {
+      await apiFetch(`${API_URL}/api/despachos/${despachoId}/incidencia`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion: 'RESOLVER', solucion, reportado_por: metadataOperador })
@@ -499,7 +529,7 @@ export function WmsProvider({ children }) {
         }
       ];
 
-      const res = await fetch(`${API_URL}/api/despachos`, {
+      const res = await apiFetch(`${API_URL}/api/despachos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

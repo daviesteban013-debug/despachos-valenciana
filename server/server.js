@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { requireWmsAuth } from './middlewares/wmsAuth.js';
 import {
   listarInventario,
   detalleProducto,
@@ -31,6 +34,22 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Configuración de Servidor HTTP y WebSockets (Socket.io)
+const httpServer = createServer(app);
+export const io = new Server(httpServer, {
+  cors: {
+    origin: '*', // Permitir Vercel y Localhost
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS']
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('🔗 Cliente conectado a WebSockets:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('🔌 Cliente desconectado:', socket.id);
+  });
+});
 
 // Configuración de Multer para carga de archivos Excel en memoria
 const upload = multer({
@@ -81,6 +100,9 @@ app.patch('/api/facturas/:id/estado', cambiarEstadoFactura);
 // ----------------------------------------------------------------------------
 // RUTAS DE WMS DESPACHO A DOMICILIO (MODELO SIMPLIFICADO 2 ESTADOS + ONEDRIVE)
 // ----------------------------------------------------------------------------
+// Aplicar seguridad JWT a todas las rutas WMS
+app.use('/api/despachos', requireWmsAuth);
+app.use('/api/devoluciones', requireWmsAuth);
 app.get('/api/despachos', listarDespachos);
 app.post('/api/despachos', crearDespacho);
 app.get('/api/despachos/exportar-plantilla', exportarPlantillaExcel);
@@ -104,9 +126,10 @@ app.use((err, req, res, next) => {
 
 // Iniciar servidor si se ejecuta directamente
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`🚀 Servidor API de Inventario corriendo en puerto ${PORT}`);
-    console.log(`📡 Endpoints disponibles en http://localhost:${PORT}/api/inventario`);
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 Servidor API corriendo en puerto ${PORT}`);
+    console.log(`📡 WebSockets inicializados exitosamente`);
+    console.log(`📡 Endpoints WMS Seguros en http://localhost:${PORT}/api/despachos`);
   });
 }
 
