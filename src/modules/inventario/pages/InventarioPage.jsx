@@ -133,6 +133,8 @@ export default function InventarioPage() {
   };
 
   // Productos enriquecidos con el inventario en tiempo real del WmsContext (SSOT)
+  // TODO: Conectar con el WmsContext real si se requiere inventario en vivo en esta ruta
+  const inventarioWms = []; 
   const productosConStockEnVivo = useMemo(() => {
     return productos.map((prod) => {
       const matchWms = inventarioWms?.find(
