@@ -43,7 +43,7 @@ export default function ControlBar() {
             placeholder="Buscar por #ORD, factura ERP, cliente..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-9 h-11 text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#E11D24] focus:ring-1 focus:ring-[#E11D24] shadow-sm"
+            className="w-full bg-white/90 backdrop-blur-sm border border-slate-300/80 rounded-xl pl-10 pr-9 h-11 text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#E11D24] focus:ring-1 focus:ring-[#E11D24] shadow-sm transition-all"
           />
           {searchQuery && (
             <button
@@ -61,8 +61,8 @@ export default function ControlBar() {
           onClick={() => setFilterMenuOpen(!filterMenuOpen)}
           className={`h-11 px-3.5 rounded-xl border flex items-center gap-2 text-sm font-bold transition-all shrink-0 active:scale-95 shadow-sm ${
             hasActiveFilters
-              ? 'bg-[#E11D24] border-[#E11D24] text-white'
-              : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+              ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-red-500/20'
+              : 'bg-white/90 backdrop-blur-sm border-slate-300/80 text-slate-700 hover:bg-slate-50'
           }`}
           title="Filtros rápidos de despacho"
         >
@@ -76,7 +76,7 @@ export default function ControlBar() {
 
       {/* Menú Desplegable de Filtros */}
       {filterMenuOpen && (
-        <div className="absolute top-full left-3 right-3 sm:left-auto sm:right-4 sm:w-80 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 space-y-4 animate-fadeIn z-30">
+        <div className="absolute top-full left-3 right-3 sm:left-auto sm:right-4 sm:w-80 mt-1 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-xl shadow-slate-200/50 p-4 space-y-4 animate-fadeIn z-30 ring-1 ring-slate-900/5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <span className="text-sm font-bold text-slate-900">Filtros Operativos</span>
             {hasActiveFilters && (

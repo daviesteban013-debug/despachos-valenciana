@@ -67,7 +67,7 @@ export default function KanbanBoard() {
     <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 py-1 space-y-2">
       
       {/* 1. BARRA SUPERIOR DE CONTROL: PESTAÑAS 2 ESTADOS + FILTRO NOVEDADES + EXPORTAR EXCEL */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white border border-slate-200 p-2 rounded-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white/80 backdrop-blur-md border border-slate-200/60 p-2.5 rounded-2xl shadow-sm">
         
         {/* Selector Segmentado de Estados (Mobile First) */}
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
@@ -187,15 +187,17 @@ export default function KanbanBoard() {
 
         {/* PANEL A: PENDIENTES */}
         {(activeTab === 'pendientes' || activeTab === 'ambas') && (
-          <div className="bg-slate-50/80 rounded-xl border border-slate-200 p-3 flex flex-col space-y-3">
+          <div className="bg-white/40 backdrop-blur-lg rounded-3xl border border-white/60 shadow-sm ring-1 ring-slate-200/50 p-4 flex flex-col space-y-4">
             {/* Cabecera de Columna */}
-            <div className="flex items-center justify-between bg-slate-50 border border-slate-200 border-l-4 border-l-slate-800 text-slate-800 p-2.5 rounded-xl">
-              <div className="flex items-center gap-2">
-                <Inbox className="h-4 w-4 text-slate-700" />
-                <span className="text-xs font-bold uppercase tracking-wider">Órdenes Pendientes</span>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-slate-800 p-1.5 rounded-xl shadow-sm">
+                  <Inbox className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-sm font-black tracking-tight text-slate-800">PENDIENTES</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-slate-800 text-white">
+                <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-slate-800 text-white shadow-sm">
                   {pendientes.length}
                 </span>
               </div>
@@ -220,15 +222,17 @@ export default function KanbanBoard() {
 
         {/* PANEL B: DESPACHADOS */}
         {(activeTab === 'despachados' || activeTab === 'ambas') && (
-          <div className="bg-slate-50/80 rounded-xl border border-slate-200 p-3 flex flex-col space-y-3">
+          <div className="bg-white/40 backdrop-blur-lg rounded-3xl border border-white/60 shadow-sm ring-1 ring-slate-200/50 p-4 flex flex-col space-y-4">
             {/* Cabecera de Columna */}
-            <div className="flex items-center justify-between bg-slate-50 border border-slate-200 border-l-4 border-l-emerald-700 text-slate-900 p-2.5 rounded-xl">
-              <div className="flex items-center gap-2">
-                <Truck className="h-4 w-4 text-emerald-700" />
-                <span className="text-xs font-bold uppercase tracking-wider">Despachados (Historial)</span>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-emerald-600 p-1.5 rounded-xl shadow-sm">
+                  <Truck className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-sm font-black tracking-tight text-slate-800">DESPACHADOS</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-emerald-700 text-white">
+                <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-emerald-600 text-white shadow-sm">
                   {despachados.length}
                 </span>
               </div>

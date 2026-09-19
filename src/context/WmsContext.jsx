@@ -466,42 +466,7 @@ export function WmsProvider({ children }) {
     }
   };
 
-  // Simular inyección de nuevo pedido crítico
-  const addSimulatedOrder = () => {
-    const randomNum = Math.floor(6320 + Math.random() * 80);
-    const invoiceNum = Math.floor(80310 + Math.random() * 80);
-    const newOrder = {
-      id: `dsp-new-${Date.now()}`,
-      codigo_orden: `PVSW-${randomNum}`,
-      codigo_factura_erp: `FE-${invoiceNum}`,
-      cliente_nombre: 'Ferretería y Depósito La 10 Cúcuta',
-      cliente_codigo: 'CL-9008899',
-      zona_entrega: 'Atalaya Occidental',
-      bodega_origen_id: activeBodega,
-      transportadora: 'Flota Propia',
-      ruta_id: 'rt-101',
-      vehiculo_placa: FLOTA_VEHICULOS[0],
-      estado_actual: 'PENDIENTE',
-      prioridad: 1, // Urgente
-      bahia_asignada: 'Bodega A-01',
-      numero_guia: `GUIA-VAL-${Math.floor(1000 + Math.random() * 9000)}`,
-      valor_total: 4280000,
-      incidencia_activa: null,
-      sync_cloud: null,
-      items: [
-        { id: `it-sim-1`, sku: 'SKU-CEM-50', descripcion_producto: 'Cemento Gris Estructural 50kg Argos', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P06-E01-N1', unidad: 'BUL' },
-        { id: `it-sim-2`, sku: 'SKU-VAR-12', descripcion_producto: 'Varilla Corrugada 1/2" x 6m Diaco W60', cantidad_solicitada: 3, cantidad_auditada: 3, ubicacion_bodega: 'P08-E02-N1', unidad: 'UND' },
-        { id: `it-sim-3`, sku: 'SKU-PIN-PIN', descripcion_producto: 'Pintura Acrílica Viniltex Blanco Galón Pintuco', cantidad_solicitada: 1, cantidad_auditada: 1, ubicacion_bodega: 'P04-E02-N1', unidad: 'GAL' }
-      ],
-      history: [
-        { id: `h-sim-${Date.now()}`, estado_anterior: null, estado_nuevo: 'PENDIENTE', usuario_operador: 'Ventas Mostrador Valenciana', tiempo_estancia_seg: 10, timestamp: new Date().toISOString(), nota: `Pedido express ferretería programado para ${FLOTA_VEHICULOS[0]}` }
-      ]
-    };
 
-    setDespachos((prev) => [newOrder, ...prev]);
-    playBeep(880, 'triangle');
-    showToast(`⚡ Nuevo pedido crítico: ${newOrder.codigo_orden} (Asignado a ${FLOTA_VEHICULOS[0]})`, 'warning');
-  };
 
   // 1. Inserción de nueva orden conectada al backend
   const crearNuevoDespacho = async (payload) => {
@@ -618,17 +583,7 @@ export function WmsProvider({ children }) {
     showToast('Orden marcada como DESPACHADA.', 'success');
   };
 
-  const resetDemoData = () => {
-    localStorage.removeItem('wms_valenciana_despachos_v3');
-    localStorage.removeItem('wms_valenciana_despachos_v2');
-    setDespachos(INITIAL_DESPACHOS);
-    setDevoluciones(INITIAL_DEVOLUCIONES);
-    setSelectedCarrier('TODAS');
-    setSelectedZone('TODAS');
-    setOnlyUrgent(false);
-    setSearchQuery('');
-    showToast('Datos reiniciados al modelo de 2 estados de La Valenciana FERREHOGAR.', 'info');
-  };
+
 
   // Filtrado reactivo de despachos
   const filteredDespachos = despachos.filter((d) => {
@@ -711,11 +666,9 @@ export function WmsProvider({ children }) {
         registrarIncidencia,
         resolverIncidencia,
         procesarDevolucion,
-        addSimulatedOrder,
         crearNuevoDespacho,
         createModalOpen,
         setCreateModalOpen,
-        resetDemoData,
         showToast,
         playBeep
       }}

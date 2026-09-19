@@ -81,21 +81,21 @@ export default function DispatchCard({ despacho }) {
     <>
       <div
         onClick={() => setSelectedDespachoId(despacho.id)}
-        className={`w-full bg-white rounded-xl border p-5 space-y-3 cursor-pointer transition-all active:scale-[0.99] select-none ${
+        className={`w-full bg-white/80 backdrop-blur-sm rounded-2xl border p-5 space-y-3 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.98] select-none ${
           tieneIncidencia
-            ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300'
+            ? 'border-amber-400/60 bg-amber-50/40 ring-2 ring-amber-400/20 shadow-md shadow-amber-500/10'
             : isUrgent && despacho.estado_actual !== 'DESPACHADO'
-            ? 'border-[#E11D24] ring-2 ring-red-300/60'
-            : 'border-slate-200 hover:border-slate-300'
+            ? 'border-[#E11D24]/40 ring-2 ring-[#E11D24]/20 shadow-md shadow-red-500/10'
+            : 'border-slate-200/60 hover:border-slate-300 shadow-sm'
         }`}
       >
         {/* FILA 1: Encabezado y Estado */}
-        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+        <div className="flex items-center justify-between gap-2 border-b border-slate-100/80 pb-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-mono text-base font-bold text-slate-900 tracking-tight truncate">
+            <span className="font-mono text-base font-black text-slate-800 tracking-tight truncate">
               {despacho.codigo_factura_erp || despacho.codigo_orden}
             </span>
-            <span className="font-mono text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded shrink-0">
+            <span className="font-mono text-xs font-bold text-slate-400 bg-slate-100/50 px-2 py-0.5 rounded-lg shrink-0 border border-slate-200/50">
               #{despacho.codigo_orden}
             </span>
           </div>
@@ -115,8 +115,8 @@ export default function DispatchCard({ despacho }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-slate-900 truncate flex-1 min-w-0" title={despacho.cliente_nombre}>
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <h3 className="text-sm font-black text-slate-800 tracking-tight truncate flex-1 min-w-0" title={despacho.cliente_nombre}>
             {despacho.cliente_nombre}
           </h3>
         </div>
@@ -231,7 +231,7 @@ export default function DispatchCard({ despacho }) {
         )}
 
         {/* PIE DE LA TARJETA: ACCIONES OPERATIVAS */}
-        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+        <div className="flex items-center gap-2 pt-3 border-t border-slate-100/80 mt-2">
           {/* Botón de Novedad (Siempre accesible) */}
           <button
             type="button"
@@ -266,10 +266,10 @@ export default function DispatchCard({ despacho }) {
             <button
               type="button"
               onClick={handleDespachar}
-              className="h-10 flex-1 flex items-center justify-center gap-2 px-4 rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-bold transition-all active:scale-95"
+              className="h-10 flex-1 flex items-center justify-center gap-2 px-4 rounded-xl bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-xs font-bold transition-all active:scale-95 shadow-md hover:shadow-lg"
             >
               <Truck className="w-4 h-4 shrink-0" />
-              <span>Despachar en <span className="font-mono">{placaSeleccionada}</span></span>
+              <span>Despachar en <span className="font-mono text-emerald-300">{placaSeleccionada}</span></span>
               <ArrowRight className="w-3.5 h-3.5 shrink-0" />
             </button>
           ) : (
