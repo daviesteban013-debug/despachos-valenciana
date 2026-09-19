@@ -3,7 +3,7 @@ import logoValenciana from '../assets/logo-valenciana.jpg';
 import { useWms } from '../context/WmsContext';
 import { Building2, Zap, RotateCcw, Plus } from 'lucide-react';
 
-export default function Header() {
+export default function Header({ rightContent }) {
   const {
     bodegas,
     activeBodega,
@@ -34,7 +34,9 @@ export default function Header() {
 
       {/* 2. Estado En Línea y Controles Operativos */}
       <div className="flex items-center gap-2 shrink-0 pr-3 sm:pr-4">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+        {rightContent}
+        
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 ml-2">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
           En línea
         </span>

@@ -11,9 +11,11 @@ import ReturnsDrawer from './components/ReturnsDrawer';
 import ToastNotification from './components/ToastNotification';
 import CreateDispatchModal from './components/CreateDispatchModal';
 import HistorialView from './components/HistorialView';
-import { Layers, AlertOctagon, Undo2, History } from 'lucide-react';
+import { Layers, AlertOctagon, Undo2, History, Truck } from 'lucide-react';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import GoogleAuthBadge from './components/GoogleAuthBadge';
 
-function AppContent() {
+function AppContent({ user, setUser }) {
   const { 
     activeDockTab, 
     setActiveDockTab,
@@ -28,8 +30,8 @@ function AppContent() {
     <div className="min-h-screen bg-slate-100 flex flex-col selection:bg-red-600 selection:text-white">
       {/* Contenedor Superior Sticky (Header + Pestañas + ControlBar) */}
       <div className="sticky top-0 z-30 bg-slate-100 pb-2 shadow-sm">
-        {/* 1. Header Desktop-First (h-[68px]) con bloque de marca */}
-      <Header />
+      {/* 1. Header Desktop-First (h-[68px]) con bloque de marca y badge de auth */}
+      <Header rightContent={<GoogleAuthBadge user={user} setUser={setUser} />} />
 
       {/* Desktop Navigation Tabs (Hidden on mobile) */}
       <div className="hidden lg:flex items-center gap-2 w-full max-w-[1600px] mx-auto px-4 pt-4 pb-2">
@@ -118,5 +120,51 @@ function AppContent() {
 }
 
 export default function WmsDespachoApp() {
-  return <AppContent />;
+  const [user, setUser] = React.useState(() => {
+    const saved = localStorage.getItem('wms_google_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  // Client ID obtenido desde el portal de Google Cloud
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+  if (!clientId) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-4">
+          <AlertOctagon className="w-16 h-16 text-red-500 mx-auto" />
+          <h2 className="text-xl font-bold text-slate-800">Falta Google Client ID</h2>
+          <p className="text-sm text-slate-600">
+            Debes configurar <code>VITE_GOOGLE_CLIENT_ID</code> en el archivo <code>.env</code> para habilitar el inicio de sesión.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <GoogleOAuthProvider clientId={clientId}>
+      {!user ? (
+        <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-6">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <Truck className="w-10 h-10 text-slate-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-800">Acceso a Logística WMS</h2>
+              <p className="text-sm text-slate-500 mt-2">
+                Inicia sesión con tu cuenta de Google autorizada para ingresar al panel de despachos de La Valenciana.
+              </p>
+            </div>
+            
+            <div className="pt-4 border-t border-slate-100">
+              <GoogleAuthBadge user={user} setUser={setUser} />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <AppContent user={user} setUser={setUser} />
+      )}
+    </GoogleOAuthProvider>
+  );
 }
