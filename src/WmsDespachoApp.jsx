@@ -147,8 +147,8 @@ export default function WmsDespachoApp() {
       {!user ? (
         <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
           <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-6">
-            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2">
-              <Truck className="w-10 h-10 text-slate-400" />
+            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm border border-red-100">
+              <Truck className="w-10 h-10 text-[#E11D24]" />
             </div>
             <div>
               <h2 className="text-2xl font-black text-slate-800">Acceso a Logística WMS</h2>
