@@ -28,9 +28,12 @@ const apiFetch = async (url, options = {}) => {
   const response = await fetch(url, { ...options, headers });
   
   if (response.status === 401) {
-    // Token expirado o inválido: forzar cierre de sesión
-    localStorage.removeItem('wms_google_user');
-    window.location.reload();
+    // Si recibe 401, verificamos si había un usuario para evitar recargas infinitas si ya está deslogueado
+    const wasLoggedIn = !!localStorage.getItem('wms_google_user');
+    if (wasLoggedIn) {
+      localStorage.removeItem('wms_google_user');
+      window.location.reload();
+    }
   }
   
   return response;
