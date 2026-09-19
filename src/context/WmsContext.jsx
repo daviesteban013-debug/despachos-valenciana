@@ -25,7 +25,15 @@ const apiFetch = async (url, options = {}) => {
     ...options.headers,
     ...(token && { Authorization: `Bearer ${token}` })
   };
-  return fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers });
+  
+  if (response.status === 401) {
+    // Token expirado o inválido: forzar cierre de sesión
+    localStorage.removeItem('wms_google_user');
+    window.location.reload();
+  }
+  
+  return response;
 };
 export function WmsProvider({ children }) {
   // Despachos con modelo de 2 estados: PENDIENTE / DESPACHADO
