@@ -26,7 +26,12 @@ console.log('✅ Pool PostgreSQL configurado correctamente.');
 
 export async function getDbClient() {
   if (pgPool) {
-    return await pgPool.connect();
+    try {
+      return await pgPool.connect();
+    } catch (e) {
+      console.warn("Base de datos no accesible:", e.message);
+      return null;
+    }
   }
   return null;
 }

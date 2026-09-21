@@ -4,6 +4,7 @@ import Header from './components/Header';
 import ControlBar from './components/ControlBar';
 import KanbanBoard from './components/KanbanBoard';
 import IncidentsView from './components/IncidentsView';
+import InventoryView from './components/InventoryView';
 import BottomDock from './components/BottomDock';
 import DispatchDetailDrawer from './components/DispatchDetailDrawer';
 import IncidentModal from './components/IncidentModal';
@@ -11,7 +12,7 @@ import ReturnsDrawer from './components/ReturnsDrawer';
 import ToastNotification from './components/ToastNotification';
 import CreateDispatchModal from './components/CreateDispatchModal';
 import HistorialView from './components/HistorialView';
-import { Layers, AlertOctagon, Undo2, History, Truck } from 'lucide-react';
+import { Layers, AlertOctagon, Undo2, History, Truck, Package } from 'lucide-react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import GoogleAuthBadge from './components/GoogleAuthBadge';
 
@@ -70,6 +71,18 @@ function AppContent({ user, setUser }) {
         </button>
 
         <button
+          onClick={() => setActiveDockTab('inventory')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            activeDockTab === 'inventory'
+              ? 'bg-slate-900 text-white'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <Package className="h-4 w-4" />
+          <span>Catálogo</span>
+        </button>
+
+        <button
           onClick={() => setReturnsDrawerOpen(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
         >
@@ -103,6 +116,7 @@ function AppContent({ user, setUser }) {
       <main className="flex-1 w-full max-w-[1600px] mx-auto pb-24">
         {activeDockTab === 'waves' && <KanbanBoard />}
         {activeDockTab === 'incidents' && <IncidentsView />}
+        {activeDockTab === 'inventory' && <InventoryView />}
         {activeDockTab === 'history' && <HistorialView />}
       </main>
 

@@ -22,12 +22,13 @@ import {
   listarDespachos,
   crearDespacho,
   cambiarEstadoDespacho,
-  reintentarSincronizacionDrive,
-  gestionarIncidenciaDespacho,
   exportarPlantillaExcel,
+  gestionarIncidenciaDespacho,
+  reintentarSincronizacionDrive,
   cargarPlantillaReferenciaController,
   listarDevoluciones,
-  procesarDevolucion
+  procesarDevolucion,
+  syncExcelDirecto
 } from './controllers/wmsController.js';
 
 dotenv.config();
@@ -110,6 +111,10 @@ app.patch('/api/despachos/:id/estado', cambiarEstadoDespacho);
 app.post('/api/despachos/:id/reintentar-sync', reintentarSincronizacionDrive);
 app.post('/api/despachos/:id/incidencia', gestionarIncidenciaDespacho);
 app.post('/api/despachos/cargar-plantilla-referencia', upload.single('archivo'), cargarPlantillaReferenciaController);
+
+// Ruta especial: sync Excel directo SIN depender de PostgreSQL
+// No usa requireWmsAuth para que funcione incluso en modo offline
+app.post('/api/despachos/sync-excel-directo', syncExcelDirecto);
 
 // Rutas Logística Inversa (Devoluciones)
 app.get('/api/devoluciones', listarDevoluciones);

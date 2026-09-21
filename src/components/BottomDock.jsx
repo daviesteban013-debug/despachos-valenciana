@@ -4,7 +4,8 @@ import {
   Layers,
   AlertOctagon,
   Undo2,
-  History
+  History,
+  Package
 } from 'lucide-react';
 
 export default function BottomDock() {
@@ -41,7 +42,23 @@ export default function BottomDock() {
           <span className="text-xs">Despachos</span>
         </button>
 
-        {/* Tab 2: Incidencias & Novedades */}
+        {/* Tab 2: Catálogo */}
+        <button
+          onClick={() => setActiveDockTab('inventory')}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-all h-12 active:scale-95 ${
+            activeDockTab === 'inventory'
+              ? 'text-[#E11D24] font-bold bg-red-50'
+              : 'text-slate-500 hover:text-slate-800 font-medium'
+          }`}
+          aria-label="Catálogo"
+        >
+          <div className="relative">
+            <Package className="h-5 w-5" />
+          </div>
+          <span className="text-xs">Catálogo</span>
+        </button>
+
+        {/* Tab 3: Incidencias & Novedades */}
         <button
           onClick={() => setActiveDockTab('incidents')}
           className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-all h-12 active:scale-95 ${

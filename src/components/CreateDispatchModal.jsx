@@ -14,8 +14,10 @@ import {
   MessageSquare,
   Plus,
   Save,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
+import ProductAutocomplete from './ProductAutocomplete';
 
 import { FLOTA_VEHICULOS } from '../data/flota';
 
@@ -42,12 +44,14 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
   const { crearNuevoDespacho, showToast } = useWms();
   const [form, setForm] = useState({ ...INITIAL_FORM });
   const [errors, setErrors] = useState({});
+  const [selectedItems, setSelectedItems] = useState([]);
   const facturaInputRef = useRef(null);
 
   // Auto-enfoque al abrir
   useEffect(() => {
     if (isOpen) {
       setErrors({});
+      setSelectedItems([]);
       setTimeout(() => {
         if (facturaInputRef.current) {
           facturaInputRef.current.focus();
@@ -98,7 +102,8 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
       jornada: form.jornada,
       vehiculo_placa: form.vehiculo_placa,
       bodega_id: form.bodega_id,
-      observaciones: form.observaciones?.trim() || ''
+      observaciones: form.observaciones?.trim() || '',
+      items: selectedItems
     };
 
     try {
@@ -112,6 +117,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
           valor_factura: '',
           observaciones: ''
         }));
+        setSelectedItems([]);
         setErrors({});
         showToast(`Despacho ${ordenCreada.numero_factura || ordenCreada.codigo_factura_erp} creado. Listo para la siguiente factura.`, 'success');
         setTimeout(() => {
@@ -119,6 +125,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
         }, 100);
       } else {
         setForm({ ...INITIAL_FORM, vehiculo_placa: FLOTA_VEHICULOS[0] });
+        setSelectedItems([]);
         setErrors({});
         onClose();
       }
@@ -334,19 +341,70 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
             </select>
           </div>
 
-          {/* 9. Observaciones (observaciones) */}
+          {/* 6. Observaciones */}
           <div>
             <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
               <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
-              Observaciones (opcional)
+              Observaciones (Opcional)
             </label>
-            <input
-              type="text"
+            <textarea
               value={form.observaciones}
               onChange={(e) => handleChange('observaciones', e.target.value)}
-              placeholder="Ej: Llevar a Ferretería El Burro"
-              className="w-full h-11 px-3 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all"
+              placeholder="Ej: Llamar antes de entregar..."
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all min-h-[60px] resize-none"
             />
+          </div>
+
+          {/* 7. Productos del Despacho */}
+          <div className="pt-2 border-t border-slate-200">
+            <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+              <Package className="h-3.5 w-3.5 text-slate-400" />
+              Productos a Despachar
+            </label>
+            <ProductAutocomplete 
+              onAddProduct={(prod) => {
+                const exists = selectedItems.find(i => i.codigo === prod.codigo);
+                if (exists) {
+                  setSelectedItems(prev => prev.map(i => i.codigo === prod.codigo ? { ...i, cantidad: i.cantidad + 1 } : i));
+                } else {
+                  setSelectedItems(prev => [...prev, { ...prod, cantidad: 1 }]);
+                }
+              }} 
+            />
+            
+            {selectedItems.length > 0 && (
+              <div className="mt-3 bg-slate-50 rounded-xl border border-slate-200 max-h-48 overflow-y-auto">
+                <ul className="divide-y divide-slate-200">
+                  {selectedItems.map((item, idx) => (
+                    <li key={item.codigo} className="px-3 py-2 flex items-center justify-between gap-2 hover:bg-slate-100 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-800 truncate">{item.descripcion}</p>
+                        <p className="text-[10px] text-slate-500 font-mono">{item.codigo} • {item.und_base}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="number" 
+                          min="1"
+                          value={item.cantidad}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 1;
+                            setSelectedItems(prev => prev.map(i => i.codigo === item.codigo ? { ...i, cantidad: val } : i));
+                          }}
+                          className="w-14 h-7 px-1 text-center text-xs font-bold border border-slate-300 rounded focus:ring-1 focus:ring-[#E11D24] outline-none"
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => setSelectedItems(prev => prev.filter(i => i.codigo !== item.codigo))}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Resumen del Vehículo y Hoja Excel */}

@@ -121,35 +121,9 @@ export default function DispatchCard({ despacho }) {
           </h3>
         </div>
 
-        {/* FILA 3: Selector de Vehículo de Flota Fija (4 placas) */}
+        {/* FILA 3: Datos de vehículo (Solo en modo despachado) */}
         <div className="pt-1">
-          {despacho.estado_actual === 'PENDIENTE' ? (
-            <div 
-              className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 w-[400px] max-w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Truck className="h-4 w-4 text-slate-700 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block leading-tight">
-                  Vehículo Asignado (Hoja Excel):
-                </label>
-                <select
-                  value={placaSeleccionada}
-                  onChange={handleCambiarVehiculo}
-                  className={`w-full mt-0.5 bg-white border text-xs font-bold font-mono rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-900 ${
-                    errorSinPlaca ? 'border-amber-500 ring-1 ring-amber-500' : 'border-slate-300 text-slate-800'
-                  }`}
-                >
-                  {FLOTA_VEHICULOS.map(v => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ) : (
-            /* Datos de Despacho en Modo Despachado */
+          {despacho.estado_actual === 'DESPACHADO' && (
             <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
               <div className="flex items-center gap-2">
                 <Truck className="h-4 w-4 text-emerald-700 shrink-0" />
@@ -261,17 +235,32 @@ export default function DispatchCard({ despacho }) {
             <span className="hidden sm:inline">Tirilla</span>
           </button>
 
-          {/* Botón de Despacho Principal (Un solo toque para despachar) */}
+          {/* Botón de Despacho Principal (Split Button) */}
           {despacho.estado_actual === 'PENDIENTE' ? (
-            <button
-              type="button"
-              onClick={handleDespachar}
-              className="h-10 flex-1 flex items-center justify-center gap-2 px-4 rounded-xl bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-xs font-bold transition-all active:scale-95 shadow-md hover:shadow-lg"
-            >
-              <Truck className="w-4 h-4 shrink-0" />
-              <span>Despachar en <span className="font-mono text-emerald-300">{placaSeleccionada}</span></span>
-              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
-            </button>
+            <div className={`h-10 flex-1 flex rounded-xl shadow-md transition-all ${errorSinPlaca ? 'ring-2 ring-amber-500' : 'hover:shadow-lg'}`}>
+              <button
+                type="button"
+                onClick={handleDespachar}
+                className="flex-1 flex items-center justify-center gap-2 px-3 rounded-l-xl bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-xs font-bold transition-all active:scale-95"
+              >
+                <Truck className="w-4 h-4 shrink-0" />
+                <span>Despachar</span>
+              </button>
+              <div className="relative flex items-center bg-slate-900 border-l border-slate-700 rounded-r-xl px-2 hover:bg-black transition-colors" onClick={(e) => e.stopPropagation()}>
+                <select
+                  value={placaSeleccionada}
+                  onChange={handleCambiarVehiculo}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Cambiar vehículo asignado"
+                >
+                  {FLOTA_VEHICULOS.map(v => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+                <span className="font-mono text-emerald-400 text-xs font-bold px-1">{placaSeleccionada}</span>
+                <span className="text-slate-400 text-[10px] ml-0.5">▼</span>
+              </div>
+            </div>
           ) : (
             /* Opciones de orden despachada */
             <div className="flex items-center justify-between flex-1 gap-2">

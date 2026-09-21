@@ -10,10 +10,22 @@ import { FLOTA_VEHICULOS } from '../data/flota';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const WmsContext = createContext(null);
 
+let globalAudioContext = null;
+const initAudioContext = () => {
+  if (typeof window !== 'undefined' && window.AudioContext && !globalAudioContext) {
+    try {
+      globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      console.warn("AudioContext not supported or blocked");
+    }
+  }
+  return globalAudioContext;
+};
+
 const getGoogleToken = () => {
   try {
     const u = JSON.parse(localStorage.getItem('wms_google_user'));
-    return u ? u.credential : null;
+    return u ? (u.token || u.credential) : null;
   } catch (e) {
     return null;
   }
@@ -54,6 +66,7 @@ export function WmsProvider({ children }) {
 
   // Fetch initial despachos from backend
   const fetchDespachos = useCallback(async () => {
+    if (!getGoogleToken()) return;
     try {
       const res = await apiFetch(`${API_URL}/api/despachos`);
       if (res.ok) {
@@ -68,6 +81,7 @@ export function WmsProvider({ children }) {
   const [devoluciones, setDevoluciones] = useState([]);
 
   const fetchDevoluciones = useCallback(async () => {
+    if (!getGoogleToken()) return;
     try {
       const res = await apiFetch(`${API_URL}/api/devoluciones`);
       if (res.ok) {
@@ -138,8 +152,11 @@ export function WmsProvider({ children }) {
   // Sonido / respuesta táctil para interacción en bodega
   const playBeep = (freq = 880, type = 'sine') => {
     try {
-      if (typeof window !== 'undefined' && window.AudioContext) {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = initAudioContext();
+      if (ctx) {
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = type;
@@ -152,7 +169,11 @@ export function WmsProvider({ children }) {
         osc.stop(ctx.currentTime + 0.13);
       }
       if (navigator.vibrate) {
-        navigator.vibrate(50);
+        if (freq < 500) {
+          navigator.vibrate([200, 100, 200]);
+        } else {
+          navigator.vibrate([50, 50, 50]);
+        }
       }
     } catch (e) {
       // AudioContext policy fallback
@@ -175,6 +196,45 @@ export function WmsProvider({ children }) {
       prev.map(d => (d.id === despachoId ? { ...d, vehiculo_placa: placaNormalizada } : d))
     );
     showToast(`Vehículo [${placaNormalizada}] asignado a la orden.`, 'info');
+  };
+
+  // Helper: Sync Excel directo sin PostgreSQL.
+  // Se usa como fallback cuando el endpoint principal falla por BD caída.
+  const _intentarSyncExcelDirecto = async (despacho, placa, despachoId, nowIso) => {
+    try {
+      const res = await fetch(`${API_URL}/api/despachos/sync-excel-directo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehiculo: placa,
+          numeroFactura: despacho.codigo_factura_erp || despacho.codigo_orden,
+          clienteNombre: despacho.cliente_nombre || '',
+          direccion: despacho.cliente_direccion || despacho.zona_entrega || '',
+          valorFactura: despacho.valor_total || 0
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setDespachos(prev =>
+          prev.map(d => d.id === despachoId
+            ? { ...d, sync_cloud: { estado: 'SINCRONIZADO', fecha: nowIso, destino: data.destino } }
+            : d
+          )
+        );
+        showToast(`✅ Registrado en Excel [${placa}] (modo offline).`, 'success');
+      } else {
+        throw new Error(data.error || 'Error desconocido en sync directo');
+      }
+    } catch (err) {
+      console.error('[SYNC-DIRECTO] Falló también el endpoint directo:', err.message);
+      setDespachos(prev =>
+        prev.map(d => d.id === despachoId
+          ? { ...d, sync_cloud: { estado: 'PENDIENTE', error: err.message, placa, intentos: 1, ultimo_intento: nowIso } }
+          : d
+        )
+      );
+      showToast(`Despacho guardado localmente. Excel pendiente de sync.`, 'warning');
+    }
   };
 
   // Acción principal: "Despachar" (PENDIENTE -> DESPACHADO + Guardado en plantilla Excel de Google Drive)
@@ -247,38 +307,15 @@ export function WmsProvider({ children }) {
         setDespachos(prev =>
           prev.map(d => (d.id === despachoId ? { ...d, sync_cloud: data.syncExcel } : d))
         );
-        showToast(`Fila registrada en hoja [${placaFinal}] de Google Drive.`, 'success');
+        showToast(`✅ Fila registrada en hoja [${placaFinal}] de Google Drive.`, 'success');
       } else {
-        const syncError = data.syncExcel || {
-          estado: 'PENDIENTE',
-          error: data.error || 'Error al conectar con Google Drive',
-          placa: placaFinal,
-          intentos: 1,
-          ultimo_intento: nowIso
-        };
-        setDespachos(prev =>
-          prev.map(d => (d.id === despachoId ? { ...d, sync_cloud: syncError } : d))
-        );
-        showToast(`Orden despachada en bodega, pero pendiente de sincronizar en Excel: ${syncError.error}`, 'warning');
+        // BD caída o sync falló → intentar endpoint directo sin PostgreSQL
+        console.warn('[WMS] Endpoint principal falló. Intentando sync Excel directo...');
+        await _intentarSyncExcelDirecto(targetDespacho, placaFinal, despachoId, nowIso);
       }
     } catch (err) {
-      console.warn('Error en llamada a backend para sync Google Drive:', err);
-      setDespachos(prev =>
-        prev.map(d => {
-          if (d.id !== despachoId) return d;
-          return {
-            ...d,
-            sync_cloud: {
-              estado: 'PENDIENTE',
-              error: err.message || 'Servidor backend no disponible',
-              placa: placaFinal,
-              intentos: 1,
-              ultimo_intento: nowIso
-            }
-          };
-        })
-      );
-      showToast(`Despacho registrado. Sincronización en cola pendiente por red.`, 'warning');
+      console.warn('[WMS] Error de red al contactar backend. Intentando sync Excel directo...', err.message);
+      await _intentarSyncExcelDirecto(targetDespacho, placaFinal, despachoId, nowIso);
     }
 
     return true;
@@ -341,6 +378,9 @@ export function WmsProvider({ children }) {
 
   // Restaurar a PENDIENTE (en caso de error operacional en muelle)
   const restaurarACola = async (despachoId) => {
+    const despachoAnterior = despachos.find(d => d.id === despachoId);
+    if (!despachoAnterior) return;
+
     setDespachos(prev =>
       prev.map(d => {
         if (d.id !== despachoId) return d;
@@ -355,13 +395,16 @@ export function WmsProvider({ children }) {
     showToast('Orden devuelta a PENDIENTE.', 'info');
 
     try {
-      await apiFetch(`${API_URL}/api/despachos/${despachoId}/estado`, {
+      const res = await apiFetch(`${API_URL}/api/despachos/${despachoId}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nuevoEstado: 'PENDIENTE' })
       });
+      if (!res.ok) throw new Error('Falló en el servidor');
     } catch (err) {
       console.warn('Error restaurando estado en el backend:', err);
+      setDespachos(prev => prev.map(d => d.id === despachoId ? despachoAnterior : d));
+      showToast('Error al restaurar orden. Se ha revertido el cambio.', 'error');
     }
   };
 
@@ -481,29 +524,41 @@ export function WmsProvider({ children }) {
 
   // 1. Inserción de nueva orden conectada al backend
   const crearNuevoDespacho = async (payload) => {
-    try {
-      const factura = (payload.numero_factura || '').trim().toUpperCase();
-      const cliente = (payload.cliente_nombre || '').trim();
-      const direccion = (payload.direccion_entrega || '').trim();
-      const valor = Number(payload.valor_factura) || 0;
-      const vehiculo = payload.vehiculo_placa || FLOTA_VEHICULOS[0];
-      const jornada = payload.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM');
-      const bodega = payload.bodega_id || '01';
-      const obs = (payload.observaciones || '').trim();
-      const fechaDespacho = payload.fecha_despacho || new Date().toISOString().slice(0, 10);
-      const randomNum = Math.floor(6400 + Math.random() * 600);
+    // Preparar variables antes del try/catch para que sean accesibles en ambos bloques
+    const factura = (payload.numero_factura || '').trim().toUpperCase();
+    const cliente = (payload.cliente_nombre || '').trim();
+    const direccion = (payload.direccion_entrega || '').trim();
+    const valor = Number(payload.valor_factura) || 0;
+    const vehiculo = payload.vehiculo_placa || FLOTA_VEHICULOS[0];
+    const jornada = payload.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM');
+    const bodega = payload.bodega_id || '01';
+    const obs = (payload.observaciones || '').trim();
+    const fechaDespacho = payload.fecha_despacho || new Date().toISOString().slice(0, 10);
+    const randomNum = Math.floor(6400 + Math.random() * 600);
 
-      const items = [
-        {
-          id: `it-${Date.now()}`,
-          sku: 'SKU-PEDIDO',
-          descripcion_producto: `Despacho ${factura}`,
-          cantidad_solicitada: 1,
-          cantidad_auditada: 1,
-          ubicacion_bodega: 'DESPACHO',
-          unidad: 'UND'
-        }
-      ];
+    const items = payload.items && payload.items.length > 0 
+      ? payload.items.map((it, idx) => ({
+          id: `it-${Date.now()}-${idx}`,
+          sku: it.codigo,
+          descripcion_producto: it.descripcion,
+          cantidad_solicitada: it.cantidad || 1,
+          cantidad_auditada: it.cantidad || 1,
+          ubicacion_bodega: payload.bodega_id || 'DESPACHO',
+          unidad: it.und_base || 'UND'
+        }))
+      : [
+          {
+            id: `it-${Date.now()}`,
+            sku: 'SKU-PEDIDO',
+            descripcion_producto: `Despacho ${factura}`,
+            cantidad_solicitada: 1,
+            cantidad_auditada: 1,
+            ubicacion_bodega: 'DESPACHO',
+            unidad: 'UND'
+          }
+        ];
+
+    try {
 
       const res = await apiFetch(`${API_URL}/api/despachos`, {
         method: 'POST',
@@ -560,10 +615,36 @@ export function WmsProvider({ children }) {
       return ordenCompleta;
 
     } catch (error) {
-      console.error('Error al crear despacho:', error);
-      showToast(`Fallo crítico creando despacho: ${error.message}`, 'error');
-      // No se bloquea la ejecución para devolver un error pero NO se crea el registro localmente.
-      throw error;
+      console.warn('Error al crear despacho en servidor (Activando Modo Offline):', error.message);
+
+      // Completar datos de UI para compatibilidad offline
+      const ordenCompleta = {
+        id: `offline-${Date.now()}`,
+        codigo_orden: `PVSW-${randomNum}`,
+        codigo_factura_erp: factura,
+        cliente_nombre: payload.cliente_nombre,
+        cliente_direccion: payload.direccion_entrega,
+        zona_entrega: payload.direccion_entrega,
+        estado_actual: 'PENDIENTE',
+        vehiculo_placa: payload.vehiculo_placa,
+        bodega_origen_id: payload.bodega_id,
+        valor_total: payload.valor_factura,
+        jornada: payload.jornada,
+        observaciones: payload.observaciones,
+        fecha_despacho: fechaDespacho,
+        transportadora: 'Flota Propia',
+        ruta_id: 'rt-offline',
+        prioridad: 2,
+        bahia_asignada: 'Bodega (Offline)',
+        numero_guia: `GUIA-OFF-${Math.floor(1000 + Math.random() * 9000)}`,
+        items: items,
+        sync_cloud: null
+      };
+
+      setDespachos((prev) => [ordenCompleta, ...prev]);
+      playBeep(880, 'triangle');
+      showToast(`⚡ Guardado localmente (Offline). Servidor desconectado.`, 'info');
+      return ordenCompleta;
     }
   };
 
@@ -572,7 +653,7 @@ export function WmsProvider({ children }) {
     const nowIso = new Date().toISOString();
     setDespachos((prev) =>
       prev.map((orden) => {
-        if (orden.id === despachoId || orden.numero_factura === despachoId || orden.codigo_factura_erp === despachoId) {
+        if (orden.id === despachoId) {
           const placa = orden.vehiculo_placa || FLOTA_VEHICULOS[0];
           return {
             ...orden,

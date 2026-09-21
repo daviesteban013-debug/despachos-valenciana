@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useWms } from '../context/WmsContext';
 import DispatchCard from './DispatchCard';
 import { 
@@ -29,19 +29,24 @@ export default function KanbanBoard() {
   const [reintentandoTodos, setReintentandoTodos] = useState(false);
 
   // Segmentación en los 2 estados
-  const pendientes = filteredDespachos
-    .filter((d) => d.estado_actual === 'PENDIENTE')
-    .filter((d) => (soloConIncidencia ? Boolean(d.incidencia_activa) : true))
-    .sort((a, b) => a.prioridad - b.prioridad);
+  // Segmentación en los 2 estados usando useMemo para optimizar rendimiento
+  const pendientes = useMemo(() => {
+    return filteredDespachos
+      .filter((d) => d.estado_actual === 'PENDIENTE')
+      .filter((d) => (soloConIncidencia ? Boolean(d.incidencia_activa) : true))
+      .sort((a, b) => a.prioridad - b.prioridad);
+  }, [filteredDespachos, soloConIncidencia]);
 
-  const despachados = filteredDespachos
-    .filter((d) => d.estado_actual === 'DESPACHADO')
-    .filter((d) => (soloConIncidencia ? Boolean(d.incidencia_activa) : true))
-    .sort((a, b) => {
-      const timeA = a.hora_salida ? new Date(a.hora_salida).getTime() : 0;
-      const timeB = b.hora_salida ? new Date(b.hora_salida).getTime() : 0;
-      return timeB - timeA;
-    });
+  const despachados = useMemo(() => {
+    return filteredDespachos
+      .filter((d) => d.estado_actual === 'DESPACHADO')
+      .filter((d) => (soloConIncidencia ? Boolean(d.incidencia_activa) : true))
+      .sort((a, b) => {
+        const timeA = a.hora_salida ? new Date(a.hora_salida).getTime() : 0;
+        const timeB = b.hora_salida ? new Date(b.hora_salida).getTime() : 0;
+        return timeB - timeA;
+      });
+  }, [filteredDespachos, soloConIncidencia]);
 
 
 
@@ -187,7 +192,7 @@ export default function KanbanBoard() {
 
         {/* PANEL A: PENDIENTES */}
         {(activeTab === 'pendientes' || activeTab === 'ambas') && (
-          <div className="bg-white/40 backdrop-blur-lg rounded-3xl border border-white/60 shadow-sm ring-1 ring-slate-200/50 p-4 flex flex-col space-y-4">
+          <div className="bg-white/40 backdrop-blur-lg rounded-3xl border border-white/60 shadow-sm ring-1 ring-slate-200/50 p-4 flex flex-col space-y-4 max-w-2xl mx-auto w-full">
             {/* Cabecera de Columna */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
               <div className="flex items-center gap-2.5">
@@ -222,7 +227,7 @@ export default function KanbanBoard() {
 
         {/* PANEL B: DESPACHADOS */}
         {(activeTab === 'despachados' || activeTab === 'ambas') && (
-          <div className="bg-white/40 backdrop-blur-lg rounded-3xl border border-white/60 shadow-sm ring-1 ring-slate-200/50 p-4 flex flex-col space-y-4">
+          <div className="bg-white/40 backdrop-blur-lg rounded-3xl border border-white/60 shadow-sm ring-1 ring-slate-200/50 p-4 flex flex-col space-y-4 max-w-2xl mx-auto w-full">
             {/* Cabecera de Columna */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
               <div className="flex items-center gap-2.5">

@@ -264,3 +264,33 @@ export async function procesarDevolucion(req, res) {
     if (client) client.release();
   }
 }
+
+// POST /api/despachos/sync-excel-directo
+// Escribe en el Excel de Google Drive SIN necesitar PostgreSQL.
+// Útil cuando la BD está caída pero el usuario quiere registrar la salida del camión.
+export async function syncExcelDirecto(req, res) {
+  try {
+    const { vehiculo, numeroFactura, clienteNombre, direccion, valorFactura } = req.body;
+
+    if (!vehiculo || !numeroFactura) {
+      return res.status(400).json({ error: 'vehiculo y numeroFactura son obligatorios.' });
+    }
+
+    const resultado = await registrarDespachoEnPlantilla({
+      vehiculo: (vehiculo || '').trim().toUpperCase(),
+      numeroFactura,
+      clienteNombre: clienteNombre || '',
+      direccion: direccion || '',
+      valorFactura: valorFactura || 0
+    });
+
+    return res.json({
+      ok: true,
+      mensaje: 'Sincronizado en Excel correctamente (modo offline).',
+      destino: resultado.destino
+    });
+  } catch (err) {
+    console.error('[SYNC-EXCEL-DIRECTO] Error:', err.message);
+    return res.status(500).json({ error: err.message || 'Error al escribir en Excel.' });
+  }
+}
