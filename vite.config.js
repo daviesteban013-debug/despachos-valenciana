@@ -33,10 +33,49 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        // Solo cachear assets pequeños: JS/CSS/HTML/imágenes estáticas
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Excluir el inventario JSON grande del precache del service worker
+        globIgnores: ['**/inventario.json'],
+        // Aumentar límite a 4 MiB para el chunk principal
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // El inventario se cachea en runtime via CacheFirst (no precache)
+        runtimeCaching: [
+          {
+            urlPattern: /\/inventario\.json$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'inventario-cache',
+              expiration: { maxAgeSeconds: 60 * 60 * 24 * 7 } // 7 dias
+            }
+          }
+        ]
       }
     })
   ],
+  build: {
+    // Code splitting para reducir el chunk principal
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-ui';
+          }
+          if (id.includes('node_modules/@react-oauth')) {
+            return 'vendor-google';
+          }
+          if (id.includes('node_modules/xlsx') || id.includes('node_modules/exceljs')) {
+            return 'vendor-excel';
+          }
+        }
+      }
+    },
+    // Aumentar el warning threshold a 1 MB
+    chunkSizeWarningLimit: 1000
+  },
   server: {
     port: 3000,
     strictPort: true,
@@ -54,5 +93,3 @@ export default defineConfig({
     }
   }
 });
-
-

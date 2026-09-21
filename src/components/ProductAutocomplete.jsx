@@ -1,27 +1,56 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, Package, Plus } from 'lucide-react';
-import inventarioData from '../data/inventario.json';
+import { Search, Package, Plus, Loader2 } from 'lucide-react';
+
+// Cache global para no volver a fetchear si ya se cargó
+let _cachedInventario = null;
+let _fetchPromise = null;
+
+function getInventario() {
+  if (_cachedInventario) return Promise.resolve(_cachedInventario);
+  if (!_fetchPromise) {
+    _fetchPromise = fetch('/inventario.json')
+      .then(r => r.json())
+      .then(data => {
+        _cachedInventario = data;
+        return data;
+      });
+  }
+  return _fetchPromise;
+}
 
 export default function ProductAutocomplete({ onAddProduct }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [inventario, setInventario] = useState(_cachedInventario || []);
+  const [loading, setLoading] = useState(!_cachedInventario);
   const wrapperRef = useRef(null);
 
-  // Filtrado optimizado para máximo 50 resultados para no trabar el render
+  // Carga lazy una sola vez (usa caché global si ya se cargó en InventoryView)
+  useEffect(() => {
+    if (_cachedInventario) return;
+    setLoading(true);
+    getInventario()
+      .then(data => {
+        setInventario(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  // Filtrado optimizado para máximo 50 resultados
   const filteredProducts = useMemo(() => {
     if (!searchTerm || searchTerm.length < 2) return [];
     const term = searchTerm.toLowerCase();
-    
     let results = [];
-    for (let i = 0; i < inventarioData.length; i++) {
-      const item = inventarioData[i];
+    for (let i = 0; i < inventario.length; i++) {
+      const item = inventario[i];
       if (item.descripcion.toLowerCase().includes(term) || item.codigo.toLowerCase().includes(term)) {
         results.push(item);
-        if (results.length >= 50) break; // Limitar resultados
+        if (results.length >= 50) break;
       }
     }
     return results;
-  }, [searchTerm]);
+  }, [searchTerm, inventario]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -42,7 +71,10 @@ export default function ProductAutocomplete({ onAddProduct }) {
   return (
     <div className="relative w-full" ref={wrapperRef}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        {loading
+          ? <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 animate-spin" />
+          : <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        }
         <input
           type="text"
           value={searchTerm}
@@ -51,8 +83,9 @@ export default function ProductAutocomplete({ onAddProduct }) {
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          placeholder="Buscar producto por código o descripción..."
-          className="w-full h-11 pl-9 pr-3 rounded-xl border border-slate-300 text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all"
+          placeholder={loading ? 'Cargando catálogo...' : 'Buscar producto por código o descripción...'}
+          disabled={loading}
+          className="w-full h-11 pl-9 pr-3 rounded-xl border border-slate-300 text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all disabled:opacity-60"
         />
       </div>
 

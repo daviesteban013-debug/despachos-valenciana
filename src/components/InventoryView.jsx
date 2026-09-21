@@ -1,12 +1,29 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Package, Hash, Box, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import inventarioData from '../data/inventario.json';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Package, Hash, Box, Calendar, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 100;
 
 export default function InventoryView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [inventarioData, setInventarioData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  // Carga lazy del inventario desde /public (no entra al bundle)
+  useEffect(() => {
+    fetch('/inventario.json')
+      .then(r => r.json())
+      .then(data => {
+        setInventarioData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setLoadError('No se pudo cargar el catálogo.');
+        setLoading(false);
+        console.error('[InventoryView] Error cargando inventario:', err);
+      });
+  }, []);
 
   // Filtrado ultra rápido
   const filteredItems = useMemo(() => {
@@ -30,6 +47,17 @@ export default function InventoryView() {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64 gap-3 text-slate-500">
+      <Loader2 className="w-6 h-6 animate-spin text-[#E11D24]" />
+      <span className="font-semibold">Cargando catálogo...</span>
+    </div>
+  );
+
+  if (loadError) return (
+    <div className="flex items-center justify-center h-64 text-red-500 font-semibold">{loadError}</div>
+  );
 
   return (
     <div className="p-4 lg:p-8 animate-fadeIn max-w-[1200px] mx-auto">
