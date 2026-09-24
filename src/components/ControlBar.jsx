@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useWms } from '../context/WmsContext';
 import { 
   Search, 
   X, 
-  SlidersHorizontal, 
-  Check 
+  SlidersHorizontal,
+  FileSpreadsheet,
+  Loader2,
+  CheckCircle2
 } from 'lucide-react';
 
 const CARRIERS = ['TODAS', 'Flota Propia', 'Coordinadora', 'TCC', 'Servientrega'];
@@ -19,10 +21,18 @@ export default function ControlBar() {
     selectedZone, 
     setSelectedZone, 
     onlyUrgent, 
-    setOnlyUrgent 
+    setOnlyUrgent,
+    showToast
   } = useWms();
 
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+
+  // ── Kardex import state ────────────────────────────────────────────────────
+  const [kardexCargando, setKardexCargando] = useState(false);
+  const [kardexStats, setKardexStats]       = useState(null); // { facturas_unicas, filas_procesadas }
+  const fileInputRef = useRef(null);
+
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   const hasActiveFilters = selectedCarrier !== 'TODAS' || selectedZone !== 'TODAS' || onlyUrgent;
 
@@ -30,6 +40,32 @@ export default function ControlBar() {
     setSelectedCarrier('TODAS');
     setSelectedZone('TODAS');
     setOnlyUrgent(false);
+  };
+
+  // ── Importar kardex Excel ──────────────────────────────────────────────────
+  const handleKardexFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // reset para poder reimportar el mismo archivo
+
+    setKardexCargando(true);
+    setKardexStats(null);
+    try {
+      const formData = new FormData();
+      formData.append('archivo', file);
+      const res  = await fetch(`${API_URL}/api/kardex/importar`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al importar');
+      setKardexStats({ facturas: data.facturas_unicas, lineas: data.filas_procesadas });
+      showToast(
+        `⚡ Kardex listo: ${data.facturas_unicas} facturas · ${data.filas_procesadas} líneas importadas`,
+        'success'
+      );
+    } catch (err) {
+      showToast(`Error importando kardex: ${err.message}`, 'error');
+    } finally {
+      setKardexCargando(false);
+    }
   };
 
   return (
@@ -55,6 +91,42 @@ export default function ControlBar() {
             </button>
           )}
         </div>
+
+        {/* ── Botón Importar Kardex ERP ── */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={handleKardexFileChange}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={kardexCargando}
+          title={kardexStats ? `Kardex cargado: ${kardexStats.facturas} facturas` : 'Importar kardex de ventas ERP (.xlsx)'}
+          className={`h-11 px-3 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition-all shrink-0 active:scale-95 shadow-sm ${
+            kardexCargando
+              ? 'bg-amber-50 border-amber-200 text-amber-600 cursor-wait'
+              : kardexStats
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
+              : 'bg-white/90 backdrop-blur-sm border-slate-300/80 text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          {kardexCargando ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : kardexStats ? (
+            <CheckCircle2 className="h-4 w-4" />
+          ) : (
+            <FileSpreadsheet className="h-4 w-4" />
+          )}
+          <span className="hidden sm:inline">
+            {kardexCargando
+              ? 'Cargando...'
+              : kardexStats
+              ? `${kardexStats.facturas} Facturas`
+              : 'Kardex ERP'}
+          </span>
+        </button>
 
         {/* Botón Filtros Rápidos (h-11 = 44px touch target) */}
         <button

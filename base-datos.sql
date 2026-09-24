@@ -286,3 +286,40 @@ INSERT INTO bodegas (id, codigo, nombre, seccion_slug, ubicacion_fisica) VALUES
 (7, 'BOD-FER', 'Ferretería General', 'ferreteria_general', 'Pasillo 1 y 2 - Mostrador Central')
 ON CONFLICT (id) DO NOTHING;
 
+
+-- ----------------------------------------------------------------------------
+-- 11. MÓDULO KARDEX DE VENTAS ERP (CACHÉ PARA AUTO-LLENADO DE DESPACHOS)
+-- Almacena temporalmente las líneas del Excel kardex exportado del ERP.
+-- El operador importa el archivo y luego busca facturas para pre-llenar
+-- el modal de creación de despachos automáticamente.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS kardex_ventas (
+    id                  BIGSERIAL PRIMARY KEY,
+    archivo_origen      VARCHAR(255) NOT NULL,          -- Nombre del Excel importado
+    tipo_doc            VARCHAR(20),                    -- *FV1, *FVI, *CR, etc.
+    num_factura         VARCHAR(50) NOT NULL,            -- 70057, 70058...
+    fecha_factura       DATE,                           -- 21/09/2026
+    forma_pago          VARCHAR(10),                    -- CO (contado), CR (crédito)
+    nit_cliente         VARCHAR(20),                    -- NIT o CC del cliente
+    codigo_producto     VARCHAR(50) NOT NULL,            -- Código SKU del ERP
+    bodega              VARCHAR(20),                    -- 00/D, 01/D...
+    descripcion         VARCHAR(300),                   -- Nombre del producto
+    cantidad            INT NOT NULL DEFAULT 0,
+    precio_unitario     NUMERIC(14, 2) NOT NULL DEFAULT 0,
+    valor_sin_iva       NUMERIC(14, 2) NOT NULL DEFAULT 0,
+    iva                 NUMERIC(14, 2) NOT NULL DEFAULT 0,
+    precio_venta        NUMERIC(14, 2) NOT NULL DEFAULT 0,
+    valor_total         NUMERIC(14, 2) NOT NULL DEFAULT 0,
+    costo_unitario      NUMERIC(14, 2) NOT NULL DEFAULT 0,
+    saldo_cantidad      INT NOT NULL DEFAULT 0,
+    saldo_valor         NUMERIC(16, 2) NOT NULL DEFAULT 0,
+    pct_iva             NUMERIC(5, 2) NOT NULL DEFAULT 0,
+    consecutivo_kardex  VARCHAR(20),                    -- Consecutivo interno del kardex
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Índices para búsqueda rápida de facturas
+CREATE INDEX IF NOT EXISTS idx_kardex_num_factura ON kardex_ventas(UPPER(num_factura));
+CREATE INDEX IF NOT EXISTS idx_kardex_nit_cliente ON kardex_ventas(nit_cliente);
+CREATE INDEX IF NOT EXISTS idx_kardex_fecha ON kardex_ventas(fecha_factura DESC);
+CREATE INDEX IF NOT EXISTS idx_kardex_codigo_producto ON kardex_ventas(codigo_producto);

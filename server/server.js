@@ -30,6 +30,13 @@ import {
   procesarDevolucion,
   syncExcelDirecto
 } from './controllers/wmsController.js';
+import {
+  importarKardex,
+  obtenerFactura,
+  buscarFacturas,
+  estadisticasKardex,
+  limpiarKardex
+} from './controllers/kardexController.js';
 
 dotenv.config();
 
@@ -119,6 +126,18 @@ app.post('/api/despachos/sync-excel-directo', syncExcelDirecto);
 // Rutas Logística Inversa (Devoluciones)
 app.get('/api/devoluciones', listarDevoluciones);
 app.patch('/api/devoluciones/:id/procesar', procesarDevolucion);
+
+// ----------------------------------------------------------------------------
+// RUTAS DE KARDEX ERP (IMPORTACIÓN Y BÚSQUEDA DE FACTURAS)
+// Permite cargar el Excel de ventas del ERP y buscar facturas por número
+// para pre-llenar el modal de creación de despachos automáticamente.
+// ----------------------------------------------------------------------------
+app.post('/api/kardex/importar', upload.single('archivo'), importarKardex);
+app.get('/api/kardex/buscar', buscarFacturas);
+app.get('/api/kardex/estadisticas', estadisticasKardex);
+app.delete('/api/kardex/limpiar', limpiarKardex);
+app.get('/api/kardex/factura/:numero', obtenerFactura);
+
 
 // Middleware para manejo de errores
 app.use((err, req, res, next) => {
