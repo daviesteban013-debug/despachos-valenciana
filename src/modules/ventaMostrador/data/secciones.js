@@ -114,6 +114,12 @@ export const SECCIONES = [
   }
 ];
 
+// Lista plana y sin duplicados de todas las sugerencias de las 7 secciones.
+// Usada para autocompletado en FacturacionPage sin necesitar el selector visual de sección.
+export const SUGERENCIAS_CONSOLIDADAS = [
+  ...new Set(SECCIONES.flatMap((s) => s.sugerencias))
+];
+
 // Helper para obtener metadatos de sección rápidamente
 export const getSeccionInfo = (slug) => {
   return SECCIONES.find((s) => s.slug === slug) || {

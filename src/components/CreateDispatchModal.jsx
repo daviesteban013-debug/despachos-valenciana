@@ -493,21 +493,6 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
             </select>
           </div>
 
-          {/* ── 7. BODEGA ── */}
-          <div>
-            <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
-              <Warehouse className="h-3.5 w-3.5 text-slate-400" />
-              Bodega de Salida
-            </label>
-            <select
-              value={form.bodega_id}
-              onChange={e => handleChange('bodega_id', e.target.value)}
-              className="w-full h-11 px-3 rounded-xl border border-slate-300 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all"
-            >
-              {BODEGAS_SALIDA.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
-            </select>
-          </div>
-
           {/* ── 8. OBSERVACIONES ── */}
           <div>
             <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">

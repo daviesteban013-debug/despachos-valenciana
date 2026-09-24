@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import MostradorHeader from '../components/MostradorHeader';
 import { useVentaMostrador } from '../store/ventaMostrador';
-import { SECCIONES, getSeccionInfo, ESTADOS_META } from '../data/secciones';
+import { SECCIONES, getSeccionInfo, ESTADOS_META, SUGERENCIAS_CONSOLIDADAS } from '../data/secciones';
 import {
   FileText,
   Plus,
@@ -28,11 +28,14 @@ export default function FacturacionPage() {
     confirmarSelloYEntregar
   } = useVentaMostrador();
 
+  // seccion fija: una sola bodega física — no se muestra selector al usuario
+  const SECCION_FIJA = 'ferreteria_general';
+
   // Estados del formulario de nueva factura
   const [numeroFactura, setNumeroFactura] = useState(() => `FE-${Math.floor(80300 + Math.random() * 900)}`);
   const [cliente, setCliente] = useState('');
   const [items, setItems] = useState([
-    { nombre: '', cantidad: 1, seccion: 'materiales_construccion' }
+    { nombre: '', cantidad: 1, seccion: SECCION_FIJA }
   ]);
   const [errorForm, setErrorForm] = useState('');
   const [exitoForm, setExitoForm] = useState('');
@@ -40,11 +43,11 @@ export default function FacturacionPage() {
   // Filtro de lista de facturas
   const [filtroEstado, setFiltroEstado] = useState('todos');
 
-  // Agregar fila de ítem
+  // Agregar fila de ítem (sección fija, no visible al usuario)
   const agregarItem = () => {
     setItems((prev) => [
       ...prev,
-      { nombre: '', cantidad: 1, seccion: 'ferreteria_general' }
+      { nombre: '', cantidad: 1, seccion: SECCION_FIJA }
     ]);
   };
 
@@ -61,11 +64,11 @@ export default function FacturacionPage() {
     );
   };
 
-  // Llenar sugerencia rápida
-  const aplicarSugerencia = (index, nombreSugerido, seccionSugerida) => {
+  // Llenar sugerencia rápida (seccion siempre fija)
+  const aplicarSugerencia = (index, nombreSugerido) => {
     setItems((prev) =>
       prev.map((it, i) =>
-        i === index ? { ...it, nombre: nombreSugerido, seccion: seccionSugerida } : it
+        i === index ? { ...it, nombre: nombreSugerido, seccion: SECCION_FIJA } : it
       )
     );
   };
@@ -96,10 +99,7 @@ export default function FacturacionPage() {
         setErrorForm(`La cantidad del ítem #${i + 1} debe ser mayor a cero.`);
         return;
       }
-      if (!it.seccion) {
-        setErrorForm(`El ítem #${i + 1} (${it.nombre}) debe tener una sección/bodega asignada.`);
-        return;
-      }
+      // seccion ya está fija en SECCION_FIJA, no requiere validación visual
     }
 
     try {
@@ -114,7 +114,7 @@ export default function FacturacionPage() {
       // Preparar siguiente factura
       setNumeroFactura(`FE-${Math.floor(80300 + Math.random() * 900)}`);
       setCliente('');
-      setItems([{ nombre: '', cantidad: 1, seccion: 'materiales_construccion' }]);
+      setItems([{ nombre: '', cantidad: 1, seccion: SECCION_FIJA }]);
       setTimeout(() => setExitoForm(''), 5000);
     } catch (err) {
       setErrorForm(err.message || 'Error al crear la factura');
@@ -327,25 +327,6 @@ export default function FacturacionPage() {
                         />
                       </div>
 
-                      {/* Selector de Sección Obligatorio */}
-                      <div className="md:col-span-4">
-                        <label className="block md:hidden text-xs font-bold text-slate-600 mb-1">
-                          Sección/Bodega Obligatoria *
-                        </label>
-                        <select
-                          value={item.seccion}
-                          onChange={(e) => actualizarItem(index, 'seccion', e.target.value)}
-                          className="w-full h-11 px-3 rounded-lg border-2 border-slate-300 text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:border-[#E11D24] bg-white cursor-pointer"
-                          required
-                        >
-                          {SECCIONES.map((sec) => (
-                            <option key={sec.slug} value={sec.slug}>
-                              {sec.nombre} ({sec.bodegaFisica})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
                       {/* Botón Eliminar */}
                       <div className="md:col-span-1 flex justify-end md:justify-center">
                         <button
@@ -360,16 +341,17 @@ export default function FacturacionPage() {
                       </div>
                     </div>
 
-                    {/* Fila de sugerencias rápidas según la sección seleccionada */}
+
+                    {/* Fila de sugerencias rápidas — consolidadas de todas las secciones */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-1 pl-1">
                       <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-amber-500" /> Sugerencias {seccionActual.nombre}:
+                        <Sparkles className="w-3 h-3 text-amber-500" /> Sugerencias rápidas:
                       </span>
-                      {seccionActual.sugerencias?.slice(0, 3).map((sug) => (
+                      {SUGERENCIAS_CONSOLIDADAS.slice(0, 5).map((sug) => (
                         <button
                           key={sug}
                           type="button"
-                          onClick={() => aplicarSugerencia(index, sug, seccionActual.slug)}
+                          onClick={() => aplicarSugerencia(index, sug)}
                           className="text-[10px] px-2 py-0.5 rounded bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors truncate max-w-[220px]"
                           title={sug}
                         >
