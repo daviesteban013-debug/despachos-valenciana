@@ -61,8 +61,9 @@ export default function HistorialView() {
 
       return true;
     }).sort((a, b) => {
-      const timeA = a.hora_salida ? new Date(a.hora_salida).getTime() : 0;
-      const timeB = b.hora_salida ? new Date(b.hora_salida).getTime() : 0;
+      // Usar hora_salida, fecha_despacho o created_at para un ordenamiento estricto
+      const timeA = new Date(a.hora_salida || a.fecha_despacho || a.created_at || 0).getTime();
+      const timeB = new Date(b.hora_salida || b.fecha_despacho || b.created_at || 0).getTime();
       return timeB - timeA;
     });
   }, [despachos, dateRange, customStartDate, customEndDate, selectedVehiculo, searchQuery]);
@@ -70,10 +71,12 @@ export default function HistorialView() {
   const handleExportExcel = () => {
     if (filteredHistory.length === 0) return;
 
-    // Formatear datos para Excel (Tabla plana)
+    // Formatear datos para Excel (Tabla plana y limpia)
+    const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+    
     const dataToExport = filteredHistory.map(d => ({
-      'Fecha Despacho': d.fecha_despacho ? new Date(d.fecha_despacho).toLocaleDateString() : 'N/A',
-      'Hora Salida': d.hora_salida ? new Date(d.hora_salida).toLocaleTimeString() : 'N/A',
+      'Fecha Despacho': d.fecha_despacho ? new Date(d.fecha_despacho).toLocaleDateString('es-CO') : 'N/A',
+      'Hora Salida': d.hora_salida ? new Date(d.hora_salida).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
       'Código Orden': d.codigo_orden || 'N/A',
       'Factura ERP': d.codigo_factura_erp || 'N/A',
       'Cliente': d.cliente_nombre || 'N/A',
@@ -81,7 +84,7 @@ export default function HistorialView() {
       'Dirección': d.cliente_direccion || 'N/A',
       'Vehículo Placa': d.vehiculo_placa || 'N/A',
       'Jornada': d.jornada || 'AM',
-      'Valor Total': d.valor_total || 0,
+      'Valor Total': d.valor_total ? formatter.format(d.valor_total) : '$ 0',
       'Estado Actual': d.estado_actual,
       'Operador Picking': d.picking_operario || 'N/A',
       'Mesa Packing': d.packing_mesa || 'N/A',
