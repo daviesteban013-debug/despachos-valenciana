@@ -1,13 +1,10 @@
 import React from 'react';
 import logoValenciana from '../assets/logo-valenciana.jpg';
 import { useWms } from '../context/WmsContext';
-import { Building2, Plus, WifiOff } from 'lucide-react';
+import { Plus, WifiOff } from 'lucide-react';
 
 export default function Header({ rightContent }) {
   const {
-    bodegas,
-    activeBodega,
-    setActiveBodega,
     setCreateModalOpen,
     kpis
   } = useWms();
@@ -61,29 +58,14 @@ export default function Header({ rightContent }) {
           </div>
         )}
 
-        {/* Selector de Bodega (visible en tablet/desktop) */}
-        <div className="hidden sm:flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-xl px-2 h-8">
-          <Building2 className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-          <select
-            value={activeBodega}
-            onChange={(e) => setActiveBodega(e.target.value)}
-            className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
-          >
-            {bodegas.map((b) => (
-              <option key={b.codigo} value={b.codigo} className="text-slate-900 font-medium">
-                {b.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
         {/* Botón Principal: Nuevo Despacho */}
         <button
           onClick={() => setCreateModalOpen(true)}
-          className="h-9 px-3.5 sm:px-4 bg-gradient-to-r from-[#E11D24] to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-1.5 shrink-0"
+          className="h-10 px-4 bg-gradient-to-r from-[#E11D24] to-[#B9121B] hover:from-[#f02229] hover:to-[#cc141d] text-white rounded-xl font-bold transition-all duration-300 shadow-[0_4px_12px_rgba(225,29,36,0.25)] hover:shadow-[0_6px_16px_rgba(225,29,36,0.4)] hover:-translate-y-0.5 active:scale-95 active:translate-y-0 flex items-center gap-2 shrink-0"
           title="Registrar nuevo pedido de despacho"
         >
-          <Plus className="h-4 w-4" />
-          <span className="text-xs sm:text-sm tracking-wide">Nuevo Despacho</span>
+          <Plus className="h-5 w-5" />
+          <span className="text-sm tracking-wide">Nuevo Despacho</span>
         </button>
       </div>
     </header>

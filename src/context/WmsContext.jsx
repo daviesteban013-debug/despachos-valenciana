@@ -206,7 +206,6 @@ export function WmsProvider({ children }) {
   const [wavesViewMode, setWavesViewMode] = useState('kanban');
 
   // Configuración operativa y filtros
-  const [activeBodega, setActiveBodega] = useState(MOCK_BODEGAS[0].codigo);
   const [activeTurno, setActiveTurno] = useState('Diurno');
   const [selectedCarrier, setSelectedCarrier] = useState('TODAS');
   const [selectedZone, setSelectedZone] = useState('TODAS');
@@ -836,8 +835,6 @@ export function WmsProvider({ children }) {
         bodegas: MOCK_BODEGAS,
         rutasVehiculos: MOCK_VEHICULOS_RUTAS,
         flotaVehiculos: FLOTA_VEHICULOS,
-        activeBodega,
-        setActiveBodega,
         activeTurno,
         setActiveTurno,
         activeDockTab,

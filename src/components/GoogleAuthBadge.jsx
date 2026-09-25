@@ -112,25 +112,29 @@ export default function GoogleAuthBadge({ user, setUser }) {
 
   // ─── Usuario ya logueado ──────────────────────────────────────────────────
   if (user) {
+    const firstName = user.name ? user.name.split(' ')[0] : 'Usuario';
+    const dateStr = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short' });
+    const capitalizedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+
     return (
-      <div className="flex items-center gap-3 bg-white border border-slate-200 px-3 py-1.5 rounded-full shadow-sm">
+      <div className="flex items-center gap-3 bg-slate-50/80 hover:bg-white border border-slate-200/60 hover:border-slate-300 px-3 py-1.5 rounded-2xl shadow-sm hover:shadow transition-all group">
         <img
           src={user.picture}
           alt={user.name}
-          className="w-8 h-8 rounded-full shadow-sm border border-slate-100"
+          className="w-9 h-9 rounded-xl shadow-sm border border-slate-100 group-hover:scale-105 transition-transform"
           referrerPolicy="no-referrer"
         />
-        <div className="flex flex-col hidden sm:flex">
-          <span className="text-sm font-bold text-slate-800 leading-tight">
-            {user.name}
+        <div className="flex-col hidden sm:flex justify-center mr-1">
+          <span className="text-[13px] font-black text-slate-800 leading-tight flex items-center gap-1">
+            ¡Hola, {firstName}! <span className="text-sm origin-bottom-right group-hover:animate-bounce">👋</span>
           </span>
-          <span className="text-[10px] text-slate-500 font-medium">
-            {user.email}
+          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+            {capitalizedDate}
           </span>
         </div>
         <button
           onClick={handleLogout}
-          className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-full transition-colors ml-1"
+          className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-colors"
           title="Cerrar Sesión"
         >
           <LogOut className="w-4 h-4" />

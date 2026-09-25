@@ -154,15 +154,15 @@ export default function KanbanBoard() {
               )}
             </button>
 
-            {/* Exportar copia Excel */}
+            {/* Descargar Plantilla Drive */}
             <button
               onClick={handleExportarExcel}
               disabled={exportando}
-              title="Descargar copia del archivo Excel con las 4 hojas de vehiculos"
-              className="h-11 flex items-center gap-1.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all active:scale-95 shrink-0 shadow-sm"
+              title="Descargar copia de la plantilla física de Google Drive (4 hojas de vehículos)"
+              className="h-11 flex items-center gap-1.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all active:scale-95 shrink-0 shadow-sm"
             >
               <Download className={`h-4 w-4 ${exportando ? 'animate-bounce' : ''}`} />
-              <span className="hidden sm:inline">{exportando ? 'Generando...' : 'Exportar Excel'}</span>
+              <span className="hidden sm:inline">{exportando ? 'Descargando...' : 'Plantilla Drive'}</span>
             </button>
           </div>
         </div>
