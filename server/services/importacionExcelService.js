@@ -74,6 +74,17 @@ export async function procesarImportacionExcel(bufferOPath, nombreArchivo, usuar
     `, [nombreArchivo, filas.length, usuarioAdmin]);
     const importacionId = impRows[0].id;
 
+    // Cargar TODO el inventario actual a memoria para evitar N queries SELECT
+    const { rows: inventarioRows } = await client.query('SELECT sku, bodega_id, cantidad FROM inventario_por_bodega');
+    const mapaInventario = new Map();
+    inventarioRows.forEach(row => {
+      mapaInventario.set(`${row.sku}_${row.bodega_id}`, row.cantidad);
+    });
+
+    const productosAInsertar = [];
+    const productosAActualizar = [];
+    const diferenciasAInsertar = [];
+
     for (const fila of filas) {
       const codigoRaw = fila['SKU'] || fila['Código'] || fila['Codigo'] || fila['Código Artículo'] || fila['Codigo Articulo'] || fila['ItemCode'] || '';
       const nombre = (fila['Nombre'] || fila['Descripción'] || fila['Descripcion'] || fila['Producto'] || '').toString().trim();
@@ -112,49 +123,90 @@ export async function procesarImportacionExcel(bufferOPath, nombreArchivo, usuar
         }
       }
 
-      // Upsert producto
+      // Upsert producto en memoria (para luego ejecutar en batch/secuencial rapido)
       const pIndex = productosRows.findIndex(p => p.sku === skuFinal);
       if (pIndex >= 0) {
-        await client.query(`
-          UPDATE productos 
-          SET nombre = $1, descripcion = $2, unidad_medida = $3, precio_unitario = CASE WHEN $4 > 0 THEN $4 ELSE precio_unitario END, peso_unitario_kg = CASE WHEN $5 > 0 THEN $5 ELSE peso_unitario_kg END, updated_at = NOW()
-          WHERE sku = $6
-        `, [nombre, descripcion, unidadMedida, precioUnitario, pesoUnitarioKg, skuFinal]);
-        productosActualizados++;
+        productosAActualizar.push({ nombre, descripcion, unidadMedida, precioUnitario, pesoUnitarioKg, skuFinal });
       } else {
-        await client.query(`
-          INSERT INTO productos (sku, nombre, descripcion, categoria_slug, unidad_medida, precio_unitario, peso_unitario_kg, es_codigo_interno)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        `, [skuFinal, nombre, descripcion, categoriaSlug, unidadMedida, precioUnitario, pesoUnitarioKg, esCodigoInterno]);
+        productosAInsertar.push({ skuFinal, nombre, descripcion, categoriaSlug, unidadMedida, precioUnitario, pesoUnitarioKg, esCodigoInterno });
         productosRows.push({ sku: skuFinal, nombre, descripcion, es_codigo_interno: esCodigoInterno });
-        productosNuevos++;
       }
 
-      // Consultar stock actual (cantidad en BD) - Solo lectura para calcular la diferencia, NO actualizamos
-      const { rows: stockRows } = await client.query('SELECT cantidad FROM inventario_por_bodega WHERE sku = $1 AND bodega_id = $2', [skuFinal, bodegaId]);
-      const cantidadSistema = stockRows.length > 0 ? stockRows[0].cantidad : 0;
+      // Consultar stock actual desde el MAPA en memoria (O(1), sin viaje de red)
+      const keyInventario = `${skuFinal}_${bodegaId}`;
+      const cantidadSistema = mapaInventario.get(keyInventario) || 0;
       const diferencia = cantidadExcel - cantidadSistema;
 
       if (diferencia !== 0) {
         const bodegaNombre = bodegas.find((b) => b.id === bodegaId)?.nombre || `Bodega ${bodegaId}`;
-        const { rows: difRows } = await client.query(`
-          INSERT INTO diferencias_inventario (importacion_id, sku, bodega_id, cantidad_sistema, cantidad_excel, diferencia, estado)
-          VALUES ($1, $2, $3, $4, $5, $6, 'pendiente') RETURNING id
-        `, [importacionId, skuFinal, bodegaId, cantidadSistema, cantidadExcel, diferencia]);
-        
-        diferenciasDetectadas.push({
-          id: difRows[0].id,
-          importacion_id: importacionId,
-          sku: skuFinal,
-          producto_nombre: nombre,
-          bodega_id: bodegaId,
-          bodega_nombre: bodegaNombre,
-          cantidad_sistema: cantidadSistema,
-          cantidad_excel: cantidadExcel,
-          diferencia,
-          estado: 'pendiente'
+        diferenciasAInsertar.push({
+          importacionId, skuFinal, bodegaId, cantidadSistema, cantidadExcel, diferencia, nombre, bodegaNombre
         });
       }
+    }
+
+    // --- EJECUTAR LOTES (BATCH PROCESSING) ---
+    
+    // 1. Insertar productos nuevos en bloques
+    const CHUNK_SIZE = 500;
+    for (let i = 0; i < productosAInsertar.length; i += CHUNK_SIZE) {
+      const chunk = productosAInsertar.slice(i, i + CHUNK_SIZE);
+      const placeholders = [];
+      const values = [];
+      let pIdx = 1;
+      chunk.forEach(p => {
+        placeholders.push(`($${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++})`);
+        values.push(p.skuFinal, p.nombre, p.descripcion, p.categoriaSlug, p.unidadMedida, p.precioUnitario, p.pesoUnitarioKg, p.esCodigoInterno);
+      });
+      await client.query(`
+        INSERT INTO productos (sku, nombre, descripcion, categoria_slug, unidad_medida, precio_unitario, peso_unitario_kg, es_codigo_interno)
+        VALUES ${placeholders.join(',')}
+      `, values);
+    }
+    productosNuevos += productosAInsertar.length;
+
+    // 2. Actualizar productos existentes (Secuencial rápido sin transacciones internas)
+    for (const p of productosAActualizar) {
+      await client.query(`
+        UPDATE productos 
+        SET nombre = $1, descripcion = $2, unidad_medida = $3, precio_unitario = CASE WHEN $4 > 0 THEN $4 ELSE precio_unitario END, peso_unitario_kg = CASE WHEN $5 > 0 THEN $5 ELSE peso_unitario_kg END, updated_at = NOW()
+        WHERE sku = $6
+      `, [p.nombre, p.descripcion, p.unidadMedida, p.precioUnitario, p.pesoUnitarioKg, p.skuFinal]);
+    }
+    productosActualizados += productosAActualizar.length;
+
+    // 3. Insertar diferencias en bloques y recuperar IDs para el frontend
+    for (let i = 0; i < diferenciasAInsertar.length; i += CHUNK_SIZE) {
+      const chunk = diferenciasAInsertar.slice(i, i + CHUNK_SIZE);
+      const placeholders = [];
+      const values = [];
+      let pIdx = 1;
+      chunk.forEach(d => {
+        placeholders.push(`($${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, 'pendiente')`);
+        values.push(d.importacionId, d.skuFinal, d.bodegaId, d.cantidadSistema, d.cantidadExcel, d.diferencia);
+      });
+      
+      const { rows: insertedDifs } = await client.query(`
+        INSERT INTO diferencias_inventario (importacion_id, sku, bodega_id, cantidad_sistema, cantidad_excel, diferencia, estado)
+        VALUES ${placeholders.join(',')} RETURNING id, sku, bodega_id
+      `, values);
+
+      // Mapear los IDs insertados para el resumen
+      insertedDifs.forEach((dbDif, idx) => {
+        const memDif = chunk[idx];
+        diferenciasDetectadas.push({
+          id: dbDif.id,
+          importacion_id: memDif.importacionId,
+          sku: memDif.skuFinal,
+          producto_nombre: memDif.nombre,
+          bodega_id: memDif.bodegaId,
+          bodega_nombre: memDif.bodegaNombre,
+          cantidad_sistema: memDif.cantidadSistema,
+          cantidad_excel: memDif.cantidadExcel,
+          diferencia: memDif.diferencia,
+          estado: 'pendiente'
+        });
+      });
     }
 
     await client.query(`

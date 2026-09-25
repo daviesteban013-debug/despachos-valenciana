@@ -40,12 +40,19 @@ const apiFetch = async (url, options = {}) => {
   const response = await fetch(url, { ...options, headers });
   
   if (response.status === 401) {
-    // Si recibe 401, verificamos si había un usuario para evitar recargas infinitas si ya está deslogueado
+    // Token inválido o expirado: limpiar sesión y recargar
     const wasLoggedIn = !!localStorage.getItem('wms_google_user');
     if (wasLoggedIn) {
       localStorage.removeItem('wms_google_user');
       window.location.reload();
     }
+  }
+
+  if (response.status === 403) {
+    // Cuenta no autorizada (dominio/whitelist): mostrar error específico sin recargar
+    // El componente que llama debe leer response.status === 403 para diferenciarlo del 401
+    // No borramos la sesión aquí; el usuario puede necesitar ver el mensaje.
+    console.warn('[WMS] 403 Forbidden: cuenta de Google no autorizada en el backend.');
   }
   
   return response;
@@ -63,6 +70,11 @@ export function WmsProvider({ children }) {
     }
     return INITIAL_DESPACHOS;
   });
+
+  // Estado de conexión con el backend
+  const [backendOnline, setBackendOnline] = useState(true);
+  // Flag para evitar reintentos simultáneos
+  const retryingRef = React.useRef(false);
 
   // Fetch initial despachos from backend
   const fetchDespachos = useCallback(async () => {
@@ -93,6 +105,54 @@ export function WmsProvider({ children }) {
     }
   }, []);
 
+  // Función de reintento automático para despachos PENDIENTE_DE_SYNC
+  const reintentarDespachosPendientes = useCallback(async () => {
+    if (retryingRef.current) return;
+    const pendientes = JSON.parse(localStorage.getItem('wms_valenciana_despachos_v3') || '[]')
+      .filter(d => d._sync_status === 'PENDIENTE_DE_SYNC');
+    if (pendientes.length === 0) return;
+
+    retryingRef.current = true;
+    console.log(`[SYNC] Reintentando ${pendientes.length} despacho(s) pendiente(s)...`);
+
+    for (const d of pendientes) {
+      try {
+        const res = await apiFetch(`${API_URL}/api/despachos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            codigo_orden: d.codigo_orden,
+            codigo_factura_erp: d.codigo_factura_erp,
+            cliente_nombre: d.cliente_nombre,
+            direccion_entrega: d.cliente_direccion || d.zona_entrega,
+            jornada: d.jornada,
+            vehiculo_placa: d.vehiculo_placa,
+            bodega_id: d.bodega_origen_id,
+            valor_total: d.valor_total,
+            observaciones: d.observaciones,
+            fecha_despacho: d.fecha_despacho,
+            items: d.items
+          })
+        });
+
+        if (res.ok) {
+          const confirmado = await res.json();
+          // Reemplazar el despacho offline con el confirmado por el servidor
+          setDespachos(prev => prev.map(item =>
+            item.id === d.id
+              ? { ...confirmado, _sync_status: 'CONFIRMADO', _offline_id_reemplazado: d.id }
+              : item
+          ));
+          console.log(`[SYNC] ✅ Despacho ${d.codigo_orden} confirmado en servidor.`);
+        }
+      } catch (err) {
+        console.warn(`[SYNC] Reintento fallido para ${d.codigo_orden}:`, err.message);
+      }
+    }
+
+    retryingRef.current = false;
+  }, []);
+
   useEffect(() => {
     fetchDespachos();
     fetchDevoluciones();
@@ -107,8 +167,37 @@ export function WmsProvider({ children }) {
       }
     });
 
-    return () => socket.disconnect();
-  }, [fetchDespachos, fetchDevoluciones]);
+    // ── Reintento automático en background ──────────────────────────────────
+    // 1. Cuando el navegador recupera conexión a Internet
+    const handleOnline = () => {
+      console.log('[SYNC] Conexión restaurada. Verificando backend...');
+      setBackendOnline(true);
+      reintentarDespachosPendientes();
+    };
+    window.addEventListener('online', handleOnline);
+
+    // 2. Polling cada 30 s a /api/health para detectar que el backend volvió
+    const healthInterval = setInterval(async () => {
+      try {
+        const r = await fetch(`${API_URL}/api/health`, { signal: AbortSignal.timeout(5000) });
+        if (r.ok) {
+          if (!backendOnline) {
+            setBackendOnline(true);
+            console.log('[SYNC] Backend detectado online. Iniciando reintento...');
+          }
+          reintentarDespachosPendientes();
+        }
+      } catch {
+        setBackendOnline(false);
+      }
+    }, 30000);
+
+    return () => {
+      socket.disconnect();
+      window.removeEventListener('online', handleOnline);
+      clearInterval(healthInterval);
+    };
+  }, [fetchDespachos, fetchDevoluciones, reintentarDespachosPendientes]);
 
   // Navegación Bottom Dock: 'waves' (Despachos) | 'incidents' (Novedades)
   const [activeDockTab, setActiveDockTab] = useState('waves');
@@ -227,13 +316,23 @@ export function WmsProvider({ children }) {
       }
     } catch (err) {
       console.error('[SYNC-DIRECTO] Falló también el endpoint directo:', err.message);
+      // ⚠️ Marcar explícitamente como NO confirmado centralmente
       setDespachos(prev =>
         prev.map(d => d.id === despachoId
-          ? { ...d, sync_cloud: { estado: 'PENDIENTE', error: err.message, placa, intentos: 1, ultimo_intento: nowIso } }
+          ? {
+              ...d,
+              // _sync_status diferencia entre "confirmado en BD" vs "solo local"
+              _sync_status: 'PENDIENTE_DE_SYNC',
+              sync_cloud: { estado: 'PENDIENTE', error: err.message, placa, intentos: 1, ultimo_intento: nowIso }
+            }
           : d
         )
       );
-      showToast(`Despacho guardado localmente. Excel pendiente de sync.`, 'warning');
+      // Toast honesto: el despacho NO está confirmado en el sistema central
+      showToast(
+        `⚠️ Sin confirmar en servidor. El despacho quedó solo en este dispositivo y se reintentará automáticamente.`,
+        'warning'
+      );
     }
   };
 
@@ -617,7 +716,10 @@ export function WmsProvider({ children }) {
     } catch (error) {
       console.warn('Error al crear despacho en servidor (Activando Modo Offline):', error.message);
 
-      // Completar datos de UI para compatibilidad offline
+      // ⚠️ MODO OFFLINE HONESTO:
+      // El despacho se guarda SOLO en este dispositivo con estado PENDIENTE_DE_SYNC.
+      // NUNCA se presenta como confirmado. El reintento automático lo enviará al servidor
+      // cuando la conexión se restablezca.
       const ordenCompleta = {
         id: `offline-${Date.now()}`,
         codigo_orden: `PVSW-${randomNum}`,
@@ -638,12 +740,20 @@ export function WmsProvider({ children }) {
         bahia_asignada: 'Bodega (Offline)',
         numero_guia: `GUIA-OFF-${Math.floor(1000 + Math.random() * 9000)}`,
         items: items,
-        sync_cloud: null
+        sync_cloud: null,
+        // Campo clave que identifica despachos sin confirmar en el servidor
+        _sync_status: 'PENDIENTE_DE_SYNC',
+        _sync_error: error.message,
+        _sync_timestamp: new Date().toISOString()
       };
 
       setDespachos((prev) => [ordenCompleta, ...prev]);
-      playBeep(880, 'triangle');
-      showToast(`⚡ Guardado localmente (Offline). Servidor desconectado.`, 'info');
+      playBeep(440, 'sawtooth'); // beep de advertencia, no de éxito
+      // Toast honesto: NO dice que fue un éxito
+      showToast(
+        `⚠️ El servidor no confirmó el registro. Despacho guardado solo en este dispositivo. Se reintentará automáticamente cuando haya conexión.`,
+        'warning'
+      );
       return ordenCompleta;
     }
   };
@@ -710,7 +820,9 @@ export function WmsProvider({ children }) {
     despachados: despachos.filter((d) => d.estado_actual === 'DESPACHADO').length,
     conIncidencia: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
     incidencias: despachos.filter((d) => Boolean(d.incidencia_activa)).length,
-    pendientesSyncExcel: despachos.filter((d) => d.estado_actual === 'DESPACHADO' && d.sync_cloud?.estado === 'PENDIENTE').length
+    pendientesSyncExcel: despachos.filter((d) => d.estado_actual === 'DESPACHADO' && d.sync_cloud?.estado === 'PENDIENTE').length,
+    // Despachos creados offline que AÚN no han sido confirmados por el servidor
+    sinConfirmarEnServidor: despachos.filter((d) => d._sync_status === 'PENDIENTE_DE_SYNC').length
   };
 
   const selectedDespacho = despachos.find((d) => d.id === selectedDespachoId) || null;
@@ -749,10 +861,12 @@ export function WmsProvider({ children }) {
         notification,
         setNotification,
         kpis,
+        backendOnline,
         despacharOrden,
         marcarComoDespachado,
         asignarVehiculo,
         reintentarSyncDrive,
+        reintentarDespachosPendientes,
         exportarCopiaExcel,
         restaurarACola,
         registrarIncidencia,

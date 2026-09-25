@@ -1,15 +1,18 @@
 import React from 'react';
 import logoValenciana from '../assets/logo-valenciana.jpg';
 import { useWms } from '../context/WmsContext';
-import { Building2, Plus } from 'lucide-react';
+import { Building2, Plus, WifiOff } from 'lucide-react';
 
 export default function Header({ rightContent }) {
   const {
     bodegas,
     activeBodega,
     setActiveBodega,
-    setCreateModalOpen
+    setCreateModalOpen,
+    kpis
   } = useWms();
+
+  const sinConfirmarCount = kpis?.sinConfirmarEnServidor || 0;
 
   return (
     <header className="w-full h-[68px] bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between shadow-sm border-t-4 border-t-[#E11D24] relative z-40">
@@ -44,6 +47,19 @@ export default function Header({ rightContent }) {
           </span>
           <span className="text-xs font-bold text-slate-700">En línea</span>
         </div>
+
+        {/* Badge: despachos sin confirmar en el servidor (solo visible si hay alguno) */}
+        {sinConfirmarCount > 0 && (
+          <div
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 border border-amber-400 mr-1 animate-pulse"
+            title={`${sinConfirmarCount} despacho(s) creado(s) offline sin confirmación del servidor. Se reintentarán automáticamente.`}
+          >
+            <WifiOff className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+            <span className="text-xs font-bold text-amber-900">
+              {sinConfirmarCount} sin confirmar
+            </span>
+          </div>
+        )}
 
         {/* Selector de Bodega (visible en tablet/desktop) */}
         <div className="hidden sm:flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-xl px-2 h-8">

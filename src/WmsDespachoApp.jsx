@@ -108,8 +108,6 @@ function AppContent({ user, setUser }) {
         </button>
       </div>
 
-      {/* 2. Barra de Control con Búsqueda Compacta y Filtros Desplegables */}
-      <ControlBar />
       </div>
 
       {/* 4. Contenido Principal con pb-24 para despejar el BottomDock */}

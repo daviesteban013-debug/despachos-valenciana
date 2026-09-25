@@ -50,19 +50,15 @@ export async function buscarArchivoEnDrive(nombreArchivo = process.env.NOMBRE_AR
 
   if (archivos.length === 0) return null;
 
-  // 1. Buscar coincidencia por nombre
-  let match = archivos.find(a => a.name.replace(/['"]+/g, '').trim().toLowerCase() === nombreLimpio);
+  // Buscar coincidencia ESTRICTA por nombre (ignorando mayúsculas y comillas)
+  const match = archivos.find(a => a.name.replace(/['"]+/g, '').trim().toLowerCase() === nombreLimpio);
 
-  // 2. Si no coincide exacto, buscar cualquier archivo Excel o con palabra clave
-  if (!match) {
-    match = archivos.find(a =>
-      a.name.toLowerCase().includes('control') ||
-      a.name.toLowerCase().includes('plantilla') ||
-      a.name.endsWith('.xlsx')
-    );
+  if (match) {
+    return match;
   }
-
-  return match || archivos[0];
+  
+  console.warn(`[DRIVE-WARNING] No se encontró coincidencia exacta para "${nombreLimpio}". No se usarán fallbacks peligrosos para evitar sobrescribir otros archivos.`);
+  return null;
 }
 
 /**
