@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { io } from 'socket.io-client';
+import { useWmsSockets } from '../hooks/useWmsSockets';
+import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import {
   INITIAL_DESPACHOS,
   INITIAL_DEVOLUCIONES,
@@ -58,18 +59,7 @@ const apiFetch = async (url, options = {}) => {
   return response;
 };
 export function WmsProvider({ children }) {
-  // Despachos con modelo de 2 estados: PENDIENTE / DESPACHADO
-  const [despachos, setDespachos] = useState(() => {
-    try {
-      const savedV3 = localStorage.getItem('wms_valenciana_despachos_v3');
-      if (savedV3) {
-        return JSON.parse(savedV3);
-      }
-    } catch (e) {
-      console.warn('Error leyendo localStorage despachos:', e);
-    }
-    return INITIAL_DESPACHOS;
-  });
+  const { despachos, setDespachos } = useOfflineQueue(INITIAL_DESPACHOS);
 
   // Estado de conexión con el backend
   const [backendOnline, setBackendOnline] = useState(true);
@@ -153,19 +143,21 @@ export function WmsProvider({ children }) {
     retryingRef.current = false;
   }, []);
 
+  // Manejador de eventos WebSocket
+  const handleWebSocketEvent = useCallback((data) => {
+    console.log('⚡ WMS WebSocket Update:', data);
+    fetchDespachos();
+    if (data.action && data.action.includes('DEVOLUCION')) {
+      fetchDevoluciones();
+    }
+  }, [fetchDespachos, fetchDevoluciones]);
+
+  // Hook de Sockets
+  useWmsSockets(handleWebSocketEvent, API_URL);
+
   useEffect(() => {
     fetchDespachos();
     fetchDevoluciones();
-
-    // Iniciar WebSockets
-    const socket = io(API_URL);
-    socket.on('wms_update_event', (data) => {
-      console.log('⚡ WMS WebSocket Update:', data);
-      fetchDespachos();
-      if (data.action && data.action.includes('DEVOLUCION')) {
-        fetchDevoluciones();
-      }
-    });
 
     // ── Reintento automático en background ──────────────────────────────────
     // 1. Cuando el navegador recupera conexión a Internet
@@ -193,11 +185,10 @@ export function WmsProvider({ children }) {
     }, 30000);
 
     return () => {
-      socket.disconnect();
       window.removeEventListener('online', handleOnline);
       clearInterval(healthInterval);
     };
-  }, [fetchDespachos, fetchDevoluciones, reintentarDespachosPendientes]);
+  }, [fetchDespachos, fetchDevoluciones, reintentarDespachosPendientes, backendOnline]);
 
   // Navegación Bottom Dock: 'waves' (Despachos) | 'incidents' (Novedades)
   const [activeDockTab, setActiveDockTab] = useState('waves');
@@ -221,15 +212,7 @@ export function WmsProvider({ children }) {
 
 
 
-  // Persistencia local de despachos v3 (2 estados)
-  useEffect(() => {
-    try {
-      localStorage.setItem('wms_valenciana_despachos_v3', JSON.stringify(despachos));
-    } catch (e) {
-      console.warn('LocalStorage error', e);
-    }
-  }, [despachos]);
-
+  // La persistencia de despachos ahora es manejada por useOfflineQueue
   const showToast = (message, type = 'info') => {
     setNotification({ message, type, id: Date.now() });
     setTimeout(() => {

@@ -8,21 +8,15 @@ import {
   descargarExcelDesdeDrive, 
   sincronizarConGoogleDrive 
 } from './googleDriveService.js';
+import {
+  ANCHOS_COLUMNAS_8,
+  ENCABEZADOS_TABLA_8,
+  ESTILOS_CELDA,
+  inyectarMembreteInstitucional
+} from './excelStyles.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Encabezados reales requeridos por tesorería (8 columnas)
-export const ENCABEZADOS_COLUMNAS = [
-  { header: 'Nombre del cliente', key: 'cliente_nombre', width: 30 },
-  { header: 'Dirección', key: 'direccion', width: 30 },
-  { header: 'AM', key: 'am', width: 5 },
-  { header: 'PM', key: 'pm', width: 5 },
-  { header: 'Número de Factura', key: 'numero_factura', width: 22 },
-  { header: 'Valor de la factura', key: 'valor_factura', width: 22 },
-  { header: 'Observaciones', key: 'observaciones', width: 35 },
-  { header: 'Firma de Recibido', key: 'firma', width: 25 }
-];
 
 // Ruta de almacenamiento local para modo simulación / fallback y desarrollo offline
 const DATA_DIR = path.resolve(__dirname, '../data');
@@ -41,33 +35,6 @@ function enqueue(task) {
 }
 
 /**
- * Escribe el membrete corporativo (4 filas) al inicio de una hoja.
- */
-function escribirMembreteCorporativo(worksheet) {
-  // Configurar las columnas primero para tener anchos y keys disponibles
-  worksheet.columns = ENCABEZADOS_COLUMNAS;
-
-  // Fila 1: Título principal
-  const row1 = worksheet.getRow(1);
-  row1.getCell(1).value = 'CONTROL DE DESPACHO A CLIENTES';
-  row1.getCell(1).font = { bold: true, size: 16 };
-  row1.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-  worksheet.mergeCells(1, 1, 1, 8);
-  row1.height = 30;
-
-  // Fila 2: Versión
-  const row2 = worksheet.getRow(2);
-  row2.getCell(1).value = 'Versión: 1';
-  row2.getCell(1).font = { italic: true, size: 10 };
-  row2.getCell(1).alignment = { horizontal: 'right' };
-  worksheet.mergeCells(2, 1, 2, 8);
-
-  // Fila 3 y 4 en blanco para separación
-  worksheet.getRow(3).height = 15;
-  worksheet.getRow(4).height = 15;
-}
-
-/**
  * Inicializa un libro ExcelJS con las 4 hojas fijas correspondientes a la flota
  */
 export async function crearPlantillaBase() {
@@ -81,7 +48,10 @@ export async function crearPlantillaBase() {
       views: [{ showGridLines: true }]
     });
     
-    escribirMembreteCorporativo(sheet);
+    sheet.columns = ANCHOS_COLUMNAS_8;
+    // Utilizamos la nueva función inyectarMembreteInstitucional
+    const todayStr = new Date().toLocaleDateString('es-CO');
+    inyectarMembreteInstitucional(sheet, `Fecha: ${todayStr}`, placa);
   }
 
   return workbook;
@@ -205,15 +175,17 @@ export async function registrarDespachoEnPlantilla({
     if (!worksheet) {
       console.warn(`⚠️ Hoja para vehículo ${vehiculoNormalizado} no existía. Creándola...`);
       worksheet = workbook.addWorksheet(vehiculoNormalizado, { views: [{ showGridLines: true }] });
-      escribirMembreteCorporativo(worksheet);
+      worksheet.columns = ANCHOS_COLUMNAS_8;
+      inyectarMembreteInstitucional(worksheet, `Fecha: ${fechaBloqueStr}`, vehiculoNormalizado);
     } else {
       if (!worksheet.columns || worksheet.columns.length === 0) {
-        worksheet.columns = ENCABEZADOS_COLUMNAS;
+        worksheet.columns = ANCHOS_COLUMNAS_8;
       }
     }
 
     // 4. Buscar si existe el bloque para esta fecha
     let filaSubtotalExistente = -1;
+    let filaInicioBloque = -1;
     let sumaActualSubtotal = 0;
     let enBloque = false;
     for (let r = 1; r <= worksheet.rowCount; r++) {
@@ -222,6 +194,7 @@ export async function registrarDespachoEnPlantilla({
       
       if (val1.includes(`Fecha: ${fechaBloqueStr}`)) {
         enBloque = true;
+        filaInicioBloque = r + 2; // La fila de datos empieza despus del header
       } else if (enBloque && val1.toUpperCase() === 'SUBTOTAL') {
         filaSubtotalExistente = r;
         sumaActualSubtotal = row.getCell(6).result || row.getCell(6).value || 0; // Col 6: valor_factura
@@ -248,26 +221,31 @@ export async function registrarDespachoEnPlantilla({
       worksheet.spliceRows(filaSubtotalExistente, 0, rowData);
       
       const newRow = worksheet.getRow(filaSubtotalExistente);
+      
+      // Aplicar dataRowBorder
+      newRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = ESTILOS_CELDA.dataRowBorder;
+      });
       newRow.getCell(3).alignment = { horizontal: 'center' };
       newRow.getCell(4).alignment = { horizontal: 'center' };
       
       const valorCell = newRow.getCell(6);
-      valorCell.numFmt = '"$"#,##0';
+      valorCell.numFmt = ESTILOS_CELDA.formatoMonedaCop;
       valorCell.alignment = { horizontal: 'right' };
 
-      const nuevaSuma = Number(sumaActualSubtotal) + valorNumerico;
       const subRow = worksheet.getRow(filaSubtotalExistente + 1);
       
+      // MANTENER INTACTA LA FORMULA
       const subCell = subRow.getCell(6);
-      subCell.value = nuevaSuma;
-      subCell.numFmt = '"$"#,##0';
-      subCell.font = { bold: true };
+      subCell.value = { formula: `SUM(F${filaInicioBloque}:F${filaSubtotalExistente})` };
+      subCell.numFmt = ESTILOS_CELDA.formatoMonedaCop;
+      
       subRow.commit();
       newRow.commit();
       
     } else {
       const lastRow = worksheet.rowCount;
-      const nextStart = lastRow > 4 ? lastRow + 2 : 5;
+      const nextStart = lastRow > 4 ? lastRow + 2 : 6;
       
       const titleRow = worksheet.getRow(nextStart);
       titleRow.getCell(1).value = `Fecha: ${fechaBloqueStr}`;
@@ -276,43 +254,45 @@ export async function registrarDespachoEnPlantilla({
       titleRow.commit();
       
       const headerRow = worksheet.getRow(nextStart + 1);
-      headerRow.values = [
-        'Nombre del cliente',
-        'Dirección',
-        'AM',
-        'PM',
-        'Número de Factura',
-        'Valor de la factura',
-        'Observaciones',
-        'Firma de Recibido'
-      ];
-      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      headerRow.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE11D24' } // Rojo Valenciana
-      };
-      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      headerRow.values = ENCABEZADOS_TABLA_8;
+      
+      // Aplicar estilo de header
+      headerRow.eachCell({ includeEmpty: false }, (cell) => {
+        cell.font = ESTILOS_CELDA.header.font;
+        cell.fill = ESTILOS_CELDA.header.fill;
+        cell.alignment = ESTILOS_CELDA.header.alignment;
+        cell.border = ESTILOS_CELDA.header.border;
+      });
       headerRow.height = 20;
       headerRow.commit();
       
       const dataRow = worksheet.getRow(nextStart + 2);
       dataRow.values = rowData;
+      dataRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = ESTILOS_CELDA.dataRowBorder;
+      });
       dataRow.getCell(3).alignment = { horizontal: 'center' };
       dataRow.getCell(4).alignment = { horizontal: 'center' };
       const valCell = dataRow.getCell(6);
-      valCell.numFmt = '"$"#,##0';
+      valCell.numFmt = ESTILOS_CELDA.formatoMonedaCop;
       valCell.alignment = { horizontal: 'right' };
       dataRow.commit();
       
       const subRow = worksheet.getRow(nextStart + 3);
       subRow.getCell(1).value = 'SUBTOTAL';
-      subRow.getCell(1).font = { bold: true };
+      subRow.getCell(1).font = ESTILOS_CELDA.totalRow.font;
       subRow.getCell(1).alignment = { horizontal: 'right' };
+      
+      // Aplicar borde de subtotal a toda la fila o a celdas clave
+      subRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = ESTILOS_CELDA.totalRow.border;
+      });
+
       const subValCell = subRow.getCell(6);
-      subValCell.value = valorNumerico;
-      subValCell.numFmt = '"$"#,##0';
-      subValCell.font = { bold: true };
+      // MANTENER INTACTA LA FORMULA
+      subValCell.value = { formula: `SUM(F${nextStart + 2}:F${nextStart + 2})` };
+      subValCell.numFmt = ESTILOS_CELDA.formatoMonedaCop;
+      subValCell.font = ESTILOS_CELDA.totalRow.font;
       subRow.commit();
     }
 

@@ -1,3 +1,4 @@
+import { ApiError } from '../middlewares/errorHandler.js';
 import {
   procesarKardexExcel,
   buscarFacturaKardex,
@@ -10,9 +11,9 @@ import { getDbClient } from '../config/db.js';
 // POST /api/kardex/importar
 // Recibe el archivo Excel del kardex (multipart) y lo indexa en la DB
 // ============================================================================
-export async function importarKardex(req, res) {
+export async function importarKardex(req, res, next) {
   if (!req.file) {
-    return res.status(400).json({ error: 'Se requiere un archivo Excel (.xlsx o .xls)' });
+    return next(new ApiError(400, 'Se requiere un archivo Excel (.xlsx o .xls)'));
   }
 
   const nombreArchivo = req.file.originalname || 'kardex.xlsx';
@@ -26,7 +27,7 @@ export async function importarKardex(req, res) {
     });
   } catch (error) {
     console.error('[KARDEX] Error al importar:', error.message);
-    return res.status(400).json({ error: error.message });
+    return next(new ApiError(400, error.message));
   }
 }
 
@@ -34,11 +35,11 @@ export async function importarKardex(req, res) {
 // GET /api/kardex/factura/:numero
 // Retorna todos los ítems de una factura específica con datos de cabecera
 // ============================================================================
-export async function obtenerFactura(req, res) {
+export async function obtenerFactura(req, res, next) {
   const { numero } = req.params;
 
   if (!numero || numero.trim().length < 1) {
-    return res.status(400).json({ error: 'Número de factura requerido' });
+    return next(new ApiError(400, 'Número de factura requerido'));
   }
 
   try {
@@ -54,7 +55,7 @@ export async function obtenerFactura(req, res) {
     return res.json(factura);
   } catch (error) {
     console.error('[KARDEX] Error buscando factura:', error.message);
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   }
 }
 
@@ -62,7 +63,7 @@ export async function obtenerFactura(req, res) {
 // GET /api/kardex/buscar?q=70058
 // Autocomplete: retorna lista de facturas que empiezan con el prefijo dado
 // ============================================================================
-export async function buscarFacturas(req, res) {
+export async function buscarFacturas(req, res, next) {
   const q = (req.query.q || '').trim();
 
   if (q.length < 1) {
@@ -74,7 +75,7 @@ export async function buscarFacturas(req, res) {
     return res.json(sugerencias);
   } catch (error) {
     console.error('[KARDEX] Error en autocomplete:', error.message);
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   }
 }
 
@@ -82,12 +83,12 @@ export async function buscarFacturas(req, res) {
 // GET /api/kardex/estadisticas
 // Resumen del kardex cargado actualmente
 // ============================================================================
-export async function estadisticasKardex(req, res) {
+export async function estadisticasKardex(req, res, next) {
   try {
     const stats = await obtenerEstadisticasKardex();
     return res.json(stats || { total_lineas: 0, total_facturas: 0 });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   }
 }
 
@@ -95,15 +96,15 @@ export async function estadisticasKardex(req, res) {
 // DELETE /api/kardex/limpiar
 // Limpia todo el kardex cargado (útil antes de reimportar)
 // ============================================================================
-export async function limpiarKardex(req, res) {
+export async function limpiarKardex(req, res, next) {
   const client = await getDbClient();
-  if (!client) return res.status(500).json({ error: 'BD no disponible' });
+  if (!client) return next(new ApiError(500, 'BD no disponible'));
 
   try {
     const { rowCount } = await client.query('DELETE FROM kardex_ventas');
     return res.json({ ok: true, eliminadas: rowCount });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     client.release();
   }

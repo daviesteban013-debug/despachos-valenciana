@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { requireWmsAuth } from './middlewares/wmsAuth.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 import {
   listarInventario,
   detalleProducto,
@@ -139,14 +140,13 @@ app.delete('/api/kardex/limpiar', limpiarKardex);
 app.get('/api/kardex/factura/:numero', obtenerFactura);
 
 
-// Middleware para manejo de errores
-app.use((err, req, res, next) => {
-  console.error('❌ Error no capturado en API:', err);
-  res.status(err.statusCode || 500).json({
-    error: err.message || 'Error interno en el servidor de inventario.',
-    detalles: err.detalles || null
-  });
+// Manejo de ruta 404 (Endpoint no encontrado)
+app.use((req, res, next) => {
+  res.status(404).json({ error: `Ruta no encontrada: ${req.method} ${req.originalUrl}` });
 });
+
+// Middleware Global de Errores (Debe ir de último)
+app.use(errorHandler);
 
 // Iniciar servidor si se ejecuta directamente
 if (process.env.NODE_ENV !== 'test') {

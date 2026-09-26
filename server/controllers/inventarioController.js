@@ -1,3 +1,4 @@
+import { ApiError } from '../middlewares/errorHandler.js';
 import { getDbClient } from '../config/db.js';
 import {
   procesarImportacionExcel,
@@ -6,7 +7,7 @@ import {
 } from '../services/importacionExcelService.js';
 
 // GET /api/inventario?seccion=...&sku=...&buscar=...
-export async function listarInventario(req, res) {
+export async function listarInventario(req, res, next) {
   const client = await getDbClient();
   try {
     const { seccion, sku, buscar } = req.query;
@@ -69,14 +70,14 @@ export async function listarInventario(req, res) {
     });
   } catch (error) {
     console.error('Error listando inventario:', error);
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     if (client) client.release();
   }
 }
 
 // GET /api/inventario/:sku
-export async function detalleProducto(req, res) {
+export async function detalleProducto(req, res, next) {
   const client = await getDbClient();
   try {
     const { sku } = req.params;
@@ -108,18 +109,18 @@ export async function detalleProducto(req, res) {
     });
   } catch (error) {
     console.error('Error obteniendo detalle de producto:', error);
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     if (client) client.release();
   }
 }
 
 // POST /api/inventario/importar (Solo rol admin)
-export async function importarExcel(req, res) {
+export async function importarExcel(req, res, next) {
   try {
     const rol = req.headers['x-user-role'] || req.body?.rol || 'admin';
     if (rol !== 'admin') {
-      return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador para importar inventario.' });
+      return next(new ApiError(403, 'Acceso denegado. Se requiere rol de administrador para importar inventario.'));
     }
 
     let buffer = null;
@@ -132,23 +133,23 @@ export async function importarExcel(req, res) {
       buffer = Buffer.from(req.body.archivoBase64, 'base64');
       nombreArchivo = req.body.nombreArchivo || 'importacion.xlsx';
     } else {
-      return res.status(400).json({ error: 'No se recibió ningún archivo Excel (.xlsx).' });
+      return next(new ApiError(400, 'No se recibió ningún archivo Excel (.xlsx).'));
     }
 
     const resultado = await procesarImportacionExcel(buffer, nombreArchivo, req.headers['x-user-name'] || 'admin');
     return res.json(resultado);
   } catch (error) {
     console.error('Error importando Excel:', error);
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   }
 }
 
 // POST /api/inventario/importar-demo (Generador de prueba con 1 click)
-export async function importarDemoExcel(req, res) {
+export async function importarDemoExcel(req, res, next) {
   try {
     const rol = req.headers['x-user-role'] || 'admin';
     if (rol !== 'admin') {
-      return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+      return next(new ApiError(403, 'Acceso denegado. Se requiere rol de administrador.'));
     }
 
     const bufferPrueba = await generarExcelPruebaBuffer();
@@ -156,17 +157,17 @@ export async function importarDemoExcel(req, res) {
     return res.json(resultado);
   } catch (error) {
     console.error('Error procesando importación demo:', error);
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   }
 }
 
 // GET /api/inventario/diferencias (Solo rol admin)
-export async function listarDiferencias(req, res) {
+export async function listarDiferencias(req, res, next) {
   const client = await getDbClient();
   try {
     const rol = req.headers['x-user-role'] || 'admin';
     if (rol !== 'admin') {
-      return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden ver diferencias de inventario.' });
+      return next(new ApiError(403, 'Acceso denegado. Solo administradores pueden ver diferencias de inventario.'));
     }
 
     const { rows: pendientes } = await client.query("SELECT * FROM diferencias_inventario WHERE estado = 'pendiente' ORDER BY created_at DESC");
@@ -180,25 +181,25 @@ export async function listarDiferencias(req, res) {
     });
   } catch (error) {
     console.error('Error listando diferencias:', error);
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     if (client) client.release();
   }
 }
 
 // POST /api/inventario/diferencias/:id/resolver (Solo rol admin)
-export async function resolverDiferencia(req, res) {
+export async function resolverDiferencia(req, res, next) {
   try {
     const rol = req.headers['x-user-role'] || 'admin';
     if (rol !== 'admin') {
-      return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden resolver diferencias.' });
+      return next(new ApiError(403, 'Acceso denegado. Solo administradores pueden resolver diferencias.'));
     }
 
     const { id } = req.params;
     const { accion } = req.body; // 'aplicar' | 'descartar'
 
     if (!accion || !['aplicar', 'descartar'].includes(accion)) {
-      return res.status(400).json({ error: 'Debe especificar la acción: "aplicar" o "descartar".' });
+      return next(new ApiError(400, 'Debe especificar la acción: "aplicar" o "descartar".'));
     }
 
     const resuelta = await resolverDiferenciaInventario(
@@ -213,6 +214,6 @@ export async function resolverDiferencia(req, res) {
     });
   } catch (error) {
     console.error('Error resolviendo diferencia:', error);
-    return res.status(400).json({ error: error.message });
+    return next(new ApiError(400, error.message));
   }
 }

@@ -1,3 +1,4 @@
+import { ApiError } from '../middlewares/errorHandler.js';
 import { getDbClient } from '../config/db.js';
 import { descontarInventario, StockInsuficienteError } from '../services/descuentoInventarioService.js';
 
@@ -11,9 +12,9 @@ const SECCION_A_BODEGA = {
   ferreteria_general: 7
 };
 
-export async function listarFacturas(req, res) {
+export async function listarFacturas(req, res, next) {
   const client = await getDbClient();
-  if (!client) return res.status(500).json({ error: 'BD no disponible' });
+  if (!client) return next(new ApiError(500, 'BD no disponible'));
 
   try {
     const { rows: facturas } = await client.query('SELECT * FROM facturas ORDER BY created_at DESC');
@@ -31,21 +32,21 @@ export async function listarFacturas(req, res) {
 
     return res.json(resultado);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     client.release();
   }
 }
 
-export async function crearFactura(req, res) {
+export async function crearFactura(req, res, next) {
   const client = await getDbClient();
-  if (!client) return res.status(500).json({ error: 'BD no disponible' });
+  if (!client) return next(new ApiError(500, 'BD no disponible'));
 
   try {
     const { numeroFactura, cliente, items, cajero = 'Facturación' } = req.body;
 
     if (!numeroFactura || !cliente || !items || items.length === 0) {
-      return res.status(400).json({ error: 'Número de factura, cliente e ítems son obligatorios.' });
+      return next(new ApiError(400, 'Número de factura, cliente e ítems son obligatorios.'));
     }
 
     await client.query('BEGIN');
@@ -79,15 +80,15 @@ export async function crearFactura(req, res) {
     return res.status(201).json(fac);
   } catch (error) {
     await client.query('ROLLBACK');
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     client.release();
   }
 }
 
-export async function cambiarEstadoFactura(req, res) {
+export async function cambiarEstadoFactura(req, res, next) {
   const client = await getDbClient();
-  if (!client) return res.status(500).json({ error: 'BD no disponible' });
+  if (!client) return next(new ApiError(500, 'BD no disponible'));
 
   let lockAcquired = false;
 
@@ -145,11 +146,9 @@ export async function cambiarEstadoFactura(req, res) {
       } catch (errStock) {
         await client.query('ROLLBACK');
         if (errStock instanceof StockInsuficienteError) {
-          return res.status(409).json({
-            error: errStock.message,
-            detalles: errStock.detalles,
-            facturaEstado: fac.estado
-          });
+          const apiErr = new ApiError(409, errStock.message);
+          apiErr.detalles = errStock.detalles;
+          return next(apiErr);
         }
         throw errStock;
       }
@@ -216,7 +215,7 @@ export async function cambiarEstadoFactura(req, res) {
   } catch (error) {
     if (client) await client.query('ROLLBACK');
     console.error('Error actualizando estado de factura:', error);
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     if (client) client.release();
   }

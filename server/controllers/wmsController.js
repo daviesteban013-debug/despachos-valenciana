@@ -1,3 +1,4 @@
+import { ApiError } from '../middlewares/errorHandler.js';
 import { getDbClient } from '../config/db.js';
 import { 
   registrarDespachoEnPlantilla, 
@@ -8,9 +9,9 @@ import { FLOTA_VEHICULOS } from '../config/flota.js';
 import { io } from '../server.js';
 
 // GET /api/despachos
-export async function listarDespachos(req, res) {
+export async function listarDespachos(req, res, next) {
   const client = await getDbClient();
-  if (!client) return res.status(500).json({ error: 'Base de datos no disponible' });
+  if (!client) return next(new ApiError(500, 'Base de datos no disponible'));
 
   try {
     const { rows: despachos } = await client.query('SELECT * FROM despachos ORDER BY created_at DESC');
@@ -42,16 +43,16 @@ export async function listarDespachos(req, res) {
 
     return res.json(resultado);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     client.release();
   }
 }
 
 // POST /api/despachos
-export async function crearDespacho(req, res) {
+export async function crearDespacho(req, res, next) {
   const client = await getDbClient();
-  if (!client) return res.status(500).json({ error: 'Base de datos no disponible' });
+  if (!client) return next(new ApiError(500, 'Base de datos no disponible'));
 
   try {
     const {
@@ -69,7 +70,7 @@ export async function crearDespacho(req, res) {
     } = req.body;
 
     if (!cliente_nombre || !direccion_entrega) {
-      return res.status(400).json({ error: 'cliente_nombre y direccion_entrega son requeridos.' });
+      return next(new ApiError(400, 'cliente_nombre y direccion_entrega son requeridos.'));
     }
     
     await client.query('BEGIN');
@@ -118,16 +119,16 @@ export async function crearDespacho(req, res) {
     return res.status(201).json(nuevoDespacho);
   } catch (error) {
     await client.query('ROLLBACK');
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     client.release();
   }
 }
 
 // PATCH /api/despachos/:id/estado
-export async function cambiarEstadoDespacho(req, res) {
+export async function cambiarEstadoDespacho(req, res, next) {
   const client = await getDbClient();
-  if (!client) return res.status(500).json({ error: 'BD no disponible' });
+  if (!client) return next(new ApiError(500, 'BD no disponible'));
   
   try {
     const { id } = req.params;
@@ -139,12 +140,12 @@ export async function cambiarEstadoDespacho(req, res) {
       : 'SELECT * FROM despachos WHERE codigo_orden = $1 OR codigo_factura_erp = $1 LIMIT 1';
       
     const { rows: findRows } = await client.query(queryStr, [id]);
-    if (findRows.length === 0) return res.status(404).json({ error: 'Orden no encontrada.' });
+    if (findRows.length === 0) return next(new ApiError(404, 'Orden no encontrada.'));
     const despacho = findRows[0];
     const estadoUpper = (nuevoEstado || '').toUpperCase();
     
     if (estadoUpper !== 'PENDIENTE' && estadoUpper !== 'DESPACHADO') {
-      return res.status(400).json({ error: 'Estado no permitido.' });
+      return next(new ApiError(400, 'Estado no permitido.'));
     }
 
     let placaAsignada = despacho.vehiculo_placa;
@@ -174,14 +175,14 @@ export async function cambiarEstadoDespacho(req, res) {
     io.emit('wms_update_event', { action: 'DESPACHO_ACTUALIZADO', id: despacho.id, estado: 'PENDIENTE' });
     return res.json({ mensaje: 'Restaurada a pendiente', despacho: { ...despacho, estado_actual: 'PENDIENTE' } });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   } finally {
     client.release();
   }
 }
 
 // POST /api/despachos/:id/incidencia
-export async function gestionarIncidenciaDespacho(req, res) {
+export async function gestionarIncidenciaDespacho(req, res, next) {
   const client = await getDbClient();
   try {
     const { id } = req.params;
@@ -193,7 +194,7 @@ export async function gestionarIncidenciaDespacho(req, res) {
       : 'SELECT id FROM despachos WHERE codigo_orden = $1 LIMIT 1';
       
     const { rows } = await client.query(queryStr, [id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Orden no encontrada' });
+    if (rows.length === 0) return next(new ApiError(404, 'Orden no encontrada'));
     const dId = rows[0].id;
 
     if (accion === 'RESOLVER') {
@@ -210,32 +211,32 @@ export async function gestionarIncidenciaDespacho(req, res) {
   }
 }
 
-export async function exportarPlantillaExcel(req, res) {
+export async function exportarPlantillaExcel(req, res, next) {
   try {
     const buffer = await exportarPlantillaBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="Plantilla_Despachos_Vehiculos.xlsx"`);
     return res.send(buffer);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return next(new ApiError(500, error.message));
   }
 }
 
-export async function cargarPlantillaReferenciaController(req, res) {
+export async function cargarPlantillaReferenciaController(req, res, next) {
   try {
     const resultado = await calibrarPlantillaReferencia(req.file.buffer);
     return res.json(resultado);
   } catch (error) {
-    return res.status(400).json({ error: error.message });
+    return next(new ApiError(400, error.message));
   }
 }
 
-export async function reintentarSincronizacionDrive(req, res) {
-  return res.status(500).json({ error: 'Not implemented in this migration yet' });
+export async function reintentarSincronizacionDrive(req, res, next) {
+  return next(new ApiError(500, 'Not implemented in this migration yet'));
 }
 
 // GET /api/devoluciones
-export async function listarDevoluciones(req, res) {
+export async function listarDevoluciones(req, res, next) {
   const client = await getDbClient();
   try {
     const { rows } = await client.query('SELECT * FROM devoluciones');
@@ -246,7 +247,7 @@ export async function listarDevoluciones(req, res) {
 }
 
 // PATCH /api/devoluciones/:id/procesar
-export async function procesarDevolucion(req, res) {
+export async function procesarDevolucion(req, res, next) {
   const client = await getDbClient();
   try {
     const { id } = req.params;
@@ -268,12 +269,12 @@ export async function procesarDevolucion(req, res) {
 // POST /api/despachos/sync-excel-directo
 // Escribe en el Excel de Google Drive SIN necesitar PostgreSQL.
 // Útil cuando la BD está caída pero el usuario quiere registrar la salida del camión.
-export async function syncExcelDirecto(req, res) {
+export async function syncExcelDirecto(req, res, next) {
   try {
     const { vehiculo, numeroFactura, clienteNombre, direccion, valorFactura } = req.body;
 
     if (!vehiculo || !numeroFactura) {
-      return res.status(400).json({ error: 'vehiculo y numeroFactura son obligatorios.' });
+      return next(new ApiError(400, 'vehiculo y numeroFactura son obligatorios.'));
     }
 
     const resultado = await registrarDespachoEnPlantilla({
@@ -291,6 +292,6 @@ export async function syncExcelDirecto(req, res) {
     });
   } catch (err) {
     console.error('[SYNC-EXCEL-DIRECTO] Error:', err.message);
-    return res.status(500).json({ error: err.message || 'Error al escribir en Excel.' });
+    return next(new ApiError(500, err.message || 'Error al escribir en Excel.'));
   }
 }
