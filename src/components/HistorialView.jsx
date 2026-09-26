@@ -5,6 +5,49 @@ import { FLOTA_VEHICULOS } from '../data/flota';
 import { History, Calendar, Truck, Search, Clock, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
+/**
+ * Parsea de forma segura fechas en formato latino DD/MM/YYYY o ISO YYYY-MM-DD
+ * para comparación cronológica estricta en milisegundos.
+ */
+function parsearFechaMilisegundos(fechaStr, horaStr = '00:00') {
+  if (!fechaStr) return 0;
+  
+  // Limpiar espacios y caracteres invisibles
+  const fLimpia = String(fechaStr).trim();
+  
+  // Caso 1: Ya es formato ISO (ej. 2026-09-25)
+  if (fLimpia.includes('-')) {
+    return new Date(`${fLimpia}T${horaStr || '00:00'}`).getTime() || 0;
+  }
+  
+  // Caso 2: Formato latino DD/MM/YYYY (ej. 25/9/2026 o 25/09/2026)
+  const partes = fLimpia.split('/');
+  if (partes.length === 3) {
+    const dia = partes[0].padStart(2, '0');
+    const mes = partes[1].padStart(2, '0');
+    const anio = partes[2];
+    
+    // Normalizar hora si viene con formato 12h (a. m. / p. m.)
+    let horaIso = '00:00';
+    if (horaStr) {
+      const hMatch = String(horaStr).match(/(\d{1,2}):(\d{2})\s*(a\.\s*m\.|p\.\s*m\.|am|pm)?/i);
+      if (hMatch) {
+        let horas = parseInt(hMatch[1], 10);
+        const minutos = hMatch[2];
+        const periodo = (hMatch[3] || '').toLowerCase().replace(/\s/g, '');
+        if ((periodo.includes('p') || periodo.includes('pm')) && horas < 12) horas += 12;
+        if ((periodo.includes('a') || periodo.includes('am')) && horas === 12) horas = 0;
+        horaIso = `${String(horas).padStart(2, '0')}:${minutos}:00`;
+      }
+    }
+    
+    const timestamp = new Date(`${anio}-${mes}-${dia}T${horaIso}`).getTime();
+    return isNaN(timestamp) ? 0 : timestamp;
+  }
+  
+  return 0;
+}
+
 export default function HistorialView() {
   const { despachos } = useWms();
 
@@ -61,10 +104,9 @@ export default function HistorialView() {
 
       return true;
     }).sort((a, b) => {
-      // Usar hora_salida, fecha_despacho o created_at para un ordenamiento estricto
-      const timeA = new Date(a.hora_salida || a.fecha_despacho || a.created_at || 0).getTime();
-      const timeB = new Date(b.hora_salida || b.fecha_despacho || b.created_at || 0).getTime();
-      return timeB - timeA;
+      const tB = parsearFechaMilisegundos(b.fecha_despacho || b.fecha, b.hora_salida || b.hora);
+      const tA = parsearFechaMilisegundos(a.fecha_despacho || a.fecha, a.hora_salida || a.hora);
+      return tB - tA; // De más reciente a más antiguo estricto
     });
   }, [despachos, dateRange, customStartDate, customEndDate, selectedVehiculo, searchQuery]);
 
@@ -86,8 +128,6 @@ export default function HistorialView() {
       'Jornada': d.jornada || 'AM',
       'Valor Total': d.valor_total ? formatter.format(d.valor_total) : '$ 0',
       'Estado Actual': d.estado_actual,
-      'Operador Picking': d.picking_operario || 'N/A',
-      'Mesa Packing': d.packing_mesa || 'N/A',
       'Transportadora': d.transportadora || 'N/A',
       'Notas': d.observaciones || ''
     }));
@@ -97,17 +137,19 @@ export default function HistorialView() {
 
     // Ajustar anchos de columna automáticamente
     worksheet['!cols'] = [
-      { wch: 15 }, // A: Fecha Despacho
+      { wch: 14 }, // A: Fecha Despacho
       { wch: 14 }, // B: Hora Salida
-      { wch: 16 }, // C: Código Orden (PVSW-XXXX)
+      { wch: 16 }, // C: Código Orden
       { wch: 18 }, // D: Factura ERP
       { wch: 30 }, // E: Cliente
-      { wch: 16 }, // F: Ciudad (Cúcuta / Los Patios)
+      { wch: 16 }, // F: Ciudad (Cúcuta)
       { wch: 38 }, // G: Dirección
-      { wch: 24 }, // H: Vehículo Placa (espacio suficiente para 'WDO-069 ANDERSON')
+      { wch: 24 }, // H: Vehículo Placa (espacio amplio para 'WDO-069 ANDERSON')
       { wch: 10 }, // I: Jornada (AM/PM)
       { wch: 20 }, // J: Valor Total
-      { wch: 16 }  // K: Estado (espacio suficiente para 'DESPACHADO')
+      { wch: 16 }, // K: Estado Actual (espacio para 'DESPACHADO')
+      { wch: 18 }, // L: Transportadora
+      { wch: 32 }  // M: Notas
     ];
 
     // Crear libro de trabajo y exportar
