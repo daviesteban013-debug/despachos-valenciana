@@ -80,7 +80,7 @@ export default function HistorialView() {
       'Código Orden': d.codigo_orden || 'N/A',
       'Factura ERP': d.codigo_factura_erp || 'N/A',
       'Cliente': d.cliente_nombre || 'N/A',
-      'Ciudad': d.cliente_ciudad || 'Bogotá D.C.',
+      'Ciudad': d.cliente_ciudad || 'Cúcuta',
       'Dirección': d.cliente_direccion || 'N/A',
       'Vehículo Placa': d.vehiculo_placa || 'N/A',
       'Jornada': d.jornada || 'AM',
@@ -97,9 +97,17 @@ export default function HistorialView() {
 
     // Ajustar anchos de columna automáticamente
     worksheet['!cols'] = [
-      { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 30 },
-      { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 10 }, { wch: 15 },
-      { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 30 }
+      { wch: 15 }, // A: Fecha Despacho
+      { wch: 14 }, // B: Hora Salida
+      { wch: 16 }, // C: Código Orden (PVSW-XXXX)
+      { wch: 18 }, // D: Factura ERP
+      { wch: 30 }, // E: Cliente
+      { wch: 16 }, // F: Ciudad (Cúcuta / Los Patios)
+      { wch: 38 }, // G: Dirección
+      { wch: 24 }, // H: Vehículo Placa (espacio suficiente para 'WDO-069 ANDERSON')
+      { wch: 10 }, // I: Jornada (AM/PM)
+      { wch: 20 }, // J: Valor Total
+      { wch: 16 }  // K: Estado (espacio suficiente para 'DESPACHADO')
     ];
 
     // Crear libro de trabajo y exportar

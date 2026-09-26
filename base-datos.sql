@@ -69,7 +69,7 @@ CREATE TABLE despachos (
     codigo_factura_erp VARCHAR(50) NOT NULL,
     cliente_nombre VARCHAR(200) NOT NULL,
     cliente_direccion TEXT,
-    cliente_ciudad VARCHAR(100) NOT NULL DEFAULT 'Bogotá D.C.',
+    cliente_ciudad VARCHAR(100) NOT NULL DEFAULT 'Cúcuta',
     transportadora VARCHAR(100) NOT NULL,
     ruta_id UUID REFERENCES rutas(id) ON DELETE SET NULL,
     estado_actual estado_despacho NOT NULL DEFAULT 'PENDIENTE',

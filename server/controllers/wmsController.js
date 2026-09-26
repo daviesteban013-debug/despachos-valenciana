@@ -14,7 +14,7 @@ export async function listarDespachos(req, res, next) {
   if (!client) return next(new ApiError(500, 'Base de datos no disponible'));
 
   try {
-    const { rows: despachos } = await client.query('SELECT * FROM despachos ORDER BY created_at DESC');
+    const { rows: despachos } = await client.query('SELECT * FROM despachos ORDER BY fecha_despacho DESC, hora_salida DESC, id DESC');
     const { rows: items } = await client.query('SELECT * FROM despacho_items');
     const { rows: historial } = await client.query('SELECT * FROM historial_estados_despacho ORDER BY created_at ASC');
     const { rows: incidencias } = await client.query('SELECT * FROM incidencias_despacho WHERE resuelta = FALSE');
@@ -66,7 +66,8 @@ export async function crearDespacho(req, res, next) {
       valor_total,
       observaciones,
       fecha_despacho,
-      items
+      items,
+      ciudad
     } = req.body;
 
     if (!cliente_nombre || !direccion_entrega) {
@@ -77,16 +78,17 @@ export async function crearDespacho(req, res, next) {
     
     const { rows: dRows } = await client.query(`
       INSERT INTO despachos (
-        codigo_orden, codigo_factura_erp, cliente_nombre, cliente_direccion, 
+        codigo_orden, codigo_factura_erp, cliente_nombre, cliente_direccion, cliente_ciudad,
         transportadora, estado_actual, vehiculo_placa, valor_total, fecha_despacho, jornada, observaciones
       ) VALUES (
-        $1, $2, $3, $4, 'Flota Propia', 'PENDIENTE', $5, $6, $7, $8, $9
+        $1, $2, $3, $4, $5, 'Flota Propia', 'PENDIENTE', $6, $7, $8, $9, $10
       ) RETURNING *
     `, [
       codigo_orden || `PVSW-${Math.floor(Math.random() * 10000)}`,
       codigo_factura_erp || '',
       cliente_nombre,
       direccion_entrega,
+      ciudad || 'Cúcuta',
       vehiculo_placa || FLOTA_VEHICULOS[0],
       valor_total || 0,
       fecha_despacho || new Date().toISOString(),

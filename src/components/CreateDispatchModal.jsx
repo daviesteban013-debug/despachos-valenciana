@@ -26,6 +26,7 @@ const INITIAL_FORM = {
   jornada: new Date().getHours() < 12 ? 'AM' : 'PM',
   vehiculo_placa: FLOTA_VEHICULOS[0],
   bodega_id: '01',
+  ciudad: 'Cúcuta',
   observaciones: ''
 };
 
@@ -207,6 +208,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
       jornada:          form.jornada,
       vehiculo_placa:   form.vehiculo_placa,
       bodega_id:        form.bodega_id,
+      ciudad:           form.ciudad,
       observaciones:    form.observaciones?.trim() || '',
       items:            selectedItems
     };
