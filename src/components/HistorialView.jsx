@@ -64,7 +64,8 @@ export default function HistorialView() {
 
       // 2. Filtro de fecha
       if (d.fecha_despacho) {
-        const dDate = new Date(d.fecha_despacho);
+        const fechaLimpia = String(d.fecha_despacho).trim().split('T')[0];
+        const dDate = new Date(`${fechaLimpia}T12:00:00`);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -117,7 +118,15 @@ export default function HistorialView() {
     const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
     
     const dataToExport = filteredHistory.map(d => ({
-      'Fecha Despacho': d.fecha_despacho ? new Date(d.fecha_despacho).toLocaleDateString('es-CO') : 'N/A',
+      'Fecha Despacho': d.fecha_despacho ? (() => {
+        const fStr = String(d.fecha_despacho).trim().split('T')[0];
+        const partes = fStr.split('-');
+        if (partes.length === 3) {
+          const [anio, mes, dia] = partes;
+          return `${parseInt(dia, 10)}/${parseInt(mes, 10)}/${anio}`;
+        }
+        return fStr;
+      })() : 'N/A',
       'Hora Salida': d.hora_salida ? new Date(d.hora_salida).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
       'Código Orden': d.codigo_orden || 'N/A',
       'Factura ERP': d.codigo_factura_erp || 'N/A',
