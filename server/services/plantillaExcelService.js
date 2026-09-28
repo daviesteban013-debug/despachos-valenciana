@@ -50,7 +50,8 @@ export async function crearPlantillaBase() {
     
     sheet.columns = ANCHOS_COLUMNAS_8;
     // Utilizamos la nueva función inyectarMembreteInstitucional
-    const todayStr = new Date().toLocaleDateString('es-CO');
+    const now = new Date();
+    const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
     inyectarMembreteInstitucional(sheet, `Fecha: ${todayStr}`, placa);
   }
 
@@ -183,22 +184,28 @@ export async function registrarDespachoEnPlantilla({
       }
     }
 
-    // 4. Buscar si existe el bloque para esta fecha
+    // 4. Buscar bloque dinámico WMS para esta fecha (ignorar membrete institucional)
     let filaSubtotalExistente = -1;
     let filaInicioBloque = -1;
     let sumaActualSubtotal = 0;
     let enBloque = false;
+    const fechaMarcador = `Fecha: ${fechaBloqueStr}`;
     for (let r = 1; r <= worksheet.rowCount; r++) {
       const row = worksheet.getRow(r);
       const val1 = String(row.getCell(1).value || '').trim();
-      
-      if (val1.includes(`Fecha: ${fechaBloqueStr}`)) {
+      const val5 = String(row.getCell(5).value || '').trim();
+      const esTituloBloqueWms =
+        val1.includes(fechaMarcador) && val5.startsWith('Vehículo:');
+
+      if (esTituloBloqueWms) {
         enBloque = true;
-        filaInicioBloque = r + 2; // La fila de datos empieza despus del header
+        filaInicioBloque = r + 2;
       } else if (enBloque && val1.toUpperCase() === 'SUBTOTAL') {
         filaSubtotalExistente = r;
-        sumaActualSubtotal = row.getCell(6).result || row.getCell(6).value || 0; // Col 6: valor_factura
-        break; // Encontramos el final del bloque
+        sumaActualSubtotal = row.getCell(6).result || row.getCell(6).value || 0;
+        break;
+      } else if (val1.includes(fechaMarcador) && !val5.startsWith('Vehículo:')) {
+        // Ignorar membrete institucional
       }
     }
 
@@ -237,7 +244,8 @@ export async function registrarDespachoEnPlantilla({
       
       // MANTENER INTACTA LA FORMULA
       const subCell = subRow.getCell(6);
-      subCell.value = { formula: `SUM(F${filaInicioBloque}:F${filaSubtotalExistente})` };
+      const subFormula = `SUM(F${filaInicioBloque}:F${filaSubtotalExistente})`;
+      subCell.value = { formula: subFormula };
       subCell.numFmt = ESTILOS_CELDA.formatoMonedaCop;
       
       subRow.commit();
