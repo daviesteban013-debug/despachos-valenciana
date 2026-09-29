@@ -8,8 +8,7 @@ const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 // ALLOWED_EMAIL_DOMAIN: si está definida, el email debe terminar en @<dominio>
 // ALLOWED_EMAILS: lista separada por comas de correos individuales permitidos
 //   (útil para contratistas externos sin dominio corporativo)
-// Si NINGUNA está configurada, cualquier cuenta Google válida pasa,
-// pero se imprimirá una advertencia en los logs de inicio.
+// En producción, si NINGUNA está configurada el servidor aborta el arranque.
 
 const ALLOWED_DOMAIN = (process.env.ALLOWED_EMAIL_DOMAIN || '').trim().toLowerCase();
 const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '')
@@ -19,13 +18,23 @@ const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '')
 
 const hayRestriccion = ALLOWED_DOMAIN || ALLOWED_EMAILS.length > 0;
 
-// Advertencia en startup si no hay ninguna restricción configurada
+// Fallo de arranque en producción si no hay ninguna restricción configurada.
+// En desarrollo/test solo emite advertencia para no bloquear el onboarding.
 if (!hayRestriccion) {
-  console.warn(
-    '\n⚠️  [wmsAuth] MODO INSEGURO: No hay restricción de dominio ni whitelist configurada.\n' +
-    '   Cualquier cuenta de Google puede acceder al panel de logística.\n' +
-    '   Define ALLOWED_EMAIL_DOMAIN y/o ALLOWED_EMAILS en el archivo .env para restringir el acceso.\n'
-  );
+  if (process.env.NODE_ENV === 'production') {
+    console.error(
+      '\n🚨 [wmsAuth] ARRANQUE ABORTADO: NODE_ENV=production pero ALLOWED_EMAILS y ' +
+      'ALLOWED_EMAIL_DOMAIN no están definidas.\n' +
+      '   Define al menos una de ellas en las variables de entorno de Railway antes de desplegar.\n'
+    );
+    process.exit(1);
+  } else {
+    console.warn(
+      '\n⚠️  [wmsAuth] MODO INSEGURO (desarrollo): No hay restricción de dominio ni whitelist configurada.\n' +
+      '   Cualquier cuenta de Google puede acceder al panel de logística.\n' +
+      '   Define ALLOWED_EMAIL_DOMAIN y/o ALLOWED_EMAILS en el archivo .env para restringir el acceso.\n'
+    );
+  }
 }
 
 /**
@@ -34,7 +43,7 @@ if (!hayRestriccion) {
  * @returns {boolean}
  */
 function emailAutorizado(email) {
-  if (!hayRestriccion) return true; // sin configuración → acceso abierto (modo inseguro)
+  if (!hayRestriccion) return true; // sin configuración → acceso abierto (solo en desarrollo)
 
   // Criterio 1: whitelist individual de correos
   if (ALLOWED_EMAILS.includes(email)) return true;
@@ -54,11 +63,6 @@ export const requireWmsAuth = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-
-    if (token === 'AGENT_MAGIC_TOKEN_123') {
-       req.user = { email: 'agent@valenciana.com', name: 'Agente Automático', picture: '' };
-       return next();
-    }
 
     // 1. Validar el token con Google (firma + audiencia)
     const ticket = await client.verifyIdToken({
