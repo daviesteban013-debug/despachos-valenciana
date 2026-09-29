@@ -3,9 +3,7 @@ import { useWmsSockets } from '../hooks/useWmsSockets';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import {
   INITIAL_DESPACHOS,
-  INITIAL_DEVOLUCIONES,
-  MOCK_VEHICULOS_RUTAS,
-  MOCK_BODEGAS
+  INITIAL_DEVOLUCIONES
 } from '../data/mockData';
 import { FLOTA_VEHICULOS } from '../data/flota';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -815,8 +813,8 @@ export function WmsProvider({ children }) {
         despachos,
         filteredDespachos,
         devoluciones,
-        bodegas: MOCK_BODEGAS,
-        rutasVehiculos: MOCK_VEHICULOS_RUTAS,
+        bodegas: [],
+        rutasVehiculos: [],
         flotaVehiculos: FLOTA_VEHICULOS,
         activeTurno,
         setActiveTurno,

@@ -20,8 +20,7 @@ export default function DispatchDetailDrawer() {
     setSelectedDespachoId, 
     despacharOrden, 
     marcarComoDespachado,
-    setIncidentModalTarget, 
-    rutasVehiculos 
+    setIncidentModalTarget
   } = useWms();
 
   const [activeTab, setActiveTab] = useState('items'); // 'items' | 'timeline' | 'route'
@@ -33,7 +32,6 @@ export default function DispatchDetailDrawer() {
   const factura = selectedDespacho.numero_factura || selectedDespacho.codigo_factura_erp || selectedDespacho.codigo_orden;
   const direccion = selectedDespacho.direccion_entrega || selectedDespacho.zona_entrega || 'Sin dirección registrada';
   const cuadrilla = selectedDespacho.vehiculo_placa || FLOTA_VEHICULOS[0];
-  const rutaAsignada = rutasVehiculos.find((r) => r.id === selectedDespacho.ruta_id) || rutasVehiculos[0];
 
   return (
     <>
@@ -259,33 +257,49 @@ export default function DispatchDetailDrawer() {
               </div>
             )}
 
-            {/* TAB 3: ASIGNACIÓN DE FLOTA & RUTA */}
-            {activeTab === 'route' && rutaAsignada && (
+            {/* TAB 3: ASIGNACIÓN DE FLOTA & LOGÍSTICA */}
+            {activeTab === 'route' && (
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 text-sm">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <div>
-                    <span className="text-xs text-slate-500 block">Ruta Asignada:</span>
-                    <strong className="text-slate-900">{rutaAsignada.codigo_ruta}</strong>
+                    <span className="text-xs text-slate-500 block">Vehículo Asignado:</span>
+                    <strong className="text-slate-900 font-mono text-base">{cuadrilla}</strong>
                   </div>
-                  <span className="font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full text-xs">
-                    {rutaAsignada.estado}
+                  <span className={`font-bold px-2.5 py-0.5 rounded-full text-xs ${
+                    isDespachado ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {isDespachado ? 'Despachado' : 'Pendiente Despacho'}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-xs text-slate-500 block">Vehículo / Placa:</span>
-                    <span className="font-mono text-base font-bold text-slate-900">{rutaAsignada.vehiculo.placa}</span>
-                    <span className="text-xs text-slate-500 block">{rutaAsignada.vehiculo.modelo}</span>
+                    <span className="text-xs text-slate-500 block">Jornada:</span>
+                    <span className="font-semibold text-slate-800">{selectedDespacho.jornada || 'AM'}</span>
                   </div>
                   <div>
-                    <span className="text-xs text-slate-500 block">Conductor:</span>
-                    <span className="font-bold text-slate-900">{rutaAsignada.conductor.nombre}</span>
-                    <span className="text-xs text-purple-700 font-mono block">{rutaAsignada.conductor.telefono}</span>
+                    <span className="text-xs text-slate-500 block">Transportadora:</span>
+                    <span className="font-semibold text-slate-800">{selectedDespacho.transportadora || 'Flota Propia Valenciana'}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500 block">Destino / Zona:</span>
+                    <span className="text-slate-800 font-medium truncate block">{selectedDespacho.zona_entrega || selectedDespacho.cliente_ciudad || 'Cúcuta'}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500 block">Bahía de Carga:</span>
+                    <span className="text-slate-800 font-medium">{selectedDespacho.bahia_asignada || 'Patio Despacho'}</span>
                   </div>
                 </div>
-                <div className="pt-2 border-t border-slate-200">
-                  <span className="text-xs text-slate-500 block">Número de Guía:</span>
-                  <span className="font-mono font-bold text-slate-900 text-sm">{selectedDespacho.numero_guia}</span>
+                <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-slate-500 block">Número de Guía / Orden:</span>
+                    <span className="font-mono font-bold text-slate-900 text-sm">{selectedDespacho.numero_guia || selectedDespacho.codigo_orden || '—'}</span>
+                  </div>
+                  {selectedDespacho.fecha_despacho && (
+                    <div className="text-right">
+                      <span className="text-xs text-slate-500 block">Fecha Salida:</span>
+                      <span className="text-xs font-mono text-slate-700">{new Date(selectedDespacho.fecha_despacho).toLocaleDateString('es-CO')}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

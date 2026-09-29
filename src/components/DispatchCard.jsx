@@ -291,7 +291,7 @@ export default function DispatchCard({ despacho }) {
                     <option key={v} value={v}>{v}</option>
                   ))}
                 </select>
-                <span className="font-mono text-white/90 text-[11px] font-bold px-1 truncate max-w-[60px] inline-block align-middle">{placaSeleccionada}</span>
+                <span className="font-mono text-white/90 text-[11px] font-bold px-1 truncate max-w-[90px] inline-block align-middle">{placaSeleccionada}</span>
                 <span className="text-white/50 text-[10px] shrink-0">▼</span>
               </div>
             </div>

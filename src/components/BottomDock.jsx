@@ -24,7 +24,7 @@ export default function BottomDock() {
         {/* Tab 1: Tablero de Despachos (2 Estados: Pendiente / Despachado) */}
         <button
           onClick={() => setActiveDockTab('waves')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-all h-12 active:scale-95 ${
+          className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-2xl transition-all h-12 active:scale-95 ${
             activeDockTab === 'waves'
               ? 'text-[#E11D24] font-bold bg-red-50'
               : 'text-slate-500 hover:text-slate-800 font-medium'
@@ -39,13 +39,13 @@ export default function BottomDock() {
               </span>
             )}
           </div>
-          <span className="text-xs">Despachos</span>
+          <span className="text-[10px] sm:text-xs">Despachos</span>
         </button>
 
         {/* Tab 2: Catálogo */}
         <button
           onClick={() => setActiveDockTab('inventory')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-all h-12 active:scale-95 ${
+          className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-2xl transition-all h-12 active:scale-95 ${
             activeDockTab === 'inventory'
               ? 'text-[#E11D24] font-bold bg-red-50'
               : 'text-slate-500 hover:text-slate-800 font-medium'
@@ -55,13 +55,13 @@ export default function BottomDock() {
           <div className="relative">
             <Package className="h-5 w-5" />
           </div>
-          <span className="text-xs">Catálogo</span>
+          <span className="text-[10px] sm:text-xs">Catálogo</span>
         </button>
 
         {/* Tab 3: Incidencias & Novedades */}
         <button
           onClick={() => setActiveDockTab('incidents')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-all h-12 active:scale-95 ${
+          className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-2xl transition-all h-12 active:scale-95 ${
             activeDockTab === 'incidents'
               ? 'text-[#E11D24] font-bold bg-red-50'
               : 'text-slate-500 hover:text-slate-800 font-medium'
@@ -76,7 +76,7 @@ export default function BottomDock() {
               </span>
             )}
           </div>
-          <span className="text-xs">Novedades</span>
+          <span className="text-[10px] sm:text-xs">Novedades</span>
         </button>
 
         {/* Tab 3: Logística Inversa (Devoluciones) */}

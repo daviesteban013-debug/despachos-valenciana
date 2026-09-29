@@ -12,9 +12,10 @@ import ReturnsDrawer from './components/ReturnsDrawer';
 import ToastNotification from './components/ToastNotification';
 import CreateDispatchModal from './components/CreateDispatchModal';
 import HistorialView from './components/HistorialView';
-import { Layers, AlertOctagon, Undo2, History, Truck, Package } from 'lucide-react';
+import { Layers, AlertOctagon, Undo2, History, Truck, Package, ShieldCheck } from 'lucide-react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import GoogleAuthBadge from './components/GoogleAuthBadge';
+import logoValenciana from './assets/logo-valenciana.jpg';
 
 function AppContent({ user, setUser }) {
   const { 
@@ -157,20 +158,47 @@ export default function WmsDespachoApp() {
   return (
     <GoogleOAuthProvider clientId={clientId}>
       {!user ? (
-        <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-6">
-            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm border border-red-100">
-              <Truck className="w-10 h-10 text-[#E11D24]" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-[#7a0d10] flex items-center justify-center p-4">
+          {/* Fondo con patrón sutil */}
+          <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+          
+          <div className="relative bg-white/95 backdrop-blur-sm p-8 sm:p-10 rounded-3xl shadow-2xl shadow-black/40 max-w-sm w-full text-center space-y-6 border border-white/20">
+            {/* Logo y marca */}
+            <div className="space-y-3">
+              <div className="relative inline-block">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg border-2 border-slate-100 mx-auto">
+                  <img
+                    src="/logo-valenciana.jpg"
+                    alt="La Valenciana Ferrehogar"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                </div>
+                {/* Badge de app */}
+                <div className="absolute -bottom-2 -right-2 w-7 h-7 bg-[#E11D24] rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                  <Truck className="w-3.5 h-3.5 text-white" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-black text-[#E11D24] uppercase tracking-[0.15em]">La Valenciana FERREHOGAR</p>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">Panel de Logística</h2>
+                <p className="text-xs text-slate-500 mt-1.5 font-medium">Control de despachos, inventario y entregas</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Acceso a Logística Valenciana</h2>
-              <p className="text-sm text-slate-500 mt-2">
-                Inicia sesión con tu cuenta de Google autorizada para ingresar al panel de despachos de La Valenciana.
-              </p>
+
+            {/* Separador */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Acceso seguro</span>
+              <div className="flex-1 h-px bg-slate-200" />
             </div>
-            
-            <div className="pt-4 border-t border-slate-100">
+
+            {/* Componente de auth */}
+            <div className="flex flex-col items-center gap-3">
               <GoogleAuthBadge user={user} setUser={setUser} />
+              <p className="text-[10px] text-slate-400 max-w-[220px] leading-relaxed">
+                Solo las cuentas autorizadas por el administrador pueden ingresar al sistema.
+              </p>
             </div>
           </div>
         </div>

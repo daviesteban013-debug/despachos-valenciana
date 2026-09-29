@@ -202,24 +202,37 @@ export default function KanbanBoard() {
       {/* ── GRID DE TARJETAS: ancho completo, scroll de pagina, sin scroll interno ── */}
       <div className="w-full max-w-7xl mx-auto px-4 pb-16">
         {despachosAMostrar.length === 0 ? (
-          <div className="h-56 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center space-y-2 mt-4">
+          <div className="h-64 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center space-y-3 mt-4 bg-white/50">
             {activeTab === 'pendientes' ? (
               <>
-                <CheckCircle className="h-10 w-10 text-emerald-400" />
-                <p className="text-sm font-bold text-slate-700">No hay despachos pendientes</p>
-                <p className="text-xs text-slate-500">Crea el primero usando el boton &quot;+ Nuevo Despacho&quot;.</p>
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
+                  <CheckCircle className="h-8 w-8 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-700">\u00a1Todo despachado!</p>
+                  <p className="text-xs text-slate-500 mt-0.5">No hay órdenes pendientes por el momento.</p>
+                </div>
+                <p className="text-[11px] text-slate-400">Crea una nueva orden con el botón <span className="font-black text-slate-600">"+ Nuevo Despacho"</span></p>
               </>
             ) : activeTab === 'despachados' ? (
               <>
-                <Clock className="h-10 w-10 text-slate-400" />
-                <p className="text-sm font-bold text-slate-700">Aun no hay despachos hoy</p>
-                <p className="text-xs text-slate-500">Los pedidos despachados en vehiculos apareceran aqui.</p>
+                <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+                  <Clock className="h-8 w-8 text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-700">Aún no hay despachos hoy</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Los pedidos enviados en vehículos aparecerán aquí.</p>
+                </div>
               </>
             ) : (
               <>
-                <LayoutGrid className="h-10 w-10 text-slate-300" />
-                <p className="text-sm font-bold text-slate-700">No hay ordenes</p>
-                <p className="text-xs text-slate-500">Crea una nueva orden para comenzar.</p>
+                <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+                  <LayoutGrid className="h-8 w-8 text-slate-300" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-700">Sin órdenes registradas</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Crea una nueva orden para comenzar.</p>
+                </div>
               </>
             )}
           </div>

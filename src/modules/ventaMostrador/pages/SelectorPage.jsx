@@ -54,7 +54,7 @@ export default function SelectorPage() {
 
               <div>
                 <span className="text-xs font-black text-[#E11D24] uppercase tracking-wider">
-                  Ruta: /facturacion
+                  Módulo 1 — Caja Facturación
                 </span>
                 <h2 className="text-2xl font-black text-slate-900 mt-1">
                   Estación de Facturación
@@ -109,7 +109,7 @@ export default function SelectorPage() {
 
               <div>
                 <span className="text-xs font-black text-amber-700 uppercase tracking-wider">
-                  Ruta: /vitrina
+                  Módulo 2 — Alistamiento Vitrina
                 </span>
                 <h2 className="text-2xl font-black text-slate-900 mt-1">
                   Estación de Vitrina
@@ -164,7 +164,7 @@ export default function SelectorPage() {
 
               <div>
                 <span className="text-xs font-black text-blue-600 uppercase tracking-wider">
-                  Ruta: /inventario (Admin)
+                  Módulo 3 — Administrador de Inventario
                 </span>
                 <h2 className="text-2xl font-black text-slate-900 mt-1">
                   Gestión de Inventario
@@ -219,7 +219,7 @@ export default function SelectorPage() {
 
               <div>
                 <span className="text-xs font-black text-violet-600 uppercase tracking-wider">
-                  Ruta: /wms
+                  Módulo 4 — Despachos a Domicilio
                 </span>
                 <h2 className="text-2xl font-black text-slate-900 mt-1">
                   Logística Despacho a Domicilio

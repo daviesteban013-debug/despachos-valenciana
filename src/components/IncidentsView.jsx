@@ -98,14 +98,14 @@ export default function IncidentsView() {
                         {inc?.tipo || 'BLOQUEO OPERATIVO'}
                       </span>
                       <span className="text-xs font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
-                        {ord.bahia_asignada?.replace(/bah[ií]a/gi, 'Bodega')}
+                        {ord.bahia_asignada?.replace(/bah[ií]a/gi, 'Bodega') || '—'}
                       </span>
                     </div>
                     <h3 className="text-sm font-bold text-slate-800 mt-1">
                       {ord.cliente_nombre}
                     </h3>
                     <p className="text-xs text-slate-400">
-                      Destino: {ord.zona_entrega} • Transportadora: {ord.transportadora}
+                      {[ord.zona_entrega && `Zona: ${ord.zona_entrega}`, ord.transportadora && `Transportadora: ${ord.transportadora}`].filter(Boolean).join(' • ') || 'Sin info adicional'}
                     </p>
                   </div>
 

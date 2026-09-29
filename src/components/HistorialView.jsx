@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useWms } from '../context/WmsContext';
 import DispatchCard from './DispatchCard';
 import { FLOTA_VEHICULOS } from '../data/flota';
-import { History, Calendar, Truck, Search, Clock, Download } from 'lucide-react';
+import { History, Calendar, Truck, Search, Clock, Download, ChevronDown, X, RotateCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 /**
@@ -111,6 +111,16 @@ export default function HistorialView() {
     });
   }, [despachos, dateRange, customStartDate, customEndDate, selectedVehiculo, searchQuery]);
 
+  const hasActiveFilters = dateRange !== '7d' || selectedVehiculo !== 'TODOS' || searchQuery.trim() !== '' || Boolean(customStartDate || customEndDate);
+
+  const handleResetFilters = () => {
+    setDateRange('7d');
+    setSelectedVehiculo('TODOS');
+    setSearchQuery('');
+    setCustomStartDate('');
+    setCustomEndDate('');
+  };
+
   const handleExportExcel = () => {
     if (filteredHistory.length === 0) return;
 
@@ -189,83 +199,119 @@ export default function HistorialView() {
       </div>
 
       {/* Panel de Filtros */}
-      <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col lg:flex-row gap-4 shadow-sm">
+      <div className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col lg:flex-row gap-4 shadow-sm">
         {/* Filtro Fecha */}
-        <div className="flex flex-col gap-2 flex-1">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-            <Calendar className="h-4 w-4" />
+        <div className="flex flex-col gap-1.5 flex-1">
+          <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5 text-slate-400" />
             Rango de Fechas
           </label>
-          <select 
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="w-full border-slate-300 rounded-lg text-sm font-medium focus:ring-slate-800 focus:border-slate-800"
-          >
-            <option value="today">Hoy</option>
-            <option value="7d">Últimos 7 días</option>
-            <option value="this_month">Este mes</option>
-            <option value="all">Todo el historial</option>
-            <option value="custom">Personalizado...</option>
-          </select>
+          <div className="relative">
+            <select 
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="w-full appearance-none bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl px-3.5 py-2.5 pr-9 text-sm font-semibold text-slate-800 transition-all cursor-pointer"
+            >
+              <option value="today">Hoy</option>
+              <option value="7d">Últimos 7 días</option>
+              <option value="this_month">Este mes</option>
+              <option value="all">Todo el historial</option>
+              <option value="custom">Personalizado...</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          </div>
           {dateRange === 'custom' && (
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1.5">
               <input 
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="w-full border-slate-300 rounded-lg text-xs"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-700 focus:border-red-500 focus:ring-2 focus:ring-red-100"
               />
-              <span className="text-slate-400 text-xs">a</span>
+              <span className="text-slate-400 text-xs font-bold">a</span>
               <input 
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="w-full border-slate-300 rounded-lg text-xs"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-700 focus:border-red-500 focus:ring-2 focus:ring-red-100"
               />
             </div>
           )}
         </div>
 
         {/* Filtro Vehículo */}
-        <div className="flex flex-col gap-2 flex-1">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-            <Truck className="h-4 w-4" />
+        <div className="flex flex-col gap-1.5 flex-1">
+          <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <Truck className="h-3.5 w-3.5 text-slate-400" />
             Vehículo de Entrega
           </label>
-          <select 
-            value={selectedVehiculo}
-            onChange={(e) => setSelectedVehiculo(e.target.value)}
-            className="w-full border-slate-300 rounded-lg text-sm font-medium focus:ring-slate-800 focus:border-slate-800"
-          >
-            <option value="TODOS">Todos los vehículos</option>
-            {FLOTA_VEHICULOS.map(v => (
-              <option key={v} value={v}>{v}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select 
+              value={selectedVehiculo}
+              onChange={(e) => setSelectedVehiculo(e.target.value)}
+              className="w-full appearance-none bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl px-3.5 py-2.5 pr-9 text-sm font-semibold text-slate-800 transition-all cursor-pointer font-mono"
+            >
+              <option value="TODOS">Todos los vehículos</option>
+              {FLOTA_VEHICULOS.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          </div>
         </div>
 
         {/* Búsqueda por Texto */}
-        <div className="flex flex-col gap-2 flex-1">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-            <Search className="h-4 w-4" />
-            Búsqueda
+        <div className="flex flex-col gap-1.5 flex-1">
+          <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Search className="h-3.5 w-3.5 text-slate-400" />
+              Búsqueda
+            </span>
+            {hasActiveFilters && (
+              <button 
+                onClick={handleResetFilters}
+                className="text-red-600 hover:text-red-700 text-[11px] font-bold flex items-center gap-1 transition-colors"
+                title="Restablecer todos los filtros"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Limpiar filtros
+              </button>
+            )}
           </label>
-          <input 
-            type="text"
-            placeholder="Cliente, Factura o Nro de Orden..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full border-slate-300 rounded-lg text-sm placeholder:text-slate-400 focus:ring-slate-800 focus:border-slate-800"
-          />
+          <div className="relative">
+            <input 
+              type="text"
+              placeholder="Cliente, Factura o Nro de Orden..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl px-3.5 py-2.5 pr-9 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all"
+            />
+            {searchQuery ? (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                title="Borrar búsqueda"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : (
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 pointer-events-none" />
+            )}
+          </div>
         </div>
       </div>
 
       {/* Resultados */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 min-h-[400px]">
-        <div className="mb-4">
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4 min-h-[400px]">
+        <div className="mb-4 flex items-center justify-between">
           <span className="text-sm font-bold text-slate-700">
             Mostrando {filteredHistory.length} despacho(s)
           </span>
+          {hasActiveFilters && (
+            <span className="text-xs bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full font-bold">
+              Filtros activos
+            </span>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

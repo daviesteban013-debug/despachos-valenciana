@@ -1,12 +1,13 @@
 import React from 'react';
 import logoValenciana from '../assets/logo-valenciana.jpg';
 import { useWms } from '../context/WmsContext';
-import { Plus, WifiOff } from 'lucide-react';
+import { Plus, WifiOff, Wifi } from 'lucide-react';
 
 export default function Header({ rightContent }) {
   const {
     setCreateModalOpen,
-    kpis
+    kpis,
+    backendOnline
   } = useWms();
 
   const sinConfirmarCount = kpis?.sinConfirmarEnServidor || 0;
@@ -36,13 +37,26 @@ export default function Header({ rightContent }) {
       {/* 2. Estado En Línea y Controles Operativos */}
       <div className="flex items-center gap-2 shrink-0 pr-3 sm:pr-4">
         {rightContent}
-        {/* Estado En Línea */}
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 mr-1">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-          </span>
-          <span className="text-xs font-bold text-slate-700">En línea</span>
+        {/* Estado En Línea / Offline dinámico */}
+        <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border mr-1 transition-all ${
+          backendOnline
+            ? 'bg-slate-100 border-slate-200'
+            : 'bg-amber-50 border-amber-300 animate-pulse'
+        }`}>
+          {backendOnline ? (
+            <>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span className="text-xs font-bold text-slate-700">En línea</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <span className="text-xs font-bold text-amber-800">Sin conexión</span>
+            </>
+          )}
         </div>
 
         {/* Badge: despachos sin confirmar en el servidor (solo visible si hay alguno) */}
