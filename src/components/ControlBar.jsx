@@ -42,6 +42,16 @@ export default function ControlBar({ compact = false }) {
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+  // Lee el token de Google almacenado en sesión (mismo formato que WmsContext)
+  const getGoogleToken = () => {
+    try {
+      const u = JSON.parse(localStorage.getItem('wms_google_user'));
+      return u ? (u.token || u.credential) : null;
+    } catch (_) {
+      return null;
+    }
+  };
+
   const hasActiveFilters = selectedCarrier !== 'TODAS' || selectedZone !== 'TODAS' || onlyUrgent;
 
   const handleClearFilters = () => {
@@ -58,9 +68,26 @@ export default function ControlBar({ compact = false }) {
     setKardexCargando(true);
     setKardexStats(null);
     try {
+      const token = getGoogleToken();
       const formData = new FormData();
       formData.append('archivo', file);
-      const res = await fetch(`${API_URL}/api/kardex/importar`, { method: 'POST', body: formData });
+      const res = await fetch(`${API_URL}/api/kardex/importar`, {
+        method: 'POST',
+        body: formData,
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      if (res.status === 401) {
+        // Sesión expirada: limpiar y recargar
+        localStorage.removeItem('wms_google_user');
+        window.location.reload();
+        return;
+      }
+      if (res.status === 403) {
+        showToast('No tienes permisos de administrador para importar el kardex.', 'error');
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al importar');
       setKardexStats({ facturas: data.facturas_unicas, lineas: data.filas_procesadas });

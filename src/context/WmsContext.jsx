@@ -273,7 +273,7 @@ export function WmsProvider({ children }) {
   // Se usa como fallback cuando el endpoint principal falla por BD caída.
   const _intentarSyncExcelDirecto = async (despacho, placa, despachoId, nowIso) => {
     try {
-      const res = await fetch(`${API_URL}/api/despachos/sync-excel-directo`, {
+      const res = await apiFetch(`${API_URL}/api/despachos/sync-excel-directo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

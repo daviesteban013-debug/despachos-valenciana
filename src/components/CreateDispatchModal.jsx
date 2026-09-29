@@ -10,6 +10,17 @@ import { FLOTA_VEHICULOS } from '../data/flota';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// Lee el token Google de sesión para adjuntar en llamadas al kardex
+function getKardexAuthHeaders() {
+  try {
+    const u = JSON.parse(localStorage.getItem('wms_google_user'));
+    const token = u ? (u.token || u.credential) : null;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch (_) {
+    return {};
+  }
+}
+
 const BODEGAS_SALIDA = [
   { id: '00', nombre: '00 - Patio Materiales Pesados (Atalaya)' },
   { id: '01', nombre: '01 - Principal (Cúcuta Centro)' },
@@ -66,7 +77,9 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
     setKardexSugerencias([]);
 
     try {
-      const res  = await fetch(`${API_URL}/api/kardex/factura/${encodeURIComponent(numFactura.trim())}`);
+      const res  = await fetch(`${API_URL}/api/kardex/factura/${encodeURIComponent(numFactura.trim())}`, {
+        headers: getKardexAuthHeaders()
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -124,7 +137,9 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
     }
     const buscar = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/kardex/buscar?q=${encodeURIComponent(debouncedFactura)}`);
+        const res = await fetch(`${API_URL}/api/kardex/buscar?q=${encodeURIComponent(debouncedFactura)}`, {
+          headers: getKardexAuthHeaders()
+        });
         if (res.ok) {
           const data = await res.json();
           setKardexSugerencias(data);

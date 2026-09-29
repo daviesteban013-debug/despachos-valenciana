@@ -5,6 +5,36 @@ const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/inventario`;
 const LOCAL_STORAGE_STOCK_KEY = 'valenciana_inventario_stock_v1';
 const LOCAL_STORAGE_DIFERENCIAS_KEY = 'valenciana_inventario_diferencias_v1';
 
+/**
+ * Devuelve los headers de autenticación con el token de Google almacenado.
+ * Si el servidor responde 401, limpia la sesión y recarga.
+ */
+function getGoogleToken() {
+  try {
+    const u = JSON.parse(localStorage.getItem('wms_google_user'));
+    return u ? (u.token || u.credential) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function getAuthHeaders(extra = {}) {
+  const token = getGoogleToken();
+  return { ...extra, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
+
+async function authFetch(url, options = {}) {
+  const headers = getAuthHeaders(options.headers || {});
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    if (localStorage.getItem('wms_google_user')) {
+      localStorage.removeItem('wms_google_user');
+      window.location.reload();
+    }
+  }
+  return res;
+}
+
 // BODEGAS FIJAS OFICIALES
 const BODEGAS_SISTEMA = [
   { id: 1, codigo: 'BOD-MAT', nombre: 'Materiales de Construcción', seccion_slug: 'materiales_construccion' },
@@ -42,7 +72,7 @@ export async function obtenerInventario({ seccion = 'todas', buscar = '', sku = 
     if (buscar) params.append('buscar', buscar);
     if (sku) params.append('sku', sku);
 
-    const res = await fetch(`${API_BASE}?${params.toString()}`);
+    const res = await authFetch(`${API_BASE}?${params.toString()}`);
     if (res.ok) return await res.json();
   } catch (e) {}
 
@@ -81,7 +111,7 @@ export async function obtenerInventario({ seccion = 'todas', buscar = '', sku = 
 
 export async function obtenerDetalleProducto(sku) {
   try {
-    const res = await fetch(`${API_BASE}/${sku}`);
+    const res = await authFetch(`${API_BASE}/${sku}`);
     if (res.ok) return await res.json();
   } catch (e) {}
 
@@ -105,7 +135,7 @@ export async function obtenerDetalleProducto(sku) {
 
 export async function obtenerDiferencias(rol = 'admin') {
   try {
-    const res = await fetch(`${API_BASE}/diferencias`, {
+    const res = await authFetch(`${API_BASE}/diferencias`, {
       headers: { 'x-user-role': rol }
     });
     if (res.ok) return await res.json();
@@ -126,7 +156,7 @@ export async function obtenerDiferencias(rol = 'admin') {
 
 export async function resolverDiferencia(id, accion, rol = 'admin') {
   try {
-    const res = await fetch(`${API_BASE}/diferencias/${id}/resolver`, {
+    const res = await authFetch(`${API_BASE}/diferencias/${id}/resolver`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -164,12 +194,13 @@ export async function importarArchivoExcel(file, rol = 'admin') {
   const formData = new FormData();
   formData.append('archivo', file);
 
-  const res = await fetch(`${API_BASE}/importar`, {
+  const res = await authFetch(`${API_BASE}/importar`, {
     method: 'POST',
     headers: { 'x-user-role': rol },
     body: formData
   });
 
+  if (res.status === 403) throw new Error('No tienes permisos de administrador para importar inventario.');
   if (res.ok) return await res.json();
   const err = await res.json();
   throw new Error(err.error || 'Error al importar Excel');
@@ -177,7 +208,7 @@ export async function importarArchivoExcel(file, rol = 'admin') {
 
 export async function importarDemoExcel(rol = 'admin') {
   try {
-    const res = await fetch(`${API_BASE}/importar-demo`, {
+    const res = await authFetch(`${API_BASE}/importar-demo`, {
       method: 'POST',
       headers: { 'x-user-role': rol }
     });
@@ -236,7 +267,7 @@ export async function importarDemoExcel(rol = 'admin') {
 
 export async function ejecutarDescuentoTransaccional({ items, origen, referenciaId }) {
   try {
-    const res = await fetch(`/api/facturas/${referenciaId}/estado`, {
+    const res = await authFetch(`/api/facturas/${referenciaId}/estado`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nuevoEstado: 'entregada', usuario: 'Facturación' })
