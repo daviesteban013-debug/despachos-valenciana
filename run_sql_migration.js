@@ -1,6 +1,18 @@
 import pg from 'pg';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const dbUrl = 'postgresql://valenciana_db_user:9wmYBBZOqgAX6aZXSp47Xjl8mnaTj66C@dpg-damrj6rncjis73cj7rog-a.oregon-postgres.render.com/valenciana_db?sslmode=require';
+// La URL de conexión se lee del entorno. NUNCA hardcodear credenciales en el código.
+// Crea un archivo .env (basado en .env.example) y define DATABASE_URL ahí.
+const dbUrl = process.env.DATABASE_URL;
+
+if (!dbUrl) {
+  console.error(
+    '\n❌ [run_sql_migration] ERROR: La variable de entorno DATABASE_URL no está definida.\n' +
+    '   Copia .env.example a .env y completa DATABASE_URL antes de ejecutar este script.\n'
+  );
+  process.exit(1);
+}
 
 async function runMigration() {
   const client = new pg.Client({
