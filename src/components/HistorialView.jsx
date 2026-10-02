@@ -199,26 +199,69 @@ export default function HistorialView() {
       </div>
 
       {/* Panel de Filtros */}
-      <div className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col lg:flex-row gap-4 shadow-sm">
-        {/* Filtro Fecha */}
+      <div className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col gap-4 shadow-sm sticky top-[80px] lg:top-[140px] z-20">
+        {/* Filtro Fecha — atajos como chips */}
         <div className="flex flex-col gap-1.5 flex-1">
           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5 text-slate-400" />
             Rango de Fechas
           </label>
-          <div className="relative">
-            <select 
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="w-full appearance-none bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl px-3.5 py-2.5 pr-9 text-sm font-semibold text-slate-800 transition-all cursor-pointer"
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setDateRange('today')}
+              className={`min-h-[38px] px-3 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                dateRange === 'today'
+                  ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-sm'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
             >
-              <option value="today">Hoy</option>
-              <option value="7d">Últimos 7 días</option>
-              <option value="this_month">Este mes</option>
-              <option value="all">Todo el historial</option>
-              <option value="custom">Personalizado...</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              Hoy
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateRange('7d')}
+              className={`min-h-[38px] px-3 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                dateRange === '7d'
+                  ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-sm'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              7 días
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateRange('this_month')}
+              className={`min-h-[38px] px-3 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                dateRange === 'this_month'
+                  ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-sm'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Mes
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateRange('all')}
+              className={`min-h-[38px] px-3 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                dateRange === 'all'
+                  ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-sm'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Todo
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateRange('custom')}
+              className={`min-h-[38px] px-3 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                dateRange === 'custom'
+                  ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-sm'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Personalizado
+            </button>
           </div>
           {dateRange === 'custom' && (
             <div className="flex items-center gap-2 mt-1.5">
@@ -239,6 +282,8 @@ export default function HistorialView() {
           )}
         </div>
 
+        {/* Fila: Vehículo + Búsqueda (se apila en móvil) */}
+        <div className="flex flex-col sm:flex-row gap-4">
         {/* Filtro Vehículo */}
         <div className="flex flex-col gap-1.5 flex-1">
           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -299,6 +344,7 @@ export default function HistorialView() {
             )}
           </div>
         </div>
+        </div>
       </div>
 
       {/* Resultados */}
@@ -314,7 +360,7 @@ export default function HistorialView() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filteredHistory.length === 0 ? (
             <div className="col-span-full h-44 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-4 text-center space-y-2">
               <Clock className="h-8 w-8 text-slate-400" />

@@ -161,7 +161,7 @@ export default function DispatchCard({ despacho }) {
               {despacho.valor_total > 0 && (
                 <div className="flex items-center gap-1 text-xs font-bold text-slate-600">
                   <DollarSign className="h-3.5 w-3.5 text-slate-400" />
-                  <span>{Number(despacho.valor_total).toLocaleString('es-CO')}</span>
+                  <span className="font-mono tabular-nums">{Number(despacho.valor_total).toLocaleString('es-CO')}</span>
                 </div>
               )}
             </div>
