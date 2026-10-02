@@ -40,7 +40,7 @@ export default function ControlBar({ compact = false }) {
   const [kardexStats, setKardexStats] = useState(null); // { facturas, lineas }
   const fileInputRef = useRef(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const API_URL = import.meta.env.VITE_API_URL || '';
 
   // Lee el token de Google almacenado en sesión, validando expiración
   const getGoogleToken = () => {

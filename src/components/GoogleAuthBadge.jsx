@@ -3,7 +3,7 @@ import { GoogleLogin, googleLogout } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import { LogOut, ShieldX } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 // VITE_GOOGLE_ALLOWED_DOMAIN es SOLO una ayuda visual de UX para que el
 // selector de Google priorice las cuentas del dominio corporativo.
@@ -65,8 +65,7 @@ export default function GoogleAuthBadge({ user, setUser }) {
   };
 
   const handleError = () => {
-    console.error('Login con Google falló');
-    setAuthError('401');
+    console.warn('[AUTH] Google Sign-In prompt cerrado o no completado.');
   };
 
   const handleLogout = () => {

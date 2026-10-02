@@ -8,7 +8,7 @@ import {
 import ProductAutocomplete from './ProductAutocomplete';
 import { FLOTA_VEHICULOS } from '../data/flota';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 // Lee el token Google de sesión para adjuntar en llamadas al kardex
 function getKardexAuthHeaders() {

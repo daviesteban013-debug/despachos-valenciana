@@ -7,7 +7,7 @@ import {
 } from '../data/mockData';
 import { FLOTA_VEHICULOS } from '../data/flota';
 import { jwtDecode } from 'jwt-decode';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || '';
 const WmsContext = createContext(null);
 
 let globalAudioContext = null;

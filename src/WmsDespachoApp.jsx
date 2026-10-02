@@ -210,7 +210,7 @@ export default function WmsDespachoApp() {
               <div className="relative inline-block">
                 <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg border-2 border-slate-100 mx-auto">
                   <img
-                    src="/logo-valenciana.jpg"
+                    src="/logo-valenciana.png"
                     alt="La Valenciana Ferrehogar"
                     className="w-full h-full object-cover"
                     onError={(e) => { e.target.style.display = 'none'; }}
