@@ -82,7 +82,7 @@ export default defineConfig({
     open: false,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'https://despachos-valenciana.onrender.com',
         changeOrigin: true
       }
     },
