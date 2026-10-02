@@ -110,6 +110,7 @@ export default function ControlBar({ compact = false }) {
         <input
           type="text"
           placeholder="Buscar por #ORD, factura ERP, cliente..."
+          aria-label="Buscar por orden, factura ERP o cliente"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-white/90 backdrop-blur-sm border border-slate-300/80 rounded-xl pl-10 pr-9 h-11 text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#E11D24] focus:ring-1 focus:ring-[#E11D24] shadow-sm transition-all"
@@ -136,6 +137,7 @@ export default function ControlBar({ compact = false }) {
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={kardexCargando}
+        aria-label="Importar kardex de ventas ERP"
         title={kardexStats ? `Kardex cargado: ${kardexStats.facturas} facturas` : 'Importar kardex de ventas ERP (.xlsx)'}
         className={`h-11 px-3 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition-all shrink-0 active:scale-95 shadow-sm ${
           kardexCargando
@@ -165,6 +167,8 @@ export default function ControlBar({ compact = false }) {
       <div className="relative">
         <button
           onClick={() => setFilterMenuOpen(!filterMenuOpen)}
+          aria-label="Filtros rápidos de despacho"
+          aria-expanded={filterMenuOpen}
           className={`h-11 px-3.5 rounded-xl border flex items-center gap-2 text-sm font-bold transition-all shrink-0 active:scale-95 shadow-sm ${
             hasActiveFilters
               ? 'bg-[#E11D24] border-[#E11D24] text-white shadow-red-500/20'
