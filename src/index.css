@@ -11,13 +11,31 @@
 
 @layer base {
   body {
-    background-color: #080d1a;
+    background-color: #f1f5f9;
     color: #f1f5f9;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     padding-top: var(--sat);
     padding-bottom: var(--sab);
     padding-left: var(--sal);
     padding-right: var(--sar);
+  }
+
+  /* Anillo de foco accesible y consistente en todo elemento interactivo */
+  :focus-visible {
+    outline: 2px solid #E11D24;
+    outline-offset: 2px;
+  }
+}
+
+/* Respeta la preferencia de movimiento reducido del sistema operativo */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

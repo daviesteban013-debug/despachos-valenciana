@@ -7,6 +7,9 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        xs: '420px',
+      },
       colors: {
         valenciana: {
           DEFAULT: '#E11D24', // Rojo Valenciana FERREHOGAR
@@ -34,11 +37,21 @@ export default {
       animation: {
         'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'glow-valenciana': 'glowValenciana 1.5s ease-in-out infinite alternate',
+        'fadeIn': 'fadeIn 0.2s ease-out both',
+        'slideUp': 'slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both',
       },
       keyframes: {
         glowValenciana: {
           '0%': { boxShadow: '0 0 4px rgba(225, 29, 36, 0.4)' },
           '100%': { boxShadow: '0 0 16px rgba(225, 29, 36, 0.9)' }
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(16px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
         }
       }
     },
