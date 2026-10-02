@@ -269,7 +269,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
       onKeyDown={handleKeyDown}
     >
       <div
-        className="w-full md:max-w-lg bg-white rounded-t-3xl md:rounded-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-slideUp"
+        className="w-full md:max-w-lg bg-white rounded-t-3xl md:rounded-3xl h-[94vh] md:h-auto md:max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-slideUp"
         onClick={e => e.stopPropagation()}
       >
         {/* PULL HANDLE (Mobile) */}
@@ -332,6 +332,9 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
                 ref={facturaInputRef}
                 autoFocus
                 type="text"
+                inputMode="text"
+                autoComplete="off"
+                enterKeyHint="go"
                 value={form.numero_factura}
                 onChange={e => handleChange('numero_factura', e.target.value.toUpperCase())}
                 onFocus={() => kardexSugerencias.length > 0 && setMostrarSugerencias(true)}
@@ -395,6 +398,8 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
             )}
           </div>
 
+          {/* ── GRUPO: Cliente + Dirección ── */}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3 space-y-3">
           {/* ── 2. CLIENTE ── */}
           <div>
             <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
@@ -405,6 +410,8 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
               type="text"
               value={form.cliente_nombre}
               onChange={e => handleChange('cliente_nombre', e.target.value)}
+              autoComplete="organization"
+              enterKeyHint="next"
               placeholder="Ej: FERRETERIA SANTA ANA"
               className={`w-full h-11 px-3 rounded-xl border text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all ${
                 errors.cliente_nombre ? 'border-red-400 ring-1 ring-red-400' : 'border-slate-300'
@@ -425,6 +432,8 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
               type="text"
               value={form.direccion_entrega}
               onChange={e => handleChange('direccion_entrega', e.target.value)}
+              autoComplete="street-address"
+              enterKeyHint="next"
               placeholder="Ej: Av. 5 #10-45 Centro"
               className={`w-full h-11 px-3 rounded-xl border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all ${
                 errors.direccion_entrega ? 'border-red-400 ring-1 ring-red-400' : 'border-slate-300'
@@ -433,6 +442,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
             {errors.direccion_entrega && (
               <p className="text-xs text-red-600 mt-0.5 font-semibold">{errors.direccion_entrega}</p>
             )}
+          </div>
           </div>
 
           {/* ── 4 + 5. VALOR + JORNADA ── */}
@@ -450,10 +460,12 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
                 <input
                   type="text"
                   inputMode="numeric"
+                  autoComplete="off"
+                  enterKeyHint="next"
                   value={form.valor_factura ? formatCOP(form.valor_factura) : ''}
                   onChange={e => handleValorChange(e.target.value)}
                   placeholder="834.033"
-                  className={`w-full h-11 pl-7 pr-12 rounded-xl border text-sm font-bold font-mono text-right bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all ${
+                  className={`w-full h-11 pl-7 pr-12 rounded-xl border text-sm font-bold font-mono tabular-nums text-right bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all ${
                     errors.valor_factura
                       ? 'border-red-400 ring-1 ring-red-400'
                       : kardexCargada
@@ -618,7 +630,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
         </form>
 
         {/* PIE — BOTONES */}
-        <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center gap-2">
+        <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-slate-200 bg-slate-50 flex items-center gap-2">
           <button
             type="button"
             onClick={onClose}
