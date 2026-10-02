@@ -125,8 +125,8 @@ export default function GoogleAuthBadge({ user, setUser }) {
           referrerPolicy="no-referrer"
         />
         <div className="flex-col hidden sm:flex justify-center mr-1">
-          <span className="text-[13px] font-black text-slate-800 leading-tight flex items-center gap-1">
-            ¡Hola, {firstName}! <span className="text-sm origin-bottom-right group-hover:animate-bounce">👋</span>
+          <span className="text-[13px] font-black text-slate-800 leading-tight flex items-center gap-1 min-w-0">
+            <span className="truncate max-w-[130px]">¡Hola, {firstName}!</span> <span className="text-sm origin-bottom-right group-hover:animate-bounce shrink-0">👋</span>
           </span>
           <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
             {capitalizedDate}
@@ -136,6 +136,7 @@ export default function GoogleAuthBadge({ user, setUser }) {
           onClick={handleLogout}
           className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-colors"
           title="Cerrar Sesión"
+          aria-label="Cerrar Sesión"
         >
           <LogOut className="w-4 h-4" />
         </button>

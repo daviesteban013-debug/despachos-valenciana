@@ -15,7 +15,7 @@ export default function Header({ rightContent }) {
   return (
     <header className="w-full h-[68px] bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between shadow-sm border-t-4 border-t-[#E11D24] relative z-40">
       {/* 1. Bloque de Marca Premium */}
-      <div className="h-full flex items-center gap-3 pl-4 pr-5 sm:pl-6 shrink-0 relative">
+      <div className="h-full flex items-center gap-3 pl-4 pr-3 sm:pr-5 sm:pl-6 shrink min-w-0 relative">
         <div className="relative">
           <img
             src={logoValenciana}
@@ -38,23 +38,25 @@ export default function Header({ rightContent }) {
       <div className="flex items-center gap-2 shrink-0 pr-3 sm:pr-4">
         {rightContent}
         {/* Estado En Línea / Offline dinámico */}
-        <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border mr-1 transition-all ${
+        <div className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl border mr-1 transition-all ${
           backendOnline
             ? 'bg-slate-100 border-slate-200'
             : 'bg-amber-50 border-amber-300 animate-pulse'
-        }`}>
+        }`}
+          title={backendOnline ? 'Conectado al servidor' : 'Sin conexión con el servidor'}
+        >
           {backendOnline ? (
             <>
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
               </span>
-              <span className="text-xs font-bold text-slate-700">En línea</span>
+              <span className="hidden sm:inline text-xs font-bold text-slate-700 whitespace-nowrap">En línea</span>
             </>
           ) : (
             <>
               <WifiOff className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span className="text-xs font-bold text-amber-800">Sin conexión</span>
+              <span className="hidden sm:inline text-xs font-bold text-amber-800 whitespace-nowrap">Sin conexión</span>
             </>
           )}
         </div>
@@ -75,11 +77,12 @@ export default function Header({ rightContent }) {
         {/* Botón Principal: Nuevo Despacho */}
         <button
           onClick={() => setCreateModalOpen(true)}
-          className="h-10 px-4 bg-gradient-to-r from-[#E11D24] to-[#B9121B] hover:from-[#f02229] hover:to-[#cc141d] text-white rounded-xl font-bold transition-all duration-300 shadow-[0_4px_12px_rgba(225,29,36,0.25)] hover:shadow-[0_6px_16px_rgba(225,29,36,0.4)] hover:-translate-y-0.5 active:scale-95 active:translate-y-0 flex items-center gap-2 shrink-0"
+          className="h-11 px-3 sm:px-4 bg-gradient-to-r from-[#E11D24] to-[#B9121B] hover:from-[#f02229] hover:to-[#cc141d] text-white rounded-xl font-bold transition-all duration-300 shadow-[0_4px_12px_rgba(225,29,36,0.25)] hover:shadow-[0_6px_16px_rgba(225,29,36,0.4)] hover:-translate-y-0.5 active:scale-95 active:translate-y-0 flex items-center gap-2 shrink-0"
           title="Registrar nuevo pedido de despacho"
+          aria-label="Registrar nuevo pedido de despacho"
         >
           <Plus className="h-5 w-5" />
-          <span className="text-sm tracking-wide">Nuevo Despacho</span>
+          <span className="hidden xs:inline text-sm tracking-wide whitespace-nowrap">Nuevo Despacho</span>
         </button>
       </div>
     </header>
