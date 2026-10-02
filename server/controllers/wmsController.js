@@ -14,7 +14,10 @@ export async function listarDespachos(req, res, next) {
   if (!client) return next(new ApiError(500, 'Base de datos no disponible'));
 
   try {
-    const { rows: despachos } = await client.query('SELECT * FROM despachos ORDER BY fecha_despacho DESC, hora_salida DESC, id DESC');
+    const { rows: despachos } = await client.query(
+      'SELECT * FROM despachos WHERE usuario_creador = $1 ORDER BY fecha_despacho DESC, hora_salida DESC, id DESC',
+      [req.user.email]
+    );
     const { rows: items } = await client.query('SELECT * FROM despacho_items');
     const { rows: historial } = await client.query('SELECT * FROM historial_estados_despacho ORDER BY created_at ASC');
     const { rows: incidencias } = await client.query('SELECT * FROM incidencias_despacho WHERE resuelta = FALSE');
@@ -79,9 +82,9 @@ export async function crearDespacho(req, res, next) {
     const { rows: dRows } = await client.query(`
       INSERT INTO despachos (
         codigo_orden, codigo_factura_erp, cliente_nombre, cliente_direccion, cliente_ciudad,
-        transportadora, estado_actual, vehiculo_placa, valor_total, fecha_despacho, jornada, observaciones
+        transportadora, estado_actual, vehiculo_placa, valor_total, fecha_despacho, jornada, observaciones, usuario_creador
       ) VALUES (
-        $1, $2, $3, $4, $5, 'Flota Propia', 'PENDIENTE', $6, $7, $8, $9, $10
+        $1, $2, $3, $4, $5, 'Flota Propia', 'PENDIENTE', $6, $7, $8, $9, $10, $11
       ) RETURNING *
     `, [
       codigo_orden || `PVSW-${Math.floor(Math.random() * 10000)}`,
@@ -93,7 +96,8 @@ export async function crearDespacho(req, res, next) {
       valor_total || 0,
       fecha_despacho || new Date().toISOString(),
       jornada || 'AM',
-      observaciones || ''
+      observaciones || '',
+      req.user.email
     ]);
 
     const nuevoDespacho = dRows[0];
@@ -138,11 +142,11 @@ export async function cambiarEstadoDespacho(req, res, next) {
 
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
     const queryStr = isUUID 
-      ? 'SELECT * FROM despachos WHERE id = $1 LIMIT 1'
-      : 'SELECT * FROM despachos WHERE codigo_orden = $1 OR codigo_factura_erp = $1 LIMIT 1';
+      ? 'SELECT * FROM despachos WHERE id = $1 AND usuario_creador = $2 LIMIT 1'
+      : 'SELECT * FROM despachos WHERE (codigo_orden = $1 OR codigo_factura_erp = $1) AND usuario_creador = $2 LIMIT 1';
       
-    const { rows: findRows } = await client.query(queryStr, [id]);
-    if (findRows.length === 0) return next(new ApiError(404, 'Orden no encontrada.'));
+    const { rows: findRows } = await client.query(queryStr, [id, req.user.email]);
+    if (findRows.length === 0) return next(new ApiError(404, 'Orden no encontrada o no tienes permisos.'));
     const despacho = findRows[0];
     const estadoUpper = (nuevoEstado || '').toUpperCase();
     

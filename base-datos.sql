@@ -82,6 +82,7 @@ CREATE TABLE despachos (
     jornada VARCHAR(5) DEFAULT 'AM',
     observaciones TEXT,
     fecha_despacho DATE DEFAULT CURRENT_DATE,
+    usuario_creador VARCHAR(255) DEFAULT 'sistema@valenciana.com',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
