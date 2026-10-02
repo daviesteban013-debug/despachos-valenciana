@@ -14,8 +14,20 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 function getKardexAuthHeaders() {
   try {
     const u = JSON.parse(localStorage.getItem('wms_google_user'));
-    const token = u ? (u.token || u.credential) : null;
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    if (!u) return {};
+    const token = u.token || u.credential;
+    if (!token) return {};
+
+    // Validar expiración del JWT
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1]));
+      if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+        localStorage.removeItem('wms_google_user');
+        return {};
+      }
+    }
+    return { Authorization: `Bearer ${token}` };
   } catch (_) {
     return {};
   }

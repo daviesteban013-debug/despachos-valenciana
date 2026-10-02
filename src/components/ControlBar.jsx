@@ -42,11 +42,24 @@ export default function ControlBar({ compact = false }) {
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  // Lee el token de Google almacenado en sesión (mismo formato que WmsContext)
+  // Lee el token de Google almacenado en sesión, validando expiración
   const getGoogleToken = () => {
     try {
       const u = JSON.parse(localStorage.getItem('wms_google_user'));
-      return u ? (u.token || u.credential) : null;
+      if (!u) return null;
+      const token = u.token || u.credential;
+      if (!token) return null;
+
+      // Decodificar sin importar lib adicional (ya está en el bundle)
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+          localStorage.removeItem('wms_google_user');
+          return null;
+        }
+      }
+      return token;
     } catch (_) {
       return null;
     }

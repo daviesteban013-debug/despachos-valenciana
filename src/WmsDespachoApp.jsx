@@ -16,6 +16,42 @@ import { Layers, AlertOctagon, Undo2, History, Truck, Package, ShieldCheck } fro
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import GoogleAuthBadge from './components/GoogleAuthBadge';
 import logoValenciana from './assets/logo-valenciana.jpg';
+import { jwtDecode } from 'jwt-decode';
+
+/**
+ * Verifica si la sesión guardada en localStorage tiene un token JWT válido (no expirado).
+ * Si el token expiró, limpia la sesión para que el siguiente usuario vea la pantalla de login.
+ * Margen de seguridad: 5 minutos antes del vencimiento real.
+ */
+function getValidSavedUser() {
+  try {
+    const saved = localStorage.getItem('wms_google_user');
+    if (!saved) return null;
+
+    const userData = JSON.parse(saved);
+    if (!userData || !userData.token) {
+      localStorage.removeItem('wms_google_user');
+      return null;
+    }
+
+    const decoded = jwtDecode(userData.token);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const MARGIN_SEC = 5 * 60; // 5 minutos de margen
+
+    if (decoded.exp && decoded.exp - MARGIN_SEC < nowSec) {
+      // Token expirado o a punto de expirar → limpiar sesión
+      console.warn('[AUTH] Sesión expirada al cargar la app. Requiriendo nuevo login.');
+      localStorage.removeItem('wms_google_user');
+      return null;
+    }
+
+    return userData;
+  } catch (e) {
+    console.warn('[AUTH] Error validando sesión guardada, limpiando:', e.message);
+    localStorage.removeItem('wms_google_user');
+    return null;
+  }
+}
 
 function AppContent({ user, setUser }) {
   const { 
@@ -133,10 +169,7 @@ function AppContent({ user, setUser }) {
 }
 
 export default function WmsDespachoApp() {
-  const [user, setUser] = React.useState(() => {
-    const saved = localStorage.getItem('wms_google_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = React.useState(() => getValidSavedUser());
 
   // Client ID obtenido desde el portal de Google Cloud
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';

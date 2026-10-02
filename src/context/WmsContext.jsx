@@ -6,6 +6,7 @@ import {
   INITIAL_DEVOLUCIONES
 } from '../data/mockData';
 import { FLOTA_VEHICULOS } from '../data/flota';
+import { jwtDecode } from 'jwt-decode';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const WmsContext = createContext(null);
 
@@ -24,7 +25,20 @@ const initAudioContext = () => {
 const getGoogleToken = () => {
   try {
     const u = JSON.parse(localStorage.getItem('wms_google_user'));
-    return u ? (u.token || u.credential) : null;
+    if (!u) return null;
+    const token = u.token || u.credential;
+    if (!token) return null;
+
+    // Validar que el token no haya expirado
+    const decoded = jwtDecode(token);
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (decoded.exp && decoded.exp < nowSec) {
+      console.warn('[AUTH] Token expirado detectado en getGoogleToken. Limpiando sesión.');
+      localStorage.removeItem('wms_google_user');
+      return null;
+    }
+
+    return token;
   } catch (e) {
     return null;
   }

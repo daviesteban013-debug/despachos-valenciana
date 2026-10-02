@@ -1,4 +1,5 @@
 import { CATALOGO_PRODUCTOS_350, STOCK_INICIAL_POR_BODEGA } from '../data/catalogo350.js';
+import { jwtDecode } from 'jwt-decode';
 
 // Cliente de API HTTP hacia el backend Express en la nube / localhost
 const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/inventario`;
@@ -6,13 +7,24 @@ const LOCAL_STORAGE_STOCK_KEY = 'valenciana_inventario_stock_v1';
 const LOCAL_STORAGE_DIFERENCIAS_KEY = 'valenciana_inventario_diferencias_v1';
 
 /**
- * Devuelve los headers de autenticación con el token de Google almacenado.
- * Si el servidor responde 401, limpia la sesión y recarga.
+ * Devuelve el token de Google almacenado, validando que no haya expirado.
+ * Si el token expiró, limpia la sesión automáticamente.
  */
 function getGoogleToken() {
   try {
     const u = JSON.parse(localStorage.getItem('wms_google_user'));
-    return u ? (u.token || u.credential) : null;
+    if (!u) return null;
+    const token = u.token || u.credential;
+    if (!token) return null;
+
+    const decoded = jwtDecode(token);
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (decoded.exp && decoded.exp < nowSec) {
+      localStorage.removeItem('wms_google_user');
+      return null;
+    }
+
+    return token;
   } catch (_) {
     return null;
   }
