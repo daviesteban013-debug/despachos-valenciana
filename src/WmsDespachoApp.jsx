@@ -41,14 +41,14 @@ function AppContent({ user, setUser }) {
           onClick={() => setActiveDockTab('waves')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
             activeDockTab === 'waves'
-              ? 'bg-slate-900 text-white'
+              ? 'bg-slate-900 text-white shadow-sm'
               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <Layers className="h-4 w-4" />
           <span>Despachos</span>
           {kpis?.pendientesHoy > 0 && (
-            <span className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded-lg ${activeDockTab === 'waves' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-800'}`}>
+            <span className={`text-xs font-mono font-bold leading-none min-w-[20px] text-center px-1.5 py-0.5 rounded-lg ${activeDockTab === 'waves' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-800'}`}>
               {kpis.pendientesHoy}
             </span>
           )}
@@ -58,14 +58,14 @@ function AppContent({ user, setUser }) {
           onClick={() => setActiveDockTab('incidents')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
             activeDockTab === 'incidents'
-              ? 'bg-slate-900 text-white'
+              ? 'bg-slate-900 text-white shadow-sm'
               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <AlertOctagon className="h-4 w-4" />
           <span>Novedades</span>
           {kpis?.conIncidencia > 0 && (
-            <span className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded-lg ${activeDockTab === 'incidents' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-800'}`}>
+            <span className={`text-xs font-mono font-bold leading-none min-w-[20px] text-center px-1.5 py-0.5 rounded-lg ${activeDockTab === 'incidents' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-800'}`}>
               {kpis.conIncidencia}
             </span>
           )}
@@ -75,7 +75,7 @@ function AppContent({ user, setUser }) {
           onClick={() => setActiveDockTab('inventory')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
             activeDockTab === 'inventory'
-              ? 'bg-slate-900 text-white'
+              ? 'bg-slate-900 text-white shadow-sm'
               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
@@ -90,7 +90,7 @@ function AppContent({ user, setUser }) {
           <Undo2 className="h-4 w-4 text-amber-600" />
           <span>Devoluciones</span>
           {devoluciones?.length > 0 && (
-            <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded-lg bg-amber-100 text-amber-800">
+            <span className="text-xs font-mono font-bold leading-none min-w-[20px] text-center px-1.5 py-0.5 rounded-lg bg-amber-100 text-amber-800">
               {devoluciones.length}
             </span>
           )}
@@ -100,7 +100,7 @@ function AppContent({ user, setUser }) {
           onClick={() => setActiveDockTab('history')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
             activeDockTab === 'history'
-              ? 'bg-slate-900 text-white'
+              ? 'bg-slate-900 text-white shadow-sm'
               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
