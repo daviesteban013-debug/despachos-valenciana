@@ -114,7 +114,7 @@ export default function KanbanBoard() {
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
+                className={`flex items-center gap-1.5 px-3 min-h-[44px] rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
                   activeTab === id ? activeClass : 'text-slate-600 hover:bg-white/60'
                 }`}
               >
@@ -202,14 +202,14 @@ export default function KanbanBoard() {
       {/* ── GRID DE TARJETAS: ancho completo, scroll de pagina, sin scroll interno ── */}
       <div className="w-full max-w-7xl mx-auto px-4 pb-16">
         {despachosAMostrar.length === 0 ? (
-          <div className="h-64 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center space-y-3 mt-4 bg-white/50">
+          <div className="h-64 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center text-center space-y-3 mt-4 bg-white/60">
             {activeTab === 'pendientes' ? (
               <>
                 <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
                   <CheckCircle className="h-8 w-8 text-emerald-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-slate-700">\u00a1Todo despachado!</p>
+                  <p className="text-sm font-bold text-slate-700">¡Todo despachado!</p>
                   <p className="text-xs text-slate-500 mt-0.5">No hay órdenes pendientes por el momento.</p>
                 </div>
                 <p className="text-[11px] text-slate-400">Crea una nueva orden con el botón <span className="font-black text-slate-600">"+ Nuevo Despacho"</span></p>
