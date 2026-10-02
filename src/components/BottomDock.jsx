@@ -34,7 +34,7 @@ export default function BottomDock() {
           <div className="relative">
             <Layers className="h-5 w-5" />
             {kpis.pendientesHoy > 0 && (
-              <span className="absolute -top-1.5 -right-2.5 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-slate-800 text-white">
+              <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-mono font-bold px-1 rounded-full bg-slate-800 text-white">
                 {kpis.pendientesHoy}
               </span>
             )}
@@ -71,7 +71,7 @@ export default function BottomDock() {
           <div className="relative">
             <AlertOctagon className="h-5 w-5" />
             {kpis.conIncidencia > 0 && (
-              <span className="absolute -top-1.5 -right-2.5 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-[#E11D24] text-white animate-pulse">
+              <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-mono font-bold px-1 rounded-full bg-[#E11D24] text-white animate-pulse">
                 {kpis.conIncidencia}
               </span>
             )}
@@ -82,13 +82,13 @@ export default function BottomDock() {
         {/* Tab 3: Logística Inversa (Devoluciones) */}
         <button
           onClick={() => setReturnsDrawerOpen(true)}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-2xl transition-all h-12 text-slate-500 hover:text-slate-800 font-medium active:scale-95"
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-2xl transition-all h-12 text-slate-500 hover:text-slate-800 font-medium active:scale-95"
           aria-label="Abrir panel de Logística Inversa"
         >
           <div className="relative">
             <Undo2 className="h-5 w-5 text-amber-600" />
             {devoluciones?.length > 0 && (
-              <span className="absolute -top-1.5 -right-2.5 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-500 text-white">
+              <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-mono font-bold px-1 rounded-full bg-amber-500 text-white">
                 {devoluciones.length}
               </span>
             )}
@@ -99,7 +99,7 @@ export default function BottomDock() {
         {/* Tab 4: Historial Global */}
         <button
           onClick={() => setActiveDockTab('history')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-2xl transition-all h-12 active:scale-95 ${
+          className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-2xl transition-all h-12 active:scale-95 ${
             activeDockTab === 'history'
               ? 'text-[#E11D24] font-bold bg-red-50'
               : 'text-slate-500 hover:text-slate-800 font-medium'
