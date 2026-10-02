@@ -2,7 +2,10 @@ import { OAuth2Client } from 'google-auth-library';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
+const cleanVal = (v) => (v || '').trim().replace(/^["']|["']$/g, '');
+const GOOGLE_CLIENT_ID = cleanVal(process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID);
+
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // ─── Whitelist de autorización ─────────────────────────────────────────────
 // ALLOWED_EMAIL_DOMAIN: si está definida, el email debe terminar en @<dominio>
@@ -10,7 +13,7 @@ const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 //   (útil para contratistas externos sin dominio corporativo)
 // En producción, si NINGUNA está configurada el servidor aborta el arranque.
 
-const ALLOWED_DOMAIN = (process.env.ALLOWED_EMAIL_DOMAIN || '').trim().toLowerCase();
+const ALLOWED_DOMAIN = (process.env.ALLOWED_EMAIL_DOMAIN || '').trim().toLowerCase().replace(/^@/, '');
 const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '')
   .split(',')
   .map(e => e.trim().toLowerCase())
@@ -65,9 +68,15 @@ export const requireWmsAuth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     // 1. Validar el token con Google (firma + audiencia)
+    const audienceList = [
+      GOOGLE_CLIENT_ID,
+      cleanVal(process.env.VITE_GOOGLE_CLIENT_ID),
+      cleanVal(process.env.GOOGLE_CLIENT_ID)
+    ].filter(Boolean);
+
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: process.env.VITE_GOOGLE_CLIENT_ID,
+      audience: audienceList.length > 0 ? (audienceList.length === 1 ? audienceList[0] : audienceList) : undefined,
     });
 
     const payload = ticket.getPayload();
@@ -93,6 +102,9 @@ export const requireWmsAuth = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Error verificando token de Google en Backend:', error.message);
-    return res.status(401).json({ error: 'Token inválido o expirado.' });
+    return res.status(401).json({ 
+      error: 'Token inválido o expirado.',
+      details: error.message 
+    });
   }
 };

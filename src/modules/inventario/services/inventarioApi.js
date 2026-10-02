@@ -41,7 +41,7 @@ async function authFetch(url, options = {}) {
   if (res.status === 401) {
     if (localStorage.getItem('wms_google_user')) {
       localStorage.removeItem('wms_google_user');
-      window.location.reload();
+      window.dispatchEvent(new CustomEvent('wms:auth-expired'));
     }
   }
   return res;

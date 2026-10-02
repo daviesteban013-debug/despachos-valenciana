@@ -53,11 +53,11 @@ const apiFetch = async (url, options = {}) => {
   const response = await fetch(url, { ...options, headers });
   
   if (response.status === 401) {
-    // Token inválido o expirado: limpiar sesión y recargar
+    // Token inválido o expirado: limpiar sesión sin recargar abruptamente la página
     const wasLoggedIn = !!localStorage.getItem('wms_google_user');
     if (wasLoggedIn) {
       localStorage.removeItem('wms_google_user');
-      window.location.reload();
+      window.dispatchEvent(new CustomEvent('wms:auth-expired'));
     }
   }
 

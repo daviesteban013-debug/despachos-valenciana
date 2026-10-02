@@ -173,6 +173,18 @@ app.get('/api/health', (req, res) => {
 // ──────────────────────────────────────────────────────────────────────────────
 app.use('/api', requireWmsAuth);
 
+// Verificación de credenciales / sesión del usuario autenticado
+app.get('/api/auth/verify', (req, res) => {
+  res.json({
+    ok: true,
+    user: {
+      name: req.user.name,
+      email: req.user.email,
+      picture: req.user.picture
+    }
+  });
+});
+
 // ──────────────────────────────────────────────────────────────────────────────
 // RUTAS DE GESTIÓN DE INVENTARIO
 // ──────────────────────────────────────────────────────────────────────────────

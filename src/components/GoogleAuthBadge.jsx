@@ -21,11 +21,19 @@ export default function GoogleAuthBadge({ user, setUser }) {
       const decoded = jwtDecode(credentialResponse.credential);
 
       // Verificar con el backend ANTES de guardar al usuario en estado local.
-      // Así detectamos si la cuenta no está autorizada (403) antes de entrar al panel.
-      const res = await fetch(`${API_URL}/api/despachos`, {
+      // Usamos el endpoint dedicado /api/auth/verify (con fallback a /api/despachos)
+      let res = await fetch(`${API_URL}/api/auth/verify`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${credentialResponse.credential}` }
       });
+
+      if (res.status === 404) {
+        // Fallback por si el backend remoto aún no tiene /api/auth/verify
+        res = await fetch(`${API_URL}/api/despachos`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${credentialResponse.credential}` }
+        });
+      }
 
       if (res.status === 403) {
         // Cuenta de Google válida pero no autorizada por el administrador
@@ -33,8 +41,9 @@ export default function GoogleAuthBadge({ user, setUser }) {
         return;
       }
 
-      if (res.status === 401) {
-        // Token inválido o expirado (no debería ocurrir con un token recién emitido)
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Backend rechazó el token de Google:', res.status, errorData);
         setAuthError('401');
         return;
       }

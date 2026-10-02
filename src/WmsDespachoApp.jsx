@@ -171,8 +171,17 @@ function AppContent({ user, setUser }) {
 export default function WmsDespachoApp() {
   const [user, setUser] = React.useState(() => getValidSavedUser());
 
+  React.useEffect(() => {
+    const handleAuthExpired = () => {
+      console.warn('[AUTH] Evento wms:auth-expired recibido. Cerrando sesión.');
+      setUser(null);
+    };
+    window.addEventListener('wms:auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('wms:auth-expired', handleAuthExpired);
+  }, []);
+
   // Client ID obtenido desde el portal de Google Cloud
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  const clientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim().replace(/^["']|["']$/g, '');
 
   if (!clientId) {
     return (
