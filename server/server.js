@@ -48,12 +48,12 @@ dotenv.config();
 // ──────────────────────────────────────────────────────────────────────────────
 const rawCorsOrigins = (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
 if (process.env.NODE_ENV !== 'production') {
-  rawCorsOrigins.push('http://localhost:5173');
+  rawCorsOrigins.push('http://localhost:5173', 'http://localhost:3000');
 }
 if (rawCorsOrigins.length === 0 && process.env.NODE_ENV === 'production') {
   console.warn('[CORS] ⚠️  CORS_ORIGINS no definida en producción. Todas las peticiones cross-origin serán bloqueadas.');
 }
-const allowedOrigins = rawCorsOrigins;
+const allowedOrigins = [...new Set(rawCorsOrigins)];
 
 const corsOptions = {
   origin: (origin, callback) => {

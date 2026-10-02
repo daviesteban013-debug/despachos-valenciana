@@ -31,3 +31,4 @@ server/.env
 
 server/config/google-service-account.json
 *.timestamp-*
+.qoder

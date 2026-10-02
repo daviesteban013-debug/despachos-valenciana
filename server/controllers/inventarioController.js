@@ -170,9 +170,23 @@ export async function listarDiferencias(req, res, next) {
       return next(new ApiError(403, 'Acceso denegado. Solo administradores pueden ver diferencias de inventario.'));
     }
 
-    const { rows: pendientes } = await client.query("SELECT * FROM diferencias_inventario WHERE estado = 'pendiente' ORDER BY created_at DESC");
-    const { rows: historial } = await client.query("SELECT * FROM diferencias_inventario WHERE estado != 'pendiente' ORDER BY resuelto_en DESC");
-    const { rows: importaciones } = await client.query("SELECT * FROM importaciones_inventario ORDER BY fecha DESC");
+    const { rows: pendientes } = await client.query(`
+      SELECT d.*, p.nombre AS producto_nombre, b.nombre AS bodega_nombre
+      FROM diferencias_inventario d
+      LEFT JOIN productos p ON d.sku = p.sku
+      LEFT JOIN bodegas b ON d.bodega_id = b.id
+      WHERE d.estado = 'pendiente'
+      ORDER BY d.id DESC
+    `);
+    const { rows: historial } = await client.query(`
+      SELECT d.*, p.nombre AS producto_nombre, b.nombre AS bodega_nombre
+      FROM diferencias_inventario d
+      LEFT JOIN productos p ON d.sku = p.sku
+      LEFT JOIN bodegas b ON d.bodega_id = b.id
+      WHERE d.estado != 'pendiente'
+      ORDER BY d.resuelto_en DESC NULLS LAST, d.id DESC
+    `);
+    const { rows: importaciones } = await client.query("SELECT * FROM importaciones_inventario ORDER BY id DESC");
 
     return res.json({
       pendientes,
