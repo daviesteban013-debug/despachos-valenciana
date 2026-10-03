@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import ExcelJS from 'exceljs';
 import { sincronizarConGoogleDrive } from '../services/googleDriveService.js';
 import dotenv from 'dotenv';
@@ -101,6 +102,12 @@ async function generarPlantillaVirgen() {
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
+
+  // Guardar copia local de fallback limpia
+  const localPath = path.resolve('server/data/plantilla_despachos_vehiculos.xlsx');
+  fs.writeFileSync(localPath, buffer);
+  console.log(`✅ Plantilla virgen local guardada en: ${localPath}`);
+
   console.log('Subiendo plantilla virgen a Google Drive...');
   
   const targetName = process.env.NOMBRE_ARCHIVO_EXCEL || 'CONTROL ENTREGAS AGOSTO 2026.xlsx';
