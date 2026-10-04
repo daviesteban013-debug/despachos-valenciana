@@ -23,15 +23,17 @@ export default function DispatchCard({ despacho }) {
     reintentarSyncDrive,
     restaurarACola,
     setIncidentModalTarget,
+    flotaVehiculos
   } = useWms();
 
+  const vehiculosLista = flotaVehiculos || FLOTA_VEHICULOS;
   const [placaSeleccionada, setPlacaSeleccionada] = useState(
-    despacho.vehiculo_placa || FLOTA_VEHICULOS[0]
+    despacho.vehiculo_placa || vehiculosLista[0]
   );
 
   useEffect(() => {
-    setPlacaSeleccionada(despacho.vehiculo_placa || FLOTA_VEHICULOS[0]);
-  }, [despacho.vehiculo_placa]);
+    setPlacaSeleccionada(despacho.vehiculo_placa || vehiculosLista[0]);
+  }, [despacho.vehiculo_placa, vehiculosLista]);
 
   const [errorSinPlaca, setErrorSinPlaca] = useState(false);
   const [reintentando, setReintentando] = useState(false);
@@ -294,7 +296,7 @@ export default function DispatchCard({ despacho }) {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   title="Cambiar vehiculo asignado"
                 >
-                  {FLOTA_VEHICULOS.map((v) => (
+                  {vehiculosLista.map((v) => (
                     <option key={v} value={v}>{v}</option>
                   ))}
                 </select>

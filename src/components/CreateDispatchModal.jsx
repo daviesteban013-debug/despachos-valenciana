@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import ProductAutocomplete from './ProductAutocomplete';
 import { FLOTA_VEHICULOS } from '../data/flota';
+import AddVehicleModal from './AddVehicleModal';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -64,10 +65,11 @@ function useDebounce(value, delay) {
 }
 
 export default function CreateDispatchModal({ isOpen, onClose }) {
-  const { crearNuevoDespacho, showToast } = useWms();
+  const { crearNuevoDespacho, showToast, flotaVehiculos } = useWms();
   const [form, setForm]                 = useState({ ...INITIAL_FORM });
   const [errors, setErrors]             = useState({});
   const [selectedItems, setSelectedItems] = useState([]);
+  const [addVehicleOpen, setAddVehicleOpen] = useState(false);
   const facturaInputRef = useRef(null);
   const sugerenciasRef  = useRef(null);
 
@@ -521,16 +523,38 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
 
           {/* ── 6. VEHÍCULO ── */}
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
-              <Truck className="h-3.5 w-3.5 text-slate-400" />
-              Vehículo Asignado
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider">
+                <Truck className="h-3.5 w-3.5 text-slate-400" />
+                Vehículo Asignado
+              </label>
+              <button
+                type="button"
+                onClick={() => setAddVehicleOpen(true)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                title="Agregar nuevo vehículo por placa y crear hoja en Excel"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>+ Agregar vehículo</span>
+              </button>
+            </div>
             <select
               value={form.vehiculo_placa}
-              onChange={e => handleChange('vehiculo_placa', e.target.value)}
+              onChange={e => {
+                if (e.target.value === '__NUEVO_VEHICULO__') {
+                  setAddVehicleOpen(true);
+                } else {
+                  handleChange('vehiculo_placa', e.target.value);
+                }
+              }}
               className="w-full h-11 px-3 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#E11D24] transition-all"
             >
-              {FLOTA_VEHICULOS.map(v => <option key={v} value={v}>{v}</option>)}
+              {(flotaVehiculos || FLOTA_VEHICULOS).map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+              <option value="__NUEVO_VEHICULO__" className="text-red-600 font-bold bg-red-50">
+                + Agregar otro vehículo por placa...
+              </option>
             </select>
           </div>
 
@@ -669,6 +693,15 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
         </div>
 
       </div>
+
+      {/* Modal para agregar vehículo por placa con creación automática en Excel */}
+      <AddVehicleModal
+        isOpen={addVehicleOpen}
+        onClose={() => setAddVehicleOpen(false)}
+        onVehicleAdded={(nuevaPlaca) => {
+          handleChange('vehiculo_placa', nuevaPlaca);
+        }}
+      />
     </div>
   );
 }

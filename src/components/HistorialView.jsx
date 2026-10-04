@@ -49,7 +49,8 @@ function parsearFechaMilisegundos(fechaStr, horaStr = '00:00') {
 }
 
 export default function HistorialView() {
-  const { despachos } = useWms();
+  const { despachos, flotaVehiculos } = useWms();
+  const vehiculosLista = flotaVehiculos || FLOTA_VEHICULOS;
 
   const [dateRange, setDateRange] = useState('7d');
   const [customStartDate, setCustomStartDate] = useState('');
@@ -297,7 +298,7 @@ export default function HistorialView() {
               className="w-full appearance-none bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-xl px-3.5 py-2.5 pr-9 text-sm font-semibold text-slate-800 transition-all cursor-pointer font-mono"
             >
               <option value="TODOS">Todos los vehículos</option>
-              {FLOTA_VEHICULOS.map(v => (
+              {vehiculosLista.map(v => (
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>

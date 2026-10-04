@@ -58,6 +58,7 @@ export default function GoogleAuthBadge({ user, setUser }) {
       setUser(userData);
       // Guardamos en localStorage para persistencia básica
       localStorage.setItem('wms_google_user', JSON.stringify(userData));
+      window.dispatchEvent(new CustomEvent('wms:auth-login'));
     } catch (error) {
       console.error('Error decodificando el token de Google:', error);
       setAuthError('401');

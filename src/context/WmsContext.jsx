@@ -107,6 +107,94 @@ export function WmsProvider({ children }) {
     }
   }, []);
 
+  const [flotaVehiculos, setFlotaVehiculos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wms_flota_vehiculos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return Array.from(new Set([...FLOTA_VEHICULOS, ...parsed]));
+        }
+      }
+    } catch (_) {}
+    return FLOTA_VEHICULOS;
+  });
+
+  const fetchVehiculos = useCallback(async () => {
+    if (!getGoogleToken()) return;
+    try {
+      const res = await apiFetch(`${API_URL}/api/vehiculos`);
+      if (res.ok) {
+        const data = await res.json();
+        const placas = Array.isArray(data)
+          ? data.map(v => (typeof v === 'string' ? v : v.placa)).filter(Boolean)
+          : [];
+        if (placas.length > 0) {
+          const merged = Array.from(new Set([...FLOTA_VEHICULOS, ...placas]));
+          setFlotaVehiculos(merged);
+          try {
+            localStorage.setItem('wms_flota_vehiculos', JSON.stringify(merged));
+          } catch (_) {}
+        }
+      }
+    } catch (err) {
+      console.warn('[VEHICULOS] Error al obtener vehículos:', err.message);
+    }
+  }, []);
+
+  const agregarNuevoVehiculo = async ({ placa, conductor = '', modelo = '', identificador = '' }) => {
+    if (!placa || !placa.trim()) {
+      showToast('La placa del vehículo es requerida.', 'warning');
+      return { success: false, error: 'Placa requerida' };
+    }
+
+    const placaLimpia = placa.trim().toUpperCase();
+    const conductorLimpio = (conductor || '').trim().toUpperCase();
+    const identificadorFinal = (identificador || (conductorLimpio ? `${placaLimpia} ${conductorLimpio}` : placaLimpia)).trim().toUpperCase();
+
+    try {
+      const res = await apiFetch(`${API_URL}/api/vehiculos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          placa: placaLimpia,
+          conductor: conductorLimpio,
+          modelo: (modelo || '').trim(),
+          identificador: identificadorFinal
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        const nombreVehiculo = data.vehiculo?.placa || identificadorFinal;
+        setFlotaVehiculos(prev => {
+          const next = Array.from(new Set([...prev, nombreVehiculo]));
+          try {
+            localStorage.setItem('wms_flota_vehiculos', JSON.stringify(next));
+          } catch (_) {}
+          return next;
+        });
+        showToast(`✅ Vehículo [${nombreVehiculo}] agregado y creado en plantilla Excel (${data.destino || 'Google Drive'}).`, 'success');
+        return { success: true, vehiculo: nombreVehiculo, destino: data.destino, data };
+      } else {
+        throw new Error(data.error || 'Error al registrar vehículo en el servidor');
+      }
+    } catch (err) {
+      console.warn('[VEHICULOS] Fallback local al agregar vehículo:', err.message);
+      // Fallback local en caso de fallo o modo offline
+      setFlotaVehiculos(prev => {
+        const next = Array.from(new Set([...prev, identificadorFinal]));
+        try {
+          localStorage.setItem('wms_flota_vehiculos', JSON.stringify(next));
+        } catch (_) {}
+        return next;
+      });
+      showToast(`⚠️ Vehículo [${identificadorFinal}] guardado localmente (${err.message}).`, 'info');
+      return { success: true, vehiculo: identificadorFinal, offline: true };
+    }
+  };
+
   // Función de reintento automático para despachos PENDIENTE_DE_SYNC
   const reintentarDespachosPendientes = useCallback(async () => {
     if (retryingRef.current) return;
@@ -162,7 +250,10 @@ export function WmsProvider({ children }) {
     if (data.action && data.action.includes('DEVOLUCION')) {
       fetchDevoluciones();
     }
-  }, [fetchDespachos, fetchDevoluciones]);
+    if (data.action && (data.action.includes('VEHICULO') || data.action === 'VEHICULO_CREADO')) {
+      fetchVehiculos();
+    }
+  }, [fetchDespachos, fetchDevoluciones, fetchVehiculos]);
 
   // Hook de Sockets
   useWmsSockets(handleWebSocketEvent, API_URL);
@@ -170,6 +261,7 @@ export function WmsProvider({ children }) {
   useEffect(() => {
     fetchDespachos();
     fetchDevoluciones();
+    fetchVehiculos();
 
     // ── Reintento automático en background ──────────────────────────────────
     // 1. Cuando el navegador recupera conexión a Internet
@@ -196,11 +288,20 @@ export function WmsProvider({ children }) {
       }
     }, 30000);
 
+    // 3. Cuando el usuario inicia sesión
+    const handleAuthChange = () => {
+      fetchDespachos();
+      fetchDevoluciones();
+      fetchVehiculos();
+    };
+    window.addEventListener('wms:auth-login', handleAuthChange);
+
     return () => {
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('wms:auth-login', handleAuthChange);
       clearInterval(healthInterval);
     };
-  }, [fetchDespachos, fetchDevoluciones, reintentarDespachosPendientes, backendOnline]);
+  }, [fetchDespachos, fetchDevoluciones, fetchVehiculos, reintentarDespachosPendientes, backendOnline]);
 
   // Navegación Bottom Dock: 'waves' (Despachos) | 'incidents' (Novedades)
   const [activeDockTab, setActiveDockTab] = useState('waves');
@@ -267,11 +368,11 @@ export function WmsProvider({ children }) {
   // MODELO WMS DE 2 ESTADOS (PENDIENTE / DESPACHADO) + AUTOMATIZACIÓN ONEDRIVE
   // ============================================================================
 
-  // Asignar vehículo validando contra las 4 placas fijas
+  // Asignar vehículo validando contra las placas activas
   const asignarVehiculo = (despachoId, placa) => {
     const placaNormalizada = (placa || '').trim().toUpperCase();
-    if (!FLOTA_VEHICULOS.map(v => v.trim().toUpperCase()).includes(placaNormalizada)) {
-      showToast(`Placa no permitida: "${placa}". Placas válidas: ${FLOTA_VEHICULOS.join(', ')}`, 'warning');
+    if (!flotaVehiculos.map(v => v.trim().toUpperCase()).includes(placaNormalizada)) {
+      showToast(`Placa no permitida: "${placa}". Placas válidas: ${flotaVehiculos.join(', ')}`, 'warning');
       return;
     }
 
@@ -338,9 +439,9 @@ export function WmsProvider({ children }) {
 
     const placaFinal = (vehiculoPlacaOverride || targetDespacho.vehiculo_placa || '').trim().toUpperCase();
 
-    if (!placaFinal || !FLOTA_VEHICULOS.map(v => v.trim().toUpperCase()).includes(placaFinal)) {
+    if (!placaFinal || !flotaVehiculos.map(v => v.trim().toUpperCase()).includes(placaFinal)) {
       playBeep(440, 'sawtooth');
-      showToast(`Debe seleccionar uno de los vehículos permitidos (${FLOTA_VEHICULOS.join(', ')}) para despachar.`, 'warning');
+      showToast(`Debe seleccionar uno de los vehículos permitidos (${flotaVehiculos.join(', ')}) para despachar.`, 'warning');
       return false;
     }
 
@@ -622,7 +723,7 @@ export function WmsProvider({ children }) {
     const cliente = (payload.cliente_nombre || '').trim();
     const direccion = (payload.direccion_entrega || '').trim();
     const valor = Number(payload.valor_factura) || 0;
-    const vehiculo = payload.vehiculo_placa || FLOTA_VEHICULOS[0];
+    const vehiculo = payload.vehiculo_placa || flotaVehiculos[0] || FLOTA_VEHICULOS[0];
     const jornada = payload.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM');
     const bodega = payload.bodega_id || '01';
     const obs = (payload.observaciones || '').trim();
@@ -758,7 +859,7 @@ export function WmsProvider({ children }) {
     setDespachos((prev) =>
       prev.map((orden) => {
         if (orden.id === despachoId) {
-          const placa = orden.vehiculo_placa || FLOTA_VEHICULOS[0];
+          const placa = orden.vehiculo_placa || flotaVehiculos[0] || FLOTA_VEHICULOS[0];
           return {
             ...orden,
             estado: 'DESPACHADO',
@@ -829,7 +930,9 @@ export function WmsProvider({ children }) {
         devoluciones,
         bodegas: [],
         rutasVehiculos: [],
-        flotaVehiculos: FLOTA_VEHICULOS,
+        flotaVehiculos,
+        fetchVehiculos,
+        agregarNuevoVehiculo,
         activeTurno,
         setActiveTurno,
         activeDockTab,

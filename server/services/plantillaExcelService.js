@@ -132,9 +132,9 @@ export async function registrarDespachoEnPlantilla({
     throw new Error('Debe especificar el vehículo asignado para el registro en la plantilla.');
   }
 
-  const vehiculoNormalizado = vehiculo.trim();
-  if (!FLOTA_VEHICULOS.map(v => v.trim()).includes(vehiculoNormalizado)) {
-    throw new Error(`Vehículo "${vehiculoNormalizado}" no reconocido en la flota. Vehículos permitidos: ${FLOTA_VEHICULOS.join(', ')}`);
+  const vehiculoNormalizado = (vehiculo || '').trim().toUpperCase();
+  if (!vehiculoNormalizado) {
+    throw new Error('Debe especificar un vehículo válido para el registro en la plantilla.');
   }
 
   // Formato de fecha para el bloque (DD/MM/YYYY)
@@ -166,16 +166,18 @@ export async function registrarDespachoEnPlantilla({
     await workbook.xlsx.load(currentBuffer);
 
     // 3. Ubicar o crear la hoja correspondiente
+    const nombreHoja = sanitizarNombreHojaExcel(vehiculoNormalizado);
     let worksheet = null;
     workbook.eachSheet((s) => {
-      if (s.name.trim() === vehiculoNormalizado) {
+      const sName = s.name.trim().toUpperCase();
+      if (sName === vehiculoNormalizado || sName === nombreHoja) {
         worksheet = s;
       }
     });
 
     if (!worksheet) {
       console.warn(`⚠️ Hoja para vehículo ${vehiculoNormalizado} no existía. Creándola...`);
-      worksheet = workbook.addWorksheet(vehiculoNormalizado, { views: [{ showGridLines: true }] });
+      worksheet = workbook.addWorksheet(nombreHoja, { views: [{ showGridLines: true }] });
       worksheet.columns = ANCHOS_COLUMNAS_8;
       inyectarMembreteInstitucional(worksheet, `Fecha: ${fechaBloqueStr}`, vehiculoNormalizado);
     } else {
@@ -323,6 +325,91 @@ export async function registrarDespachoEnPlantilla({
       },
       destino: resultadoGuardado.destino,
       totalFilasHoja: worksheet.rowCount
+    };
+  });
+}
+
+/**
+ * Sanitiza el nombre de la hoja según las reglas estrictas de Excel:
+ * - Máximo 31 caracteres
+ * - Sin caracteres prohibidos: \ / ? * [ ] :
+ */
+export function sanitizarNombreHojaExcel(nombre) {
+  if (!nombre) return 'VEHICULO';
+  const limpio = String(nombre)
+    .replace(/[\\/?*[\]:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return limpio.substring(0, 31).trim() || 'VEHICULO';
+}
+
+/**
+ * Agrega una nueva hoja al archivo Excel correspondiente a un nuevo vehículo,
+ * inyectando el membrete institucional y formato estándar.
+ */
+export async function agregarVehiculoEnPlantilla(vehiculoIdentificador) {
+  if (!vehiculoIdentificador || !vehiculoIdentificador.trim()) {
+    throw new Error('Debe especificar la placa o identificador del vehículo.');
+  }
+
+  const vehiculoNormalizado = vehiculoIdentificador.trim().toUpperCase();
+  const nombreHoja = sanitizarNombreHojaExcel(vehiculoNormalizado);
+
+  return enqueue(async () => {
+    // 1. Obtener buffer actual (Google Drive o local)
+    const currentBuffer = await obtenerBufferPlantilla();
+
+    // 2. Cargar con ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(currentBuffer);
+
+    // 3. Verificar si la hoja ya existe
+    let worksheet = null;
+    workbook.eachSheet((s) => {
+      const sName = s.name.trim().toUpperCase();
+      if (sName === vehiculoNormalizado || sName === nombreHoja) {
+        worksheet = s;
+      }
+    });
+
+    if (worksheet) {
+      console.log(`ℹ️ La hoja para el vehículo [${nombreHoja}] ya existe en la plantilla Excel.`);
+      return {
+        success: true,
+        placa: nombreHoja,
+        yaExiste: true,
+        destino: 'Excel existente'
+      };
+    }
+
+    // 4. Crear la nueva hoja con membrete institucional
+    worksheet = workbook.addWorksheet(nombreHoja, { views: [{ showGridLines: true }] });
+    worksheet.columns = ANCHOS_COLUMNAS_8;
+
+    const now = new Date();
+    const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    inyectarMembreteInstitucional(worksheet, `Fecha: ${todayStr}`, vehiculoNormalizado);
+
+    // 5. Generar buffer actualizado y guardar (Google Drive + Local)
+    const updatedBuffer = await workbook.xlsx.writeBuffer();
+    const resGuardado = await subirBufferPlantilla(Buffer.from(updatedBuffer));
+
+    // Asegurar archivo local también
+    if (fs.existsSync(DATA_DIR)) {
+      try {
+        fs.writeFileSync(LOCAL_TEMPLATE_PATH, Buffer.from(updatedBuffer));
+      } catch (errLocal) {
+        console.warn('⚠️ No se pudo escribir copia local de plantilla:', errLocal.message);
+      }
+    }
+
+    console.log(`✅ Hoja de vehículo [${vehiculoNormalizado}] agregada con éxito a la plantilla Excel (${resGuardado.destino})`);
+
+    return {
+      success: true,
+      placa: vehiculoNormalizado,
+      destino: resGuardado.destino,
+      yaExiste: false
     };
   });
 }

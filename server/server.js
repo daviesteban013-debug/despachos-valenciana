@@ -40,6 +40,11 @@ import {
   estadisticasKardex,
   limpiarKardex
 } from './controllers/kardexController.js';
+import {
+  listarVehiculosController,
+  crearVehiculoController
+} from './controllers/vehiculosController.js';
+import { inicializarTablaVehiculos } from './services/vehiculosService.js';
 
 dotenv.config();
 
@@ -223,6 +228,12 @@ app.get('/api/devoluciones', listarDevoluciones);
 app.patch('/api/devoluciones/:id/procesar', procesarDevolucion);
 
 // ──────────────────────────────────────────────────────────────────────────────
+// RUTAS DE GESTIÓN DE VEHÍCULOS / FLOTA WMS (SYNC EXCEL)
+// ──────────────────────────────────────────────────────────────────────────────
+app.get('/api/vehiculos', listarVehiculosController);
+app.post('/api/vehiculos', crearVehiculoController);
+
+// ──────────────────────────────────────────────────────────────────────────────
 // RUTAS DE KARDEX ERP
 // ──────────────────────────────────────────────────────────────────────────────
 // Rutas de lectura: cualquier usuario autenticado
@@ -253,6 +264,7 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`📡 Endpoints WMS Seguros en http://localhost:${PORT}/api/despachos`);
     console.log(`🔒 CORS Origins: ${allowedOrigins.join(', ') || '(ninguno en producción)'}`);
     console.log(`🔒 Admin Emails configurados: ${ADMIN_EMAILS.length}`);
+    inicializarTablaVehiculos().catch(e => console.warn('[VEHICULOS] Init warning:', e.message));
   });
 }
 

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "b92e948f-e991-4fdd-bd94-f532346ccd82",
+    "placa": "WDO-069 ANDERSON",
+    "conductor": "ANDERSON",
+    "modelo": null,
+    "activo": true,
+    "created_at": "2026-10-04T17:44:45.216Z"
+  },
+  {
+    "id": "026386c0-205c-4f5e-b681-b9550d3246f5",
+    "placa": "TJP-653 GRIS",
+    "conductor": "GRIS",
+    "modelo": null,
+    "activo": true,
+    "created_at": "2026-10-04T17:44:45.376Z"
+  },
+  {
+    "id": "7d2cb4c4-ed89-46c8-812a-6838903aec6d",
+    "placa": "A20BB5E JEFERSON",
+    "conductor": "JEFERSON",
+    "modelo": null,
+    "activo": true,
+    "created_at": "2026-10-04T17:44:45.534Z"
+  },
+  {
+    "id": "d0d6b8c2-df83-4fe8-aaa8-172c3d029eff",
+    "placa": "WDP-097 JESUS",
+    "conductor": "JESUS",
+    "modelo": null,
+    "activo": true,
+    "created_at": "2026-10-04T17:44:45.693Z"
+  },
+  {
+    "id": "564c2c23-ffbe-4fa4-a6c8-0325c517a2b6",
+    "placa": "XYZ-999 PRUEBA",
+    "conductor": "PRUEBA",
+    "modelo": "",
+    "activo": true,
+    "created_at": "2026-10-04T17:45:08.726Z"
+  }
+]

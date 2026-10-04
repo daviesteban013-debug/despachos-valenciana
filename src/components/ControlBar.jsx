@@ -6,8 +6,10 @@ import {
   SlidersHorizontal,
   FileSpreadsheet,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Truck
 } from 'lucide-react';
+import AddVehicleModal from './AddVehicleModal';
 
 const CARRIERS = ['TODAS', 'Flota Propia', 'Coordinadora', 'TCC', 'Servientrega'];
 const ZONES = ['TODAS', 'Atalaya Occidental', 'Los Patios & Centro', 'Zona Industrial El Salado', 'Reparto Express Urbano'];
@@ -34,6 +36,7 @@ export default function ControlBar({ compact = false }) {
   } = useWms();
 
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [addVehicleOpen, setAddVehicleOpen] = useState(false);
 
   // Kardex import state
   const [kardexCargando, setKardexCargando] = useState(false);
@@ -176,6 +179,17 @@ export default function ControlBar({ compact = false }) {
         </span>
       </button>
 
+      {/* Boton Agregar Vehiculo a Flota y Excel */}
+      <button
+        onClick={() => setAddVehicleOpen(true)}
+        aria-label="Agregar vehículo a la flota y plantilla Excel"
+        title="Agregar nuevo vehículo por placa (Crea hoja en Excel automáticamente)"
+        className="h-11 px-3 rounded-xl border border-slate-300/80 bg-white/90 backdrop-blur-sm text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 text-xs font-bold transition-all shrink-0 active:scale-95 shadow-sm cursor-pointer"
+      >
+        <Truck className="h-4 w-4 text-red-600" />
+        <span className="hidden md:inline">+ Vehículo</span>
+      </button>
+
       {/* Boton Filtros Rapidos */}
       <div className="relative">
         <button
@@ -271,6 +285,12 @@ export default function ControlBar({ compact = false }) {
           </div>
         )}
       </div>
+
+      {/* Modal para agregar vehículo y crear hoja en Excel */}
+      <AddVehicleModal
+        isOpen={addVehicleOpen}
+        onClose={() => setAddVehicleOpen(false)}
+      />
     </div>
   );
 

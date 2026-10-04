@@ -20,9 +20,11 @@ export default function DispatchDetailDrawer() {
     setSelectedDespachoId, 
     despacharOrden, 
     marcarComoDespachado,
-    setIncidentModalTarget
+    setIncidentModalTarget,
+    flotaVehiculos
   } = useWms();
 
+  const vehiculosLista = flotaVehiculos || FLOTA_VEHICULOS;
   const [activeTab, setActiveTab] = useState('items'); // 'items' | 'timeline' | 'route'
   const [showTirilla, setShowTirilla] = useState(false);
 
@@ -31,7 +33,7 @@ export default function DispatchDetailDrawer() {
   const isDespachado = (selectedDespacho.estado || selectedDespacho.estado_actual) === 'DESPACHADO';
   const factura = selectedDespacho.numero_factura || selectedDespacho.codigo_factura_erp || selectedDespacho.codigo_orden;
   const direccion = selectedDespacho.direccion_entrega || selectedDespacho.zona_entrega || 'Sin dirección registrada';
-  const cuadrilla = selectedDespacho.vehiculo_placa || FLOTA_VEHICULOS[0];
+  const cuadrilla = selectedDespacho.vehiculo_placa || vehiculosLista[0];
 
   return (
     <>
@@ -318,13 +320,13 @@ export default function DispatchDetailDrawer() {
             {!isDespachado ? (
               <button
                 onClick={() => {
-                  despacharOrden(selectedDespacho.id, selectedDespacho.vehiculo_placa || FLOTA_VEHICULOS[0]);
+                  despacharOrden(selectedDespacho.id, selectedDespacho.vehiculo_placa || vehiculosLista[0]);
                   setSelectedDespachoId(null);
                 }}
                 className="flex-1 min-h-[44px] bg-[#E11D24] hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <Truck className="h-4 w-4" />
-                <span>Despachar ({selectedDespacho.vehiculo_placa || FLOTA_VEHICULOS[0]})</span>
+                <span>Despachar ({selectedDespacho.vehiculo_placa || vehiculosLista[0]})</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             ) : (
