@@ -31,7 +31,8 @@ import {
   cargarPlantillaReferenciaController,
   listarDevoluciones,
   procesarDevolucion,
-  syncExcelDirecto
+  syncExcelDirecto,
+  eliminarDespacho
 } from './controllers/wmsController.js';
 import {
   importarKardex,
@@ -215,6 +216,7 @@ app.get('/api/despachos', listarDespachos);
 app.post('/api/despachos', crearDespacho);
 app.get('/api/despachos/exportar-plantilla', exportarPlantillaExcel);
 app.patch('/api/despachos/:id/estado', cambiarEstadoDespacho);
+app.delete('/api/despachos/:id', eliminarDespacho);
 app.post('/api/despachos/:id/reintentar-sync', reintentarSincronizacionDrive);
 app.post('/api/despachos/:id/incidencia', gestionarIncidenciaDespacho);
 app.post('/api/despachos/cargar-plantilla-referencia', upload.single('archivo'), cargarPlantillaReferenciaController);

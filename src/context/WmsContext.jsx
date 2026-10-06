@@ -602,6 +602,38 @@ export function WmsProvider({ children }) {
     }
   };
 
+  // Eliminar orden definitivamente del sistema
+  const eliminarDespacho = async (despachoId) => {
+    const despachoAnterior = despachos.find(d => d.id === despachoId);
+    if (!despachoAnterior) return false;
+
+    // Optimistic removal
+    setDespachos(prev => prev.filter(d => d.id !== despachoId));
+    if (selectedDespachoId === despachoId) {
+      setSelectedDespachoId(null);
+    }
+    showToast(`Eliminando orden ${despachoAnterior.codigo_orden}...`, 'info');
+
+    try {
+      const res = await apiFetch(`${API_URL}/api/despachos/${despachoId}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Falló al eliminar en el servidor');
+      }
+      playBeep(659);
+      showToast(`🗑️ Orden ${despachoAnterior.codigo_orden} eliminada definitivamente.`, 'success');
+      return true;
+    } catch (err) {
+      console.warn('Error eliminando orden en backend:', err);
+      // Revertir optimistic update
+      setDespachos(prev => [...prev, despachoAnterior]);
+      showToast(`Error al eliminar: ${err.message}`, 'error');
+      return false;
+    }
+  };
+
   // Procesar devolución en logística inversa
   const procesarDevolucion = async (devolucionId, accion, notas = '') => {
     // Optimistic update
@@ -964,6 +996,7 @@ export function WmsProvider({ children }) {
         reintentarDespachosPendientes,
         exportarCopiaExcel,
         restaurarACola,
+        eliminarDespacho,
         registrarIncidencia,
         resolverIncidencia,
         procesarDevolucion,

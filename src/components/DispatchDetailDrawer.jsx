@@ -9,7 +9,8 @@ import {
   MapPin, 
   Printer,
   Package,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import PackageLabelModal from './PackageLabelModal';
 import { FLOTA_VEHICULOS } from '../data/flota';
@@ -20,6 +21,7 @@ export default function DispatchDetailDrawer() {
     setSelectedDespachoId, 
     despacharOrden, 
     marcarComoDespachado,
+    eliminarDespacho,
     setIncidentModalTarget,
     flotaVehiculos
   } = useWms();
@@ -315,6 +317,20 @@ export default function DispatchDetailDrawer() {
               className="min-h-[44px] px-3.5 bg-white hover:bg-red-50 hover:text-[#E11D24] text-slate-700 rounded-xl text-xs sm:text-sm font-bold border border-slate-300 transition-all shrink-0 active:scale-95"
             >
               Reportar Novedad
+            </button>
+
+            <button
+              onClick={() => {
+                if (window.confirm(`¿Estás seguro de que deseas eliminar definitivamente la orden ${selectedDespacho.codigo_orden}? Esta acción no se puede deshacer.`)) {
+                  eliminarDespacho(selectedDespacho.id);
+                  setSelectedDespachoId(null);
+                }
+              }}
+              className="min-h-[44px] px-3 bg-white hover:bg-red-50 text-red-600 hover:text-red-700 rounded-xl text-xs sm:text-sm font-bold border border-red-200 transition-all shrink-0 active:scale-95 flex items-center gap-1.5"
+              title="Eliminar pedido definitivamente"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Eliminar</span>
             </button>
 
             {!isDespachado ? (

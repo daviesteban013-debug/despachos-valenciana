@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Package, Hash, Box, Calendar, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, Package, Hash, Box, Calendar, ChevronLeft, ChevronRight, Loader2, DollarSign, Download } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 100;
 
@@ -34,7 +34,7 @@ export default function InventoryView() {
         item.descripcion.toLowerCase().includes(term) ||
         item.codigo.toLowerCase().includes(term)
     );
-  }, [searchTerm]);
+  }, [searchTerm, inventarioData]);
 
   // Paginación
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
@@ -46,6 +46,18 @@ export default function InventoryView() {
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
+  };
+
+  const handleDownloadJson = () => {
+    const blob = new Blob([JSON.stringify(inventarioData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'inventario.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) return (
@@ -73,15 +85,26 @@ export default function InventoryView() {
           </p>
         </div>
 
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar por código o descripción..."
-            value={searchTerm}
-            onChange={handleSearch}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E11D24]/50 focus:border-[#E11D24] transition-all shadow-sm"
-          />
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar por código o descripción..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E11D24]/50 focus:border-[#E11D24] transition-all shadow-sm"
+            />
+          </div>
+
+          <button
+            onClick={handleDownloadJson}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all whitespace-nowrap active:scale-95"
+            title="Descargar inventario.json completo con precios"
+          >
+            <Download className="w-4 h-4 text-emerald-400" />
+            <span className="hidden sm:inline">Descargar JSON</span>
+          </button>
         </div>
       </div>
 
@@ -105,6 +128,9 @@ export default function InventoryView() {
                 </th>
                 <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-24 text-right">
                   Factor
+                </th>
+                <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-28 text-right">
+                  <div className="flex items-center justify-end gap-1.5"><DollarSign className="w-4 h-4 text-emerald-600"/> Precio</div>
                 </th>
                 <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-32 text-right">
                   <div className="flex items-center justify-end gap-1.5"><Calendar className="w-4 h-4"/> Ult. Fecha</div>
@@ -130,6 +156,15 @@ export default function InventoryView() {
                     <td className="py-3 px-4 text-sm text-slate-700 font-bold text-right font-mono">
                       {item.factor}
                     </td>
+                    <td className="py-3 px-4 text-sm font-mono font-bold text-right">
+                      {item.precio && Number(item.precio) > 0 ? (
+                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          ${Number(item.precio).toLocaleString('es-CO')}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-normal">$0</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4 text-sm text-slate-500 font-medium text-right">
                       {item.fecha_ultima ? new Date(item.fecha_ultima).toLocaleDateString() : '-'}
                     </td>
@@ -137,7 +172,7 @@ export default function InventoryView() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="py-12 text-center text-slate-500">
+                  <td colSpan="7" className="py-12 text-center text-slate-500">
                     <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                     <p className="text-base font-semibold">No se encontraron productos</p>
                     <p className="text-sm">Intenta con otros términos de búsqueda.</p>
