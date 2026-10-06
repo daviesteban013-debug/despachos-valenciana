@@ -11,7 +11,6 @@ import {
   WifiOff,
   Printer,
   DollarSign,
-  Trash2
 } from 'lucide-react';
 import PackageLabelModal from './PackageLabelModal';
 import { FLOTA_VEHICULOS } from '../data/flota';
@@ -23,7 +22,6 @@ export default function DispatchCard({ despacho }) {
     asignarVehiculo,
     reintentarSyncDrive,
     restaurarACola,
-    eliminarDespacho,
     setIncidentModalTarget,
     flotaVehiculos
   } = useWms();
@@ -76,13 +74,6 @@ export default function DispatchCard({ despacho }) {
     e.stopPropagation();
     if (window.confirm(`Devolver la orden ${despacho.codigo_orden} a PENDIENTE?`)) {
       restaurarACola(despacho.id);
-    }
-  };
-
-  const handleEliminar = (e) => {
-    e.stopPropagation();
-    if (window.confirm(`¿Estás seguro de que deseas eliminar definitivamente la orden ${despacho.codigo_orden}? Esta acción no se puede deshacer.`)) {
-      eliminarDespacho(despacho.id);
     }
   };
 
@@ -280,18 +271,6 @@ export default function DispatchCard({ despacho }) {
           >
             <Printer className="w-4 h-4" />
             <span className="hidden sm:inline">Tirilla</span>
-          </button>
-
-          {/* Boton Eliminar */}
-          <button
-            type="button"
-            onClick={handleEliminar}
-            className="h-10 w-10 sm:w-auto sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold border border-slate-200 bg-white text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all active:scale-95 shrink-0"
-            title="Eliminar pedido definitivamente"
-            aria-label="Eliminar pedido definitivamente"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Eliminar</span>
           </button>
           </div>
 

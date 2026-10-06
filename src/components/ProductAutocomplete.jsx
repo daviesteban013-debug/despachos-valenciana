@@ -104,14 +104,9 @@ export default function ProductAutocomplete({ onAddProduct }) {
                     <p className="text-sm font-bold text-slate-800 leading-tight">
                       {product.descripcion}
                     </p>
-                    <div className="flex items-center justify-between text-xs text-slate-500 font-mono mt-0.5">
-                      <span>{product.codigo} • {product.und_base || 'UND'}</span>
-                      {product.precio && Number(product.precio) > 0 ? (
-                        <span className="text-emerald-700 font-bold">
-                          ${Number(product.precio).toLocaleString('es-CO')}
-                        </span>
-                      ) : null}
-                    </div>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">
+                      {product.codigo} • {product.und_base || 'UND'}
+                    </p>
                   </div>
                   <div className="bg-red-100 text-[#E11D24] p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
                     <Plus className="h-4 w-4" />
