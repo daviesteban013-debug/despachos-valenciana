@@ -121,7 +121,7 @@ export default function ControlBar({ compact = false }) {
   const inner = (
     <div className="flex items-center gap-2 flex-1">
       {/* Buscador */}
-      <div className="relative flex-1 flex items-center min-w-0">
+      <div className="relative flex-1 min-w-[160px] sm:min-w-[220px] flex items-center">
         <Search className="h-5 w-5 text-slate-400 absolute left-3 pointer-events-none shrink-0" />
         <input
           type="text"
