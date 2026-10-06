@@ -31,7 +31,8 @@ import {
   cargarPlantillaReferenciaController,
   listarDevoluciones,
   procesarDevolucion,
-  syncExcelDirecto
+  syncExcelDirecto,
+  eliminarDespacho
 } from './controllers/wmsController.js';
 import {
   importarKardex,
@@ -196,8 +197,8 @@ app.get('/api/auth/verify', (req, res) => {
 app.get('/api/inventario', listarInventario);
 app.get('/api/inventario/diferencias', listarDiferencias);
 app.post('/api/inventario/diferencias/:id/resolver', resolverDiferencia);
-// Ruta destructiva/importación → requiere admin
-app.post('/api/inventario/importar', destructiveLimiter, requireAdminAuth, upload.single('archivo'), importarExcel);
+// Ruta de importación inventario (permitida para usuarios autenticados)
+app.post('/api/inventario/importar', destructiveLimiter, upload.single('archivo'), importarExcel);
 app.post('/api/inventario/importar-demo', importarDemoExcel);
 app.get('/api/inventario/:sku', detalleProducto);
 
@@ -215,6 +216,7 @@ app.get('/api/despachos', listarDespachos);
 app.post('/api/despachos', crearDespacho);
 app.get('/api/despachos/exportar-plantilla', exportarPlantillaExcel);
 app.patch('/api/despachos/:id/estado', cambiarEstadoDespacho);
+app.delete('/api/despachos/:id', eliminarDespacho);
 app.post('/api/despachos/:id/reintentar-sync', reintentarSincronizacionDrive);
 app.post('/api/despachos/:id/incidencia', gestionarIncidenciaDespacho);
 app.post('/api/despachos/cargar-plantilla-referencia', upload.single('archivo'), cargarPlantillaReferenciaController);
@@ -241,9 +243,9 @@ app.get('/api/kardex/buscar', buscarFacturas);
 app.get('/api/kardex/estadisticas', estadisticasKardex);
 app.get('/api/kardex/factura/:numero', obtenerFactura);
 
-// Rutas destructivas/importación → requieren admin
-app.post('/api/kardex/importar', destructiveLimiter, requireAdminAuth, upload.single('archivo'), importarKardex);
-app.delete('/api/kardex/limpiar', destructiveLimiter, requireAdminAuth, limpiarKardex);
+// Rutas de gestión de kardex: cualquier usuario autenticado en WMS
+app.post('/api/kardex/importar', destructiveLimiter, upload.single('archivo'), importarKardex);
+app.delete('/api/kardex/limpiar', destructiveLimiter, upload.none?.() || ((req, res, next) => next()), limpiarKardex);
 
 // ──────────────────────────────────────────────────────────────────────────────
 // ERRORES Y 404

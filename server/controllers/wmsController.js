@@ -301,3 +301,35 @@ export async function syncExcelDirecto(req, res, next) {
     return next(new ApiError(500, err.message || 'Error al escribir en Excel.'));
   }
 }
+
+// DELETE /api/despachos/:id
+export async function eliminarDespacho(req, res, next) {
+  const client = await getDbClient();
+  if (!client) return next(new ApiError(500, 'Base de datos no disponible'));
+
+  try {
+    const { id } = req.params;
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+    
+    const queryStr = isUUID
+      ? 'DELETE FROM despachos WHERE id = $1 RETURNING id, codigo_orden'
+      : 'DELETE FROM despachos WHERE codigo_orden = $1 OR codigo_factura_erp = $1 RETURNING id, codigo_orden';
+
+    const { rows } = await client.query(queryStr, [id]);
+    if (rows.length === 0) {
+      return next(new ApiError(404, 'Orden no encontrada.'));
+    }
+
+    io.emit('wms_update_event', { action: 'DESPACHO_ELIMINADO', id: rows[0].id });
+    return res.json({
+      ok: true,
+      mensaje: `Orden ${rows[0].codigo_orden} eliminada definitivamente.`,
+      id: rows[0].id
+    });
+  } catch (error) {
+    console.error('Error eliminando despacho:', error);
+    return next(new ApiError(500, error.message));
+  } finally {
+    client.release();
+  }
+}

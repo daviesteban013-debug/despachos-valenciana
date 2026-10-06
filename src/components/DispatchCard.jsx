@@ -11,6 +11,7 @@ import {
   WifiOff,
   Printer,
   DollarSign,
+  Trash2
 } from 'lucide-react';
 import PackageLabelModal from './PackageLabelModal';
 import { FLOTA_VEHICULOS } from '../data/flota';
@@ -22,6 +23,7 @@ export default function DispatchCard({ despacho }) {
     asignarVehiculo,
     reintentarSyncDrive,
     restaurarACola,
+    eliminarDespacho,
     setIncidentModalTarget,
     flotaVehiculos
   } = useWms();
@@ -74,6 +76,13 @@ export default function DispatchCard({ despacho }) {
     e.stopPropagation();
     if (window.confirm(`Devolver la orden ${despacho.codigo_orden} a PENDIENTE?`)) {
       restaurarACola(despacho.id);
+    }
+  };
+
+  const handleEliminar = (e) => {
+    e.stopPropagation();
+    if (window.confirm(`¿Estás seguro de que deseas eliminar la orden ${despacho.codigo_orden}? Esta acción no se puede deshacer.`)) {
+      eliminarDespacho(despacho.id);
     }
   };
 
@@ -239,52 +248,61 @@ export default function DispatchCard({ despacho }) {
         </div>
 
         {/* ── PIE: acciones ── */}
-        <div className="flex items-center gap-3 px-4 pb-4 pt-3 border-t border-slate-100 mt-1">
-          {/* Acciones secundarias agrupadas (menor peso visual) */}
-          <div className="flex items-center gap-1.5 shrink-0">
-          {/* Boton Novedad */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIncidentModalTarget(despacho);
-            }}
-            className={`h-10 w-10 sm:w-auto sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95 shrink-0 ${
-              tieneIncidencia
-                ? 'bg-amber-50 border-amber-300 text-amber-700'
-                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-            }`}
-            title={tieneIncidencia ? 'Ver novedad activa' : 'Reportar novedad'}
-            aria-label={tieneIncidencia ? 'Ver novedad activa' : 'Reportar novedad'}
-          >
-            <AlertTriangle className="w-4 h-4" />
-            <span className="hidden sm:inline">{tieneIncidencia ? 'Novedad' : 'Reportar'}</span>
-          </button>
+        <div className="flex items-center gap-2 px-3 pb-3 pt-2.5 border-t border-slate-100 mt-1">
+          {/* Acciones secundarias en botones compactos */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Boton Novedad */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIncidentModalTarget(despacho);
+              }}
+              className={`h-10 w-10 flex items-center justify-center rounded-xl text-xs font-semibold border transition-all active:scale-95 shrink-0 ${
+                tieneIncidencia
+                  ? 'bg-amber-50 border-amber-300 text-amber-700'
+                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+              title={tieneIncidencia ? 'Ver novedad activa' : 'Reportar novedad'}
+              aria-label={tieneIncidencia ? 'Ver novedad activa' : 'Reportar novedad'}
+            >
+              <AlertTriangle className="w-4 h-4" />
+            </button>
 
-          {/* Boton Imprimir Tirilla */}
-          <button
-            type="button"
-            onClick={handlePrintTirilla}
-            className="h-10 w-10 sm:w-auto sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-all active:scale-95 shrink-0"
-            title="Imprimir tirilla de despacho"
-            aria-label="Imprimir tirilla de despacho"
-          >
-            <Printer className="w-4 h-4" />
-            <span className="hidden sm:inline">Tirilla</span>
-          </button>
+            {/* Boton Imprimir Tirilla */}
+            <button
+              type="button"
+              onClick={handlePrintTirilla}
+              className="h-10 w-10 flex items-center justify-center rounded-xl text-xs font-semibold border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-all active:scale-95 shrink-0"
+              title="Imprimir tirilla de despacho"
+              aria-label="Imprimir tirilla de despacho"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+
+            {/* Boton Eliminar */}
+            <button
+              type="button"
+              onClick={handleEliminar}
+              className="h-10 w-10 flex items-center justify-center rounded-xl text-xs font-semibold border border-slate-200 bg-white text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all active:scale-95 shrink-0"
+              title="Eliminar orden definitivamente"
+              aria-label="Eliminar orden definitivamente"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Accion principal */}
           {!isDespachado ? (
             /* PENDIENTE → Split button DESPACHAR */
-            <div className={`h-12 flex-1 flex rounded-xl shadow-sm transition-all min-w-0 ml-1 ${errorSinPlaca ? 'ring-2 ring-amber-400' : 'hover:shadow-md'}`}>
+            <div className={`h-11 flex-1 flex rounded-xl shadow-sm transition-all min-w-0 ${errorSinPlaca ? 'ring-2 ring-amber-400' : 'hover:shadow-md'}`}>
               <button
                 type="button"
                 onClick={handleDespachar}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 rounded-l-xl bg-[#E11D24] hover:bg-red-700 text-white text-xs sm:text-sm font-black transition-all active:scale-[0.98] overflow-hidden"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2.5 rounded-l-xl bg-[#E11D24] hover:bg-red-700 text-white text-xs sm:text-sm font-black transition-all active:scale-[0.98] shrink-0"
               >
                 <Truck className="w-4 h-4 shrink-0" />
-                <span className="truncate">DESPACHAR</span>
+                <span className="whitespace-nowrap">DESPACHAR</span>
               </button>
               <div
                 className="relative flex items-center shrink-0 bg-red-800 border-l border-red-700 rounded-r-xl px-2 hover:bg-red-900 transition-colors cursor-pointer"
@@ -300,7 +318,7 @@ export default function DispatchCard({ despacho }) {
                     <option key={v} value={v}>{v}</option>
                   ))}
                 </select>
-                <span className="font-mono text-white/90 text-[11px] font-bold px-1 truncate max-w-[90px] inline-block align-middle">{placaSeleccionada}</span>
+                <span className="font-mono text-white/90 text-[10px] sm:text-[11px] font-bold px-0.5 truncate max-w-[70px] sm:max-w-[85px] inline-block align-middle">{placaSeleccionada}</span>
                 <span className="text-white/50 text-[10px] shrink-0">▼</span>
               </div>
             </div>
