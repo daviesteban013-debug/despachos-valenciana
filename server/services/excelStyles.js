@@ -2,27 +2,33 @@
  * Configuración de estilos visuales y membretes para plantillas Excel de La Valenciana FERREHOGAR
  */
 
-export const ANCHOS_COLUMNAS_8 = [
-  { key: 'cliente', width: 34 },
-  { key: 'direccion', width: 38 },
+export const ANCHOS_COLUMNAS_9 = [
+  { key: 'cliente', width: 32 },
+  { key: 'direccion', width: 34 },
   { key: 'am', width: 6 },
   { key: 'pm', width: 6 },
   { key: 'factura', width: 18 },
   { key: 'valor', width: 20 },
-  { key: 'observaciones', width: 30 },
+  { key: 'articulos', width: 45 },
+  { key: 'observaciones', width: 25 },
   { key: 'firma', width: 22 }
 ];
 
-export const ENCABEZADOS_TABLA_8 = [
+export const ENCABEZADOS_TABLA_9 = [
   'Nombre del cliente',
   'Dirección',
   'AM',
   'PM',
   'Número de Factura',
   'Valor de la factura',
+  'Artículos / Detalle de Carga',
   'Observaciones',
   'Firma de Recibido'
 ];
+
+// Alias para mantener compatibilidad hacia atrás
+export const ANCHOS_COLUMNAS_8 = ANCHOS_COLUMNAS_9;
+export const ENCABEZADOS_TABLA_8 = ENCABEZADOS_TABLA_9;
 
 export const ESTILOS_CELDA = {
   header: {

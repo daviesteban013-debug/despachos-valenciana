@@ -440,7 +440,11 @@ export function WmsProvider({ children }) {
           numeroFactura: despacho.codigo_factura_erp || despacho.codigo_orden,
           clienteNombre: despacho.cliente_nombre || '',
           direccion: despacho.cliente_direccion || despacho.zona_entrega || '',
-          valorFactura: despacho.valor_total || 0
+          valorFactura: despacho.valor_total || 0,
+          jornada: despacho.jornada || 'AM',
+          observaciones: despacho.observaciones || '',
+          fechaDespacho: despacho.fecha_despacho || null,
+          items: despacho.items || []
         })
       });
       const data = await res.json();

@@ -159,6 +159,18 @@ export async function cambiarEstadoDespacho(req, res, next) {
       placaAsignada = (vehiculoPlaca || despacho.vehiculo_placa || '').trim().toUpperCase();
       await client.query('UPDATE despachos SET estado_actual = $1, vehiculo_placa = $2, hora_salida = NOW() WHERE id = $3', ['DESPACHADO', placaAsignada, despacho.id]);
       
+      // Consultar items de este despacho para registrar en la planilla Excel
+      let itemRows = [];
+      try {
+        const { rows } = await client.query(
+          'SELECT sku, descripcion_producto, cantidad_solicitada, ubicacion_bodega FROM despacho_items WHERE despacho_id = $1',
+          [despacho.id]
+        );
+        itemRows = rows || [];
+      } catch (errItems) {
+        console.warn('⚠️ No se pudieron obtener items del despacho para Excel:', errItems.message);
+      }
+
       let sync_cloud = { estado: 'PENDIENTE', placa: placaAsignada, fecha: new Date().toISOString() };
       
       try {
@@ -167,7 +179,11 @@ export async function cambiarEstadoDespacho(req, res, next) {
           numeroFactura: despacho.codigo_factura_erp || despacho.codigo_orden,
           clienteNombre: despacho.cliente_nombre,
           direccion: despacho.cliente_direccion,
-          valorFactura: despacho.valor_total
+          valorFactura: despacho.valor_total,
+          jornada: despacho.jornada,
+          observaciones: despacho.observaciones,
+          fechaDespacho: despacho.fecha_despacho,
+          items: itemRows
         });
         sync_cloud = { estado: 'SINCRONIZADO', fecha: new Date().toISOString(), destino: resExcel.destino };
       } catch (errExcel) {
@@ -277,7 +293,7 @@ export async function procesarDevolucion(req, res, next) {
 // Útil cuando la BD está caída pero el usuario quiere registrar la salida del camión.
 export async function syncExcelDirecto(req, res, next) {
   try {
-    const { vehiculo, numeroFactura, clienteNombre, direccion, valorFactura } = req.body;
+    const { vehiculo, numeroFactura, clienteNombre, direccion, valorFactura, jornada, observaciones, fechaDespacho, items } = req.body;
 
     if (!vehiculo || !numeroFactura) {
       return next(new ApiError(400, 'vehiculo y numeroFactura son obligatorios.'));
@@ -288,7 +304,11 @@ export async function syncExcelDirecto(req, res, next) {
       numeroFactura,
       clienteNombre: clienteNombre || '',
       direccion: direccion || '',
-      valorFactura: valorFactura || 0
+      valorFactura: valorFactura || 0,
+      jornada: jornada || 'AM',
+      observaciones: observaciones || '',
+      fechaDespacho: fechaDespacho || null,
+      items: items || []
     });
 
     return res.json({

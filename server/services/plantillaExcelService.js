@@ -9,11 +9,30 @@ import {
   sincronizarConGoogleDrive 
 } from './googleDriveService.js';
 import {
+  ANCHOS_COLUMNAS_9,
+  ENCABEZADOS_TABLA_9,
   ANCHOS_COLUMNAS_8,
   ENCABEZADOS_TABLA_8,
   ESTILOS_CELDA,
   inyectarMembreteInstitucional
 } from './excelStyles.js';
+
+/**
+ * Convierte la lista de artículos del despacho en un texto multilínea formateado para la celda de Excel.
+ */
+export function formatearItemsParaExcel(items) {
+  if (!items) return '';
+  if (typeof items === 'string') return items.trim();
+  if (!Array.isArray(items) || items.length === 0) return '';
+
+  return items
+    .map(it => {
+      const cant = it.cantidad_solicitada || it.cantidad || 1;
+      const desc = it.descripcion_producto || it.descripcion || it.nombre || it.sku || 'Artículo';
+      return `• ${cant}x ${String(desc).trim()}`;
+    })
+    .join('\n');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,7 +67,7 @@ export async function crearPlantillaBase() {
       views: [{ showGridLines: true }]
     });
     
-    sheet.columns = ANCHOS_COLUMNAS_8;
+    sheet.columns = ANCHOS_COLUMNAS_9;
     // Utilizamos la nueva función inyectarMembreteInstitucional
     const now = new Date();
     const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
@@ -126,7 +145,8 @@ export async function registrarDespachoEnPlantilla({
   jornada, 
   valorFactura, 
   observaciones, 
-  fechaDespacho 
+  fechaDespacho,
+  items
 }) {
   if (!vehiculo) {
     throw new Error('Debe especificar el vehículo asignado para el registro en la plantilla.');
@@ -178,11 +198,11 @@ export async function registrarDespachoEnPlantilla({
     if (!worksheet) {
       console.warn(`⚠️ Hoja para vehículo ${vehiculoNormalizado} no existía. Creándola...`);
       worksheet = workbook.addWorksheet(nombreHoja, { views: [{ showGridLines: true }] });
-      worksheet.columns = ANCHOS_COLUMNAS_8;
+      worksheet.columns = ANCHOS_COLUMNAS_9;
       inyectarMembreteInstitucional(worksheet, `Fecha: ${fechaBloqueStr}`, vehiculoNormalizado);
     } else {
       if (!worksheet.columns || worksheet.columns.length === 0) {
-        worksheet.columns = ANCHOS_COLUMNAS_8;
+        worksheet.columns = ANCHOS_COLUMNAS_9;
       }
     }
 
@@ -214,6 +234,7 @@ export async function registrarDespachoEnPlantilla({
     const valorNumerico = Number(valorFactura) || 0;
     const esAM = jornada === 'AM' ? 'X' : '';
     const esPM = jornada === 'PM' ? 'X' : '';
+    const articulosTexto = formatearItemsParaExcel(items);
     
     const rowData = [
       clienteNombre || 'S/N',
@@ -222,6 +243,7 @@ export async function registrarDespachoEnPlantilla({
       esPM,
       numeroFactura || 'S/F',
       valorNumerico,
+      articulosTexto,
       observaciones || '',
       '' // Firma
     ];
@@ -241,6 +263,26 @@ export async function registrarDespachoEnPlantilla({
       const valorCell = newRow.getCell(6);
       valorCell.numFmt = ESTILOS_CELDA.formatoMonedaCop;
       valorCell.alignment = { horizontal: 'right' };
+
+      const artCell = newRow.getCell(7);
+      artCell.alignment = { vertical: 'top', wrapText: true };
+
+      // Actualizar encabezados si el bloque actual fue creado previamente con 8 columnas
+      if (filaInicioBloque > 2) {
+        const headerRow = worksheet.getRow(filaInicioBloque - 1);
+        const headerVal7 = String(headerRow.getCell(7).value || '').trim();
+        if (!headerVal7.toLowerCase().includes('artículo')) {
+          headerRow.values = ENCABEZADOS_TABLA_9;
+          headerRow.eachCell({ includeEmpty: false }, (cell) => {
+            cell.font = ESTILOS_CELDA.header.font;
+            cell.fill = ESTILOS_CELDA.header.fill;
+            cell.alignment = ESTILOS_CELDA.header.alignment;
+            cell.border = ESTILOS_CELDA.header.border;
+          });
+          headerRow.height = 20;
+          headerRow.commit();
+        }
+      }
 
       const subRow = worksheet.getRow(filaSubtotalExistente + 1);
       
@@ -264,7 +306,7 @@ export async function registrarDespachoEnPlantilla({
       titleRow.commit();
       
       const headerRow = worksheet.getRow(nextStart + 1);
-      headerRow.values = ENCABEZADOS_TABLA_8;
+      headerRow.values = ENCABEZADOS_TABLA_9;
       
       // Aplicar estilo de header
       headerRow.eachCell({ includeEmpty: false }, (cell) => {
@@ -286,6 +328,8 @@ export async function registrarDespachoEnPlantilla({
       const valCell = dataRow.getCell(6);
       valCell.numFmt = ESTILOS_CELDA.formatoMonedaCop;
       valCell.alignment = { horizontal: 'right' };
+      const artCell = dataRow.getCell(7);
+      artCell.alignment = { vertical: 'top', wrapText: true };
       dataRow.commit();
       
       const subRow = worksheet.getRow(nextStart + 3);
@@ -384,7 +428,7 @@ export async function agregarVehiculoEnPlantilla(vehiculoIdentificador) {
 
     // 4. Crear la nueva hoja con membrete institucional
     worksheet = workbook.addWorksheet(nombreHoja, { views: [{ showGridLines: true }] });
-    worksheet.columns = ANCHOS_COLUMNAS_8;
+    worksheet.columns = ANCHOS_COLUMNAS_9;
 
     const now = new Date();
     const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
