@@ -46,8 +46,20 @@ import {
   crearVehiculoController
 } from './controllers/vehiculosController.js';
 import { inicializarTablaVehiculos } from './services/vehiculosService.js';
+import {
+  obtenerPerfilController,
+  obtenerBorradorController,
+  guardarBorradorController,
+  limpiarBorradorController,
+  actualizarPreferenciasController
+} from './controllers/usuarioController.js';
+import { inicializarTablaUsuarioPerfil, obtenerOCrearPerfil } from './services/usuarioService.js';
 
 dotenv.config();
+
+// Inicialización de esquemas persistentes
+inicializarTablaVehiculos();
+inicializarTablaUsuarioPerfil();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // CORS: leer orígenes desde env. En desarrollo se agrega localhost:5173.
@@ -180,16 +192,47 @@ app.get('/api/health', (req, res) => {
 app.use('/api', requireWmsAuth);
 
 // Verificación de credenciales / sesión del usuario autenticado
-app.get('/api/auth/verify', (req, res) => {
-  res.json({
-    ok: true,
-    user: {
-      name: req.user.name,
+app.get('/api/auth/verify', async (req, res) => {
+  try {
+    const perfil = await obtenerOCrearPerfil({
       email: req.user.email,
+      nombre: req.user.name,
       picture: req.user.picture
-    }
-  });
+    });
+
+    res.json({
+      ok: true,
+      user: {
+        name: req.user.name,
+        email: req.user.email,
+        picture: req.user.picture,
+        preferencias: perfil.preferencias || {},
+        borrador_despacho: perfil.borrador_despacho || null
+      }
+    });
+  } catch (error) {
+    console.warn('[AUTH] Error obteniendo perfil en /api/auth/verify (usando fallback seguro):', error.message);
+    res.json({
+      ok: true,
+      user: {
+        name: req.user.name,
+        email: req.user.email,
+        picture: req.user.picture,
+        preferencias: {},
+        borrador_despacho: null
+      }
+    });
+  }
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RUTAS DE PERFIL, PREFERENCIAS Y BORRADORES DE USUARIO (POSTGRESQL)
+// ──────────────────────────────────────────────────────────────────────────────
+app.get('/api/usuario/perfil', obtenerPerfilController);
+app.get('/api/usuario/borrador', obtenerBorradorController);
+app.put('/api/usuario/borrador', guardarBorradorController);
+app.delete('/api/usuario/borrador', limpiarBorradorController);
+app.patch('/api/usuario/preferencias', actualizarPreferenciasController);
 
 // ──────────────────────────────────────────────────────────────────────────────
 // RUTAS DE GESTIÓN DE INVENTARIO

@@ -324,3 +324,18 @@ CREATE INDEX IF NOT EXISTS idx_kardex_num_factura ON kardex_ventas(UPPER(num_fac
 CREATE INDEX IF NOT EXISTS idx_kardex_nit_cliente ON kardex_ventas(nit_cliente);
 CREATE INDEX IF NOT EXISTS idx_kardex_fecha ON kardex_ventas(fecha_factura DESC);
 CREATE INDEX IF NOT EXISTS idx_kardex_codigo_producto ON kardex_ventas(codigo_producto);
+
+-- ----------------------------------------------------------------------------
+-- 12. TABLA: PERFILES, PREFERENCIAS Y BORRADORES DE USUARIO
+-- Persiste los estados y preferencias de cada usuario autenticado
+-- para no depender de almacenamiento en cliente (localStorage).
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS usuario_perfil (
+    email VARCHAR(255) PRIMARY KEY,
+    nombre VARCHAR(200),
+    avatar_url TEXT,
+    preferencias JSONB DEFAULT '{"bodega_default": "01", "tema": "light"}',
+    borrador_despacho JSONB DEFAULT NULL,
+    ultimo_acceso TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);

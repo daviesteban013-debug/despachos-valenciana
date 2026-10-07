@@ -48,11 +48,15 @@ export default function GoogleAuthBadge({ user, setUser }) {
         return;
       }
 
+      const backendData = await res.json().catch(() => ({}));
+
       // Acceso concedido → guardar sesión
       const userData = {
-        name: decoded.name,
-        email: decoded.email,
-        picture: decoded.picture,
+        name: backendData.user?.name || decoded.name,
+        email: backendData.user?.email || decoded.email,
+        picture: backendData.user?.picture || decoded.picture,
+        preferencias: backendData.user?.preferencias || {},
+        borrador_despacho: backendData.user?.borrador_despacho || null,
         token: credentialResponse.credential
       };
       setUser(userData);

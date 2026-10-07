@@ -107,18 +107,7 @@ export function WmsProvider({ children }) {
     }
   }, []);
 
-  const [flotaVehiculos, setFlotaVehiculos] = useState(() => {
-    try {
-      const saved = localStorage.getItem('wms_flota_vehiculos');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return Array.from(new Set([...FLOTA_VEHICULOS, ...parsed]));
-        }
-      }
-    } catch (_) {}
-    return FLOTA_VEHICULOS;
-  });
+  const [flotaVehiculos, setFlotaVehiculos] = useState(FLOTA_VEHICULOS);
 
   const fetchVehiculos = useCallback(async () => {
     if (!getGoogleToken()) return;
@@ -130,11 +119,7 @@ export function WmsProvider({ children }) {
           ? data.map(v => (typeof v === 'string' ? v : v.placa)).filter(Boolean)
           : [];
         if (placas.length > 0) {
-          const merged = Array.from(new Set([...FLOTA_VEHICULOS, ...placas]));
-          setFlotaVehiculos(merged);
-          try {
-            localStorage.setItem('wms_flota_vehiculos', JSON.stringify(merged));
-          } catch (_) {}
+          setFlotaVehiculos(Array.from(new Set([...FLOTA_VEHICULOS, ...placas])));
         }
       }
     } catch (err) {
@@ -168,32 +153,91 @@ export function WmsProvider({ children }) {
 
       if (res.ok && data.success) {
         const nombreVehiculo = data.vehiculo?.placa || identificadorFinal;
-        setFlotaVehiculos(prev => {
-          const next = Array.from(new Set([...prev, nombreVehiculo]));
-          try {
-            localStorage.setItem('wms_flota_vehiculos', JSON.stringify(next));
-          } catch (_) {}
-          return next;
-        });
+        setFlotaVehiculos(prev => Array.from(new Set([...prev, nombreVehiculo])));
         showToast(`✅ Vehículo [${nombreVehiculo}] agregado y creado en plantilla Excel (${data.destino || 'Google Drive'}).`, 'success');
         return { success: true, vehiculo: nombreVehiculo, destino: data.destino, data };
       } else {
         throw new Error(data.error || 'Error al registrar vehículo en el servidor');
       }
     } catch (err) {
-      console.warn('[VEHICULOS] Fallback local al agregar vehículo:', err.message);
-      // Fallback local en caso de fallo o modo offline
-      setFlotaVehiculos(prev => {
-        const next = Array.from(new Set([...prev, identificadorFinal]));
-        try {
-          localStorage.setItem('wms_flota_vehiculos', JSON.stringify(next));
-        } catch (_) {}
-        return next;
-      });
+      console.warn('[VEHICULOS] Fallback al agregar vehículo:', err.message);
+      setFlotaVehiculos(prev => Array.from(new Set([...prev, identificadorFinal])));
       showToast(`⚠️ Vehículo [${identificadorFinal}] guardado localmente (${err.message}).`, 'info');
       return { success: true, vehiculo: identificadorFinal, offline: true };
     }
   };
+
+  // ── Perfil, Preferencias y Borradores de Usuario (PostgreSQL) ───────────────
+  const [userProfile, setUserProfile] = useState(null);
+  const [userPreferences, setUserPreferences] = useState({ bodega_default: '01', tema: 'light' });
+  const [userDraft, setUserDraft] = useState(null);
+
+  const fetchUserProfile = useCallback(async () => {
+    if (!getGoogleToken()) return;
+    try {
+      const res = await apiFetch(`${API_URL}/api/usuario/perfil`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.perfil) {
+          setUserProfile(data.perfil);
+          if (data.perfil.preferencias) {
+            setUserPreferences(prev => ({ ...prev, ...data.perfil.preferencias }));
+          }
+          if (data.perfil.borrador_despacho) {
+            setUserDraft(data.perfil.borrador_despacho);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[USUARIO] Error al obtener perfil desde backend:', err.message);
+    }
+  }, []);
+
+  const guardarBorradorDespacho = useCallback(async (borrador) => {
+    setUserDraft(borrador);
+    if (!getGoogleToken()) return;
+    try {
+      await apiFetch(`${API_URL}/api/usuario/borrador`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ borrador })
+      });
+    } catch (err) {
+      console.warn('[USUARIO] Error guardando borrador en servidor:', err.message);
+    }
+  }, []);
+
+  const descartarBorradorDespacho = useCallback(async () => {
+    setUserDraft(null);
+    if (!getGoogleToken()) return;
+    try {
+      await apiFetch(`${API_URL}/api/usuario/borrador`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn('[USUARIO] Error eliminando borrador en servidor:', err.message);
+    }
+  }, []);
+
+  const actualizarPreferenciasUsuario = useCallback(async (nuevasPrefs) => {
+    setUserPreferences(prev => ({ ...prev, ...nuevasPrefs }));
+    if (!getGoogleToken()) return;
+    try {
+      const res = await apiFetch(`${API_URL}/api/usuario/preferencias`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferencias: nuevasPrefs })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.preferencias) {
+          setUserPreferences(data.preferencias);
+        }
+      }
+    } catch (err) {
+      console.warn('[USUARIO] Error actualizando preferencias en servidor:', err.message);
+    }
+  }, []);
 
   // Función de reintento automático para despachos PENDIENTE_DE_SYNC
   const reintentarDespachosPendientes = useCallback(async () => {
@@ -262,6 +306,7 @@ export function WmsProvider({ children }) {
     fetchDespachos();
     fetchDevoluciones();
     fetchVehiculos();
+    fetchUserProfile();
 
     // ── Reintento automático en background ──────────────────────────────────
     // 1. Cuando el navegador recupera conexión a Internet
@@ -293,6 +338,7 @@ export function WmsProvider({ children }) {
       fetchDespachos();
       fetchDevoluciones();
       fetchVehiculos();
+      fetchUserProfile();
     };
     window.addEventListener('wms:auth-login', handleAuthChange);
 
@@ -301,7 +347,7 @@ export function WmsProvider({ children }) {
       window.removeEventListener('wms:auth-login', handleAuthChange);
       clearInterval(healthInterval);
     };
-  }, [fetchDespachos, fetchDevoluciones, fetchVehiculos, reintentarDespachosPendientes, backendOnline]);
+  }, [fetchDespachos, fetchDevoluciones, fetchVehiculos, fetchUserProfile, reintentarDespachosPendientes, backendOnline]);
 
   // Navegación Bottom Dock: 'waves' (Despachos) | 'incidents' (Novedades)
   const [activeDockTab, setActiveDockTab] = useState('waves');
@@ -1004,7 +1050,15 @@ export function WmsProvider({ children }) {
         createModalOpen,
         setCreateModalOpen,
         showToast,
-        playBeep
+        playBeep,
+        // Perfil, Preferencias y Borradores (asociados al usuario)
+        userProfile,
+        userPreferences,
+        userDraft,
+        fetchUserProfile,
+        guardarBorradorDespacho,
+        descartarBorradorDespacho,
+        actualizarPreferenciasUsuario
       }}
     >
       {children}

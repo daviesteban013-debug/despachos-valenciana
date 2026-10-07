@@ -65,11 +65,22 @@ function useDebounce(value, delay) {
 }
 
 export default function CreateDispatchModal({ isOpen, onClose }) {
-  const { crearNuevoDespacho, showToast, flotaVehiculos } = useWms();
+  const { 
+    crearNuevoDespacho, 
+    showToast, 
+    flotaVehiculos,
+    userDraft,
+    guardarBorradorDespacho,
+    descartarBorradorDespacho,
+    userPreferences
+  } = useWms();
   const [form, setForm]                 = useState({ ...INITIAL_FORM });
   const [errors, setErrors]             = useState({});
   const [selectedItems, setSelectedItems] = useState([]);
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
+  const [tieneBorrador, setTieneBorrador]   = useState(false);
+  const [guardandoBorrador, setGuardandoBorrador] = useState(false);
+  const skipDraftSaveRef                = useRef(false);
   const facturaInputRef = useRef(null);
   const sugerenciasRef  = useRef(null);
 
@@ -179,18 +190,70 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ── Reset al abrir ────────────────────────────────────────────────────────
+  // ── Inicializar / Restaurar Borrador al abrir ────────────────────────────
   useEffect(() => {
     if (isOpen) {
-      setForm({ ...INITIAL_FORM, vehiculo_placa: FLOTA_VEHICULOS[0] });
+      if (userDraft && userDraft.form && (userDraft.form.numero_factura || userDraft.selectedItems?.length > 0)) {
+        setForm(userDraft.form);
+        setSelectedItems(userDraft.selectedItems || []);
+        setTieneBorrador(true);
+      } else {
+        setForm({
+          ...INITIAL_FORM,
+          bodega_id: userPreferences?.bodega_default || '01',
+          vehiculo_placa: (flotaVehiculos && flotaVehiculos[0]) || FLOTA_VEHICULOS[0]
+        });
+        setSelectedItems([]);
+        setTieneBorrador(false);
+      }
       setErrors({});
-      setSelectedItems([]);
       setKardexSugerencias([]);
       setKardexCargada(false);
       setMostrarSugerencias(false);
       setTimeout(() => { facturaInputRef.current?.focus(); }, 150);
     }
   }, [isOpen]);
+
+  // ── Auto-guardado de borrador en el usuario (debounce) ───────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    if (skipDraftSaveRef.current) {
+      skipDraftSaveRef.current = false;
+      return;
+    }
+
+    const hayDatos = form.numero_factura?.trim() || form.cliente_nombre?.trim() || selectedItems.length > 0;
+    if (!hayDatos) return;
+
+    setGuardandoBorrador(true);
+    const timer = setTimeout(async () => {
+      try {
+        if (guardarBorradorDespacho) {
+          await guardarBorradorDespacho({ form, selectedItems });
+          setTieneBorrador(true);
+        }
+      } finally {
+        setGuardandoBorrador(false);
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [form, selectedItems, isOpen, guardarBorradorDespacho]);
+
+  const handleDescartarBorrador = async () => {
+    skipDraftSaveRef.current = true;
+    if (descartarBorradorDespacho) {
+      await descartarBorradorDespacho();
+    }
+    setForm({
+      ...INITIAL_FORM,
+      bodega_id: userPreferences?.bodega_default || '01',
+      vehiculo_placa: (flotaVehiculos && flotaVehiculos[0]) || FLOTA_VEHICULOS[0]
+    });
+    setSelectedItems([]);
+    setTieneBorrador(false);
+    showToast('Borrador descartado.', 'info');
+  };
 
   // ── Early return DESPUÉS de todos los hooks ───────────────────────────────
   if (!isOpen) return null;
@@ -243,6 +306,12 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
     };
     try {
       const ordenCreada = await crearNuevoDespacho(payload);
+      skipDraftSaveRef.current = true;
+      if (descartarBorradorDespacho) {
+        await descartarBorradorDespacho();
+      }
+      setTieneBorrador(false);
+
       if (crearOtro) {
         setForm(prev => ({ ...prev, numero_factura: '', valor_factura: '', observaciones: '' }));
         setSelectedItems([]);
@@ -251,7 +320,11 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
         showToast(`Despacho ${ordenCreada.codigo_factura_erp || ordenCreada.codigo_orden} creado. Siguiente factura...`, 'success');
         setTimeout(() => facturaInputRef.current?.focus(), 100);
       } else {
-        setForm({ ...INITIAL_FORM, vehiculo_placa: FLOTA_VEHICULOS[0] });
+        setForm({
+          ...INITIAL_FORM,
+          bodega_id: userPreferences?.bodega_default || '01',
+          vehiculo_placa: (flotaVehiculos && flotaVehiculos[0]) || FLOTA_VEHICULOS[0]
+        });
         setSelectedItems([]);
         setErrors({});
         setKardexCargada(false);
@@ -298,12 +371,35 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
               <Plus className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold leading-tight">Nuevo Despacho</h2>
-              <p className="text-xs text-red-200 font-medium">
-                {kardexCargada
-                  ? '⚡ Datos cargados desde el kardex ERP'
-                  : 'Digita la factura para auto-llenar desde el kardex'}
-              </p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold leading-tight">Nuevo Despacho</h2>
+                {guardandoBorrador && (
+                  <span className="text-[10px] bg-red-900/60 text-red-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> Guardando en tu usuario...
+                  </span>
+                )}
+                {tieneBorrador && !guardandoBorrador && (
+                  <span className="text-[10px] bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" /> Borrador en tu cuenta
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-red-200 font-medium">
+                  {kardexCargada
+                    ? '⚡ Datos cargados desde el kardex ERP'
+                    : 'Digita la factura para auto-llenar desde el kardex'}
+                </p>
+                {tieneBorrador && (
+                  <button
+                    type="button"
+                    onClick={handleDescartarBorrador}
+                    className="text-[11px] text-red-100 hover:text-white underline cursor-pointer"
+                  >
+                    Descartar borrador
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <button
