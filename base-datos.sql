@@ -83,6 +83,12 @@ CREATE TABLE despachos (
     observaciones TEXT,
     fecha_despacho DATE DEFAULT CURRENT_DATE,
     usuario_creador VARCHAR(255) DEFAULT 'sistema@valenciana.com',
+    -- Control idempotente de escritura en la plantilla Excel (Google Drive)
+    sync_excel_estado VARCHAR(20), -- PENDIENTE | EN_PROCESO | SINCRONIZADO | ERROR_SYNC
+    sync_excel_placa VARCHAR(100),
+    sync_excel_destino VARCHAR(150),
+    sync_excel_error TEXT,
+    sync_excel_fecha TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

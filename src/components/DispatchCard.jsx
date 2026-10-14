@@ -44,6 +44,8 @@ export default function DispatchCard({ despacho }) {
   const isUrgent = despacho.prioridad === 1;
   const tieneIncidencia = Boolean(despacho.incidencia_activa);
   const sinConfirmar = despacho._sync_status === 'PENDIENTE_DE_SYNC';
+  const rechazado = despacho._sync_status === 'RECHAZADO';
+  const soloEnDispositivo = String(despacho.id || '').startsWith('offline-');
   const isDespachado = despacho.estado_actual === 'DESPACHADO';
 
   // ── Handlers (logica de negocio intacta) ──────────────────────────────────
@@ -74,7 +76,9 @@ export default function DispatchCard({ despacho }) {
 
   const handleRestaurar = (e) => {
     e.stopPropagation();
-    if (window.confirm(`Devolver la orden ${despacho.codigo_orden} a PENDIENTE?`)) {
+    if (window.confirm(`Devolver la orden ${despacho.codigo_orden} a PENDIENTE?
+
+Si ya estaba registrada en el Excel, esa fila se conserva y no se duplicará al volver a despachar.`)) {
       restaurarACola(despacho.id);
     }
   };
@@ -186,7 +190,22 @@ export default function DispatchCard({ despacho }) {
                 <span>Sin confirmar en servidor</span>
               </div>
               <p className="text-[11px] text-amber-800 leading-snug">
-                Este despacho existe solo en este dispositivo. Se reintentara enviarlo automaticamente cuando haya conexion.
+                {soloEnDispositivo
+                  ? 'Este despacho existe solo en este dispositivo. Se reintentara enviarlo automaticamente cuando haya conexion.'
+                  : 'La salida de este despacho no ha sido confirmada por el servidor. Se reintentara automaticamente sin duplicar el Excel.'}
+              </p>
+            </div>
+          )}
+
+          {/* Banner: el servidor rechazó la orden (no se reintenta) */}
+          {rechazado && (
+            <div className="bg-red-50 border border-red-300/70 rounded-xl p-2.5 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-red-900 mb-0.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-[#E11D24] shrink-0" />
+                <span>Rechazado por el servidor</span>
+              </div>
+              <p className="text-[11px] text-red-800 leading-snug">
+                {despacho._sync_error || 'El servidor no aceptó este despacho.'} Revisa los datos, elimínalo y créalo de nuevo.
               </p>
             </div>
           )}

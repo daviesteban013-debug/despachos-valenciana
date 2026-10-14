@@ -301,7 +301,7 @@ export default function DispatchDetailDrawer() {
                   {selectedDespacho.fecha_despacho && (
                     <div className="text-right">
                       <span className="text-xs text-slate-500 block">Fecha Salida:</span>
-                      <span className="text-xs font-mono text-slate-700">{new Date(selectedDespacho.fecha_despacho).toLocaleDateString('es-CO')}</span>
+                      <span className="text-xs font-mono text-slate-700">{String(selectedDespacho.fecha_despacho).split('T')[0].split('-').reverse().join('/')}</span>
                     </div>
                   )}
                 </div>
