@@ -34,7 +34,7 @@ export default function DispatchDetailDrawer() {
 
   const isDespachado = (selectedDespacho.estado || selectedDespacho.estado_actual) === 'DESPACHADO';
   const factura = selectedDespacho.numero_factura || selectedDespacho.codigo_factura_erp || selectedDespacho.codigo_orden;
-  const direccion = selectedDespacho.direccion_entrega || selectedDespacho.zona_entrega || 'Sin dirección registrada';
+  const direccion = selectedDespacho.cliente_direccion || selectedDespacho.direccion_entrega || selectedDespacho.zona_entrega || 'Sin dirección registrada';
   const cuadrilla = selectedDespacho.vehiculo_placa || vehiculosLista[0];
 
   return (
@@ -285,8 +285,8 @@ export default function DispatchDetailDrawer() {
                     <span className="font-semibold text-slate-800">{selectedDespacho.transportadora || 'Flota Propia Valenciana'}</span>
                   </div>
                   <div>
-                    <span className="text-xs text-slate-500 block">Destino / Zona:</span>
-                    <span className="text-slate-800 font-medium truncate block">{selectedDespacho.zona_entrega || selectedDespacho.cliente_ciudad || 'Cúcuta'}</span>
+                    <span className="text-xs text-slate-500 block">Ciudad:</span>
+                    <span className="text-slate-800 font-medium truncate block">{selectedDespacho.cliente_ciudad || 'Cúcuta'}</span>
                   </div>
                   <div>
                     <span className="text-xs text-slate-500 block">Bahía de Carga:</span>

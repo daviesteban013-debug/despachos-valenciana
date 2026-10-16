@@ -46,7 +46,7 @@ import {
   crearVehiculoController
 } from './controllers/vehiculosController.js';
 import { inicializarTablaVehiculos } from './services/vehiculosService.js';
-import { inicializarColumnasSyncExcel } from './services/syncDespachoExcelService.js';
+import { inicializarColumnasDespachos } from './services/syncDespachoExcelService.js';
 import {
   obtenerPerfilController,
   obtenerBorradorController,
@@ -61,7 +61,7 @@ dotenv.config();
 // Inicialización de esquemas persistentes
 inicializarTablaVehiculos();
 inicializarTablaUsuarioPerfil();
-inicializarColumnasSyncExcel();
+inicializarColumnasDespachos();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // CORS: leer orígenes desde env. En desarrollo se agrega localhost:5173.

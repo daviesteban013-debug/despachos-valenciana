@@ -17,7 +17,7 @@ import { registrarDespachoEnPlantilla } from './plantillaExcelService.js';
 // Tiempo tras el cual un EN_PROCESO se considera abandonado (caída del proceso)
 const MINUTOS_RECLAMO_EN_PROCESO = 5;
 
-export async function inicializarColumnasSyncExcel() {
+export async function inicializarColumnasDespachos() {
   const client = await getDbClient();
   if (!client) {
     console.warn('[SYNC-EXCEL] PostgreSQL no disponible al iniciar. Se omitió la migración de columnas sync_excel_*.');
@@ -33,6 +33,10 @@ export async function inicializarColumnasSyncExcel() {
         ADD COLUMN IF NOT EXISTS sync_excel_error TEXT,
         ADD COLUMN IF NOT EXISTS sync_excel_fecha TIMESTAMPTZ;
     `);
+    // Unidad del artículo despachado (unidad menor o mayor del catálogo, ej. UND / CAJA)
+    await client.query(`
+      ALTER TABLE despacho_items ADD COLUMN IF NOT EXISTS unidad VARCHAR(20) DEFAULT 'UND';
+    `);
 
     // Despachos históricos (anteriores a este control): se asumen ya escritos
     // en el Excel para no duplicarlos si alguien los restaura y re-despacha.
@@ -47,7 +51,7 @@ export async function inicializarColumnasSyncExcel() {
     if (rowCount > 0) {
       console.log(`[SYNC-EXCEL] ${rowCount} despacho(s) histórico(s) marcados como ya registrados en Excel.`);
     }
-    console.log('✅ Columnas sync_excel_* verificadas en despachos.');
+    console.log('✅ Columnas sync_excel_* y unidad verificadas en despachos.');
   } catch (err) {
     console.error('[SYNC-EXCEL] Error migrando columnas sync_excel_*:', err.message);
   } finally {
@@ -128,7 +132,7 @@ export async function sincronizarDespachoEnExcel(despachoId) {
     despacho = rows[0];
     try {
       const { rows: itemRows } = await client.query(
-        'SELECT sku, descripcion_producto, cantidad_solicitada, ubicacion_bodega FROM despacho_items WHERE despacho_id = $1',
+        'SELECT sku, descripcion_producto, cantidad_solicitada, ubicacion_bodega, unidad FROM despacho_items WHERE despacho_id = $1',
         [despachoId]
       );
       items = itemRows || [];

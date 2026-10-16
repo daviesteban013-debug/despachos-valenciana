@@ -11,7 +11,8 @@ import {
   WifiOff,
   Printer,
   DollarSign,
-  Trash2
+  Trash2,
+  MapPin
 } from 'lucide-react';
 import PackageLabelModal from './PackageLabelModal';
 import { FLOTA_VEHICULOS } from '../data/flota';
@@ -47,6 +48,8 @@ export default function DispatchCard({ despacho }) {
   const rechazado = despacho._sync_status === 'RECHAZADO';
   const soloEnDispositivo = String(despacho.id || '').startsWith('offline-');
   const isDespachado = despacho.estado_actual === 'DESPACHADO';
+  const clienteRetira = despacho.transportadora === 'Cliente Retira';
+  const direccion = despacho.cliente_direccion || despacho.direccion_entrega || despacho.zona_entrega || '';
 
   // ── Handlers (logica de negocio intacta) ──────────────────────────────────
   const handleCambiarVehiculo = (e) => {
@@ -59,7 +62,7 @@ export default function DispatchCard({ despacho }) {
 
   const handleDespachar = async (e) => {
     e.stopPropagation();
-    const placaFinal = placaSeleccionada || despacho.vehiculo_placa;
+    const placaFinal = clienteRetira ? 'CLIENTE RETIRA' : (placaSeleccionada || despacho.vehiculo_placa);
     if (!placaFinal) {
       setErrorSinPlaca(true);
       return;
@@ -155,6 +158,12 @@ Si ya estaba registrada en el Excel, esa fila se conserva y no se duplicará al 
           >
             {despacho.cliente_nombre}
           </h3>
+          {direccion && (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 truncate" title={direccion}>
+              <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
+              <span className="truncate">{direccion}</span>
+            </p>
+          )}
         </div>
 
         {/* ── CUERPO ── */}
@@ -323,6 +332,14 @@ Si ya estaba registrada en el Excel, esa fila se conserva y no se duplicará al 
                 <Truck className="w-4 h-4 shrink-0" />
                 <span className="whitespace-nowrap">DESPACHAR</span>
               </button>
+              {clienteRetira ? (
+                <div
+                  className="flex items-center shrink-0 bg-red-800 border-l border-red-700 rounded-r-xl px-2"
+                  title="El cliente recoge con su propio transporte"
+                >
+                  <span className="text-white/90 text-[10px] sm:text-[11px] font-bold px-0.5 whitespace-nowrap">CLIENTE RETIRA</span>
+                </div>
+              ) : (
               <div
                 className="relative flex items-center shrink-0 bg-red-800 border-l border-red-700 rounded-r-xl px-2 hover:bg-red-900 transition-colors cursor-pointer"
                 onClick={(e) => e.stopPropagation()}
@@ -340,6 +357,7 @@ Si ya estaba registrada en el Excel, esa fila se conserva y no se duplicará al 
                 <span className="font-mono text-white/90 text-[10px] sm:text-[11px] font-bold px-0.5 truncate max-w-[70px] sm:max-w-[85px] inline-block align-middle">{placaSeleccionada}</span>
                 <span className="text-white/50 text-[10px] shrink-0">▼</span>
               </div>
+              )}
             </div>
           ) : (
             /* DESPACHADO → indicador + devolver */

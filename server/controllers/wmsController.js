@@ -14,6 +14,16 @@ import { fechaSqlAIso, normalizarFechaEntrada } from '../utils/fechas.js';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+// Formato de factura de la empresa: prefijo, guion y 5 dígitos (ej. 1M-43567, RM-00064, A-12345)
+const FACTURA_REGEX = /^(1M|FE|JC|JM|RM|A|C)-\d{5}$/;
+
+// Transportadoras permitidas. "Cliente Retira": el cliente recoge con su propio transporte;
+// esas órdenes se registran en la hoja CLIENTE RETIRA del Excel.
+const TRANSPORTADORA_FLOTA = 'Flota Propia';
+const TRANSPORTADORA_CLIENTE_RETIRA = 'Cliente Retira';
+const TRANSPORTADORAS = [TRANSPORTADORA_FLOTA, TRANSPORTADORA_CLIENTE_RETIRA];
+const PLACA_CLIENTE_RETIRA = 'CLIENTE RETIRA';
+
 /**
  * Código de orden con entropía suficiente para no chocar con el UNIQUE de
  * despachos.codigo_orden (el formato anterior solo tenía 600 valores posibles).
@@ -34,6 +44,8 @@ function normalizarDespacho(d) {
   return {
     ...d,
     fecha_despacho: fechaSqlAIso(d.fecha_despacho),
+    // El frontend lee la dirección como direccion_entrega (nombre usado al crear)
+    direccion_entrega: d.cliente_direccion,
     sync_cloud: construirSyncCloud(d)
   };
 }
@@ -109,7 +121,8 @@ export async function crearDespacho(req, res, next) {
     observaciones,
     fecha_despacho,
     items,
-    ciudad
+    ciudad,
+    transportadora
   } = req.body;
 
   const codigoCliente = typeof codigo_orden === 'string' ? codigo_orden.trim() : '';
@@ -122,6 +135,15 @@ export async function crearDespacho(req, res, next) {
     if (codigoFinal.length > 50) {
       return next(new ApiError(400, 'codigo_orden no puede superar 50 caracteres.'));
     }
+    const factura = String(codigo_factura_erp || '').trim().toUpperCase();
+    if (!FACTURA_REGEX.test(factura)) {
+      return next(new ApiError(400, 'Factura inválida. Formato: prefijo (1M, FE, JC, JM, RM, A, C), guion y 5 dígitos. Ej: 1M-43567.'));
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return next(new ApiError(400, 'El despacho debe tener al menos un artículo.'));
+    }
+    const transportadoraFinal = TRANSPORTADORAS.includes(transportadora) ? transportadora : TRANSPORTADORA_FLOTA;
+    const clienteRetira = transportadoraFinal === TRANSPORTADORA_CLIENTE_RETIRA;
 
     await client.query('BEGIN');
 
@@ -130,20 +152,21 @@ export async function crearDespacho(req, res, next) {
         codigo_orden, codigo_factura_erp, cliente_nombre, cliente_direccion, cliente_ciudad,
         transportadora, estado_actual, vehiculo_placa, valor_total, fecha_despacho, jornada, observaciones, usuario_creador
       ) VALUES (
-        $1, $2, $3, $4, $5, 'Flota Propia', 'PENDIENTE', $6, $7, $8, $9, $10, $11
+        $1, $2, $3, $4, $5, $12, 'PENDIENTE', $6, $7, $8, $9, $10, $11
       ) RETURNING *
     `, [
       codigoFinal,
-      codigo_factura_erp || '',
+      factura,
       cliente_nombre,
       direccion_entrega,
       ciudad || 'Cúcuta',
-      vehiculo_placa || FLOTA_VEHICULOS[0],
+      clienteRetira ? PLACA_CLIENTE_RETIRA : (vehiculo_placa || FLOTA_VEHICULOS[0]),
       valor_total || 0,
       normalizarFechaEntrada(fecha_despacho),
       jornada || 'AM',
       observaciones || '',
-      req.user.email
+      req.user.email,
+      transportadoraFinal
     ]);
 
     const nuevoDespacho = normalizarDespacho(dRows[0]);
@@ -153,14 +176,15 @@ export async function crearDespacho(req, res, next) {
       for (const it of items) {
         const { rows: iRows } = await client.query(`
           INSERT INTO despacho_items (
-            despacho_id, sku, descripcion_producto, cantidad_solicitada, ubicacion_bodega
-          ) VALUES ($1, $2, $3, $4, $5) RETURNING *
+            despacho_id, sku, descripcion_producto, cantidad_solicitada, ubicacion_bodega, unidad
+          ) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
         `, [
           nuevoDespacho.id,
           it.sku || 'SKU-001',
           it.descripcion_producto || 'Producto Genérico',
           it.cantidad_solicitada || 1,
-          it.ubicacion_bodega || 'DESPACHO'
+          it.ubicacion_bodega || 'DESPACHO',
+          String(it.unidad || 'UND').trim().toUpperCase().slice(0, 20)
         ]);
         nuevoDespacho.items.push(iRows[0]);
       }
@@ -245,7 +269,9 @@ export async function cambiarEstadoDespacho(req, res, next) {
       placaAsignada = despacho.vehiculo_placa;
       await client.query('COMMIT');
     } else {
-      placaAsignada = (vehiculoPlaca || despacho.vehiculo_placa || '').trim().toUpperCase();
+      placaAsignada = despacho.transportadora === TRANSPORTADORA_CLIENTE_RETIRA
+        ? PLACA_CLIENTE_RETIRA
+        : (vehiculoPlaca || despacho.vehiculo_placa || '').trim().toUpperCase();
       const { rows } = await client.query(`
         UPDATE despachos
         SET estado_actual = 'DESPACHADO',

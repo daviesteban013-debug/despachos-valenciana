@@ -71,6 +71,10 @@ const apiFetch = async (url, options = {}) => {
   return response;
 };
 
+// "Cliente Retira": el cliente recoge con su propio transporte (hoja CLIENTE RETIRA del Excel)
+const TRANSPORTADORA_CLIENTE_RETIRA = 'Cliente Retira';
+const PLACA_CLIENTE_RETIRA = 'CLIENTE RETIRA';
+
 // Despachos creados sin conexión: aún no existen en el servidor
 const esIdOffline = (id) => String(id || '').startsWith('offline-');
 
@@ -334,6 +338,7 @@ export function WmsProvider({ children }) {
                 cliente_nombre: d.cliente_nombre,
                 direccion_entrega: d.cliente_direccion || d.zona_entrega,
                 ciudad: d.cliente_ciudad,
+                transportadora: d.transportadora,
                 jornada: d.jornada,
                 vehiculo_placa: d.vehiculo_placa,
                 bodega_id: d.bodega_origen_id,
@@ -466,8 +471,6 @@ export function WmsProvider({ children }) {
   // Configuración operativa y filtros
   const [activeTurno, setActiveTurno] = useState('Diurno');
   const [selectedCarrier, setSelectedCarrier] = useState('TODAS');
-  const [selectedZone, setSelectedZone] = useState('TODAS');
-  const [onlyUrgent, setOnlyUrgent] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modales y selección
@@ -544,9 +547,12 @@ export function WmsProvider({ children }) {
     const targetDespacho = despachos.find(d => d.id === despachoId);
     if (!targetDespacho) return false;
 
-    const placaFinal = (vehiculoPlacaOverride || targetDespacho.vehiculo_placa || '').trim().toUpperCase();
+    const clienteRetira = targetDespacho.transportadora === TRANSPORTADORA_CLIENTE_RETIRA;
+    const placaFinal = clienteRetira
+      ? PLACA_CLIENTE_RETIRA
+      : (vehiculoPlacaOverride || targetDespacho.vehiculo_placa || '').trim().toUpperCase();
 
-    if (!placaFinal || !flotaVehiculos.map(v => v.trim().toUpperCase()).includes(placaFinal)) {
+    if (!clienteRetira && (!placaFinal || !flotaVehiculos.map(v => v.trim().toUpperCase()).includes(placaFinal))) {
       playBeep(440, 'sawtooth');
       showToast(`Debe seleccionar uno de los vehículos permitidos (${flotaVehiculos.join(', ')}) para despachar.`, 'warning');
       return false;
@@ -912,7 +918,10 @@ export function WmsProvider({ children }) {
     const cliente = (payload.cliente_nombre || '').trim();
     const direccion = (payload.direccion_entrega || '').trim();
     const valor = Number(payload.valor_factura) || 0;
-    const vehiculo = payload.vehiculo_placa || flotaVehiculos[0] || FLOTA_VEHICULOS[0];
+    const transportadora = payload.transportadora === TRANSPORTADORA_CLIENTE_RETIRA ? TRANSPORTADORA_CLIENTE_RETIRA : 'Flota Propia';
+    const vehiculo = transportadora === TRANSPORTADORA_CLIENTE_RETIRA
+      ? PLACA_CLIENTE_RETIRA
+      : (payload.vehiculo_placa || flotaVehiculos[0] || FLOTA_VEHICULOS[0]);
     const jornada = payload.jornada || (new Date().getHours() < 12 ? 'AM' : 'PM');
     const bodega = payload.bodega_id || '01';
     const obs = (payload.observaciones || '').trim();
@@ -920,27 +929,16 @@ export function WmsProvider({ children }) {
     const fechaDespacho = payload.fecha_despacho || fechaHoyLocal();
     const codigoOrden = generarCodigoOrden();
 
-    const items = payload.items && payload.items.length > 0 
-      ? payload.items.map((it, idx) => ({
-          id: `it-${Date.now()}-${idx}`,
-          sku: it.codigo,
-          descripcion_producto: it.descripcion,
-          cantidad_solicitada: it.cantidad || 1,
-          cantidad_auditada: it.cantidad || 1,
-          ubicacion_bodega: payload.bodega_id || 'DESPACHO',
-          unidad: it.und_base || 'UND'
-        }))
-      : [
-          {
-            id: `it-${Date.now()}`,
-            sku: 'SKU-PEDIDO',
-            descripcion_producto: `Despacho ${factura}`,
-            cantidad_solicitada: 1,
-            cantidad_auditada: 1,
-            ubicacion_bodega: 'DESPACHO',
-            unidad: 'UND'
-          }
-        ];
+    // El formulario exige al menos un artículo; el servidor también lo valida
+    const items = (payload.items || []).map((it, idx) => ({
+      id: `it-${Date.now()}-${idx}`,
+      sku: it.codigo,
+      descripcion_producto: it.descripcion,
+      cantidad_solicitada: it.cantidad || 1,
+      cantidad_auditada: it.cantidad || 1,
+      ubicacion_bodega: payload.bodega_id || 'DESPACHO',
+      unidad: it.unidad || it.und_base || 'UND'
+    }));
 
     try {
 
@@ -953,6 +951,7 @@ export function WmsProvider({ children }) {
           cliente_nombre: cliente,
           direccion_entrega: direccion,
           ciudad: ciudad,
+          transportadora: transportadora,
           jornada: jornada,
           vehiculo_placa: vehiculo,
           bodega_id: bodega,
@@ -982,8 +981,9 @@ export function WmsProvider({ children }) {
         ...nuevaOrden,
         cliente_codigo: `CL-${Math.floor(7000000 + Math.random() * 3000000)}`,
         zona_entrega: direccion,
+        direccion_entrega: direccion,
         bodega_origen_id: bodega,
-        transportadora: 'Flota Propia',
+        transportadora: transportadora,
         ruta_id: 'rt-101',
         prioridad: 2,
         bahia_asignada: 'Bodega A-01',
@@ -1028,13 +1028,14 @@ export function WmsProvider({ children }) {
         cliente_ciudad: ciudad,
         zona_entrega: payload.direccion_entrega,
         estado_actual: 'PENDIENTE',
-        vehiculo_placa: payload.vehiculo_placa,
+        vehiculo_placa: vehiculo,
         bodega_origen_id: payload.bodega_id,
         valor_total: payload.valor_factura,
         jornada: payload.jornada,
         observaciones: payload.observaciones,
         fecha_despacho: fechaDespacho,
-        transportadora: 'Flota Propia',
+        direccion_entrega: payload.direccion_entrega,
+        transportadora: transportadora,
         ruta_id: 'rt-offline',
         prioridad: 2,
         bahia_asignada: 'Bodega (Offline)',
@@ -1092,12 +1093,6 @@ export function WmsProvider({ children }) {
     if (selectedCarrier !== 'TODAS' && d.transportadora !== selectedCarrier) {
       return false;
     }
-    if (selectedZone !== 'TODAS' && d.zona_entrega !== selectedZone) {
-      return false;
-    }
-    if (onlyUrgent && d.prioridad !== 1) {
-      return false;
-    }
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
       const matchOrder = d.codigo_orden?.toLowerCase().includes(q);
@@ -1146,10 +1141,6 @@ export function WmsProvider({ children }) {
         setWavesViewMode,
         selectedCarrier,
         setSelectedCarrier,
-        selectedZone,
-        setSelectedZone,
-        onlyUrgent,
-        setOnlyUrgent,
         searchQuery,
         setSearchQuery,
         selectedDespacho,

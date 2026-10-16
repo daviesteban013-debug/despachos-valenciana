@@ -11,8 +11,7 @@ import {
 } from 'lucide-react';
 import AddVehicleModal from './AddVehicleModal';
 
-const CARRIERS = ['TODAS', 'Flota Propia', 'Coordinadora', 'TCC', 'Servientrega'];
-const ZONES = ['TODAS', 'Atalaya Occidental', 'Los Patios & Centro', 'Zona Industrial El Salado', 'Reparto Express Urbano'];
+const CARRIERS = ['TODAS', 'Flota Propia', 'Cliente Retira'];
 
 /**
  * ControlBar — barra de busqueda + Kardex ERP + Filtros.
@@ -28,10 +27,6 @@ export default function ControlBar({ compact = false }) {
     setSearchQuery,
     selectedCarrier,
     setSelectedCarrier,
-    selectedZone,
-    setSelectedZone,
-    onlyUrgent,
-    setOnlyUrgent,
     showToast
   } = useWms();
 
@@ -68,12 +63,10 @@ export default function ControlBar({ compact = false }) {
     }
   };
 
-  const hasActiveFilters = selectedCarrier !== 'TODAS' || selectedZone !== 'TODAS' || onlyUrgent;
+  const hasActiveFilters = selectedCarrier !== 'TODAS';
 
   const handleClearFilters = () => {
     setSelectedCarrier('TODAS');
-    setSelectedZone('TODAS');
-    setOnlyUrgent(false);
   };
 
   const handleKardexFileChange = async (e) => {
@@ -245,35 +238,6 @@ export default function ControlBar({ compact = false }) {
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* Filtro Zona de Entrega */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                Zona de Entrega
-              </label>
-              <select
-                value={selectedZone}
-                onChange={(e) => setSelectedZone(e.target.value)}
-                className="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 h-10 text-sm font-medium text-slate-800 focus:outline-none focus:border-[#E11D24]"
-              >
-                {ZONES.map((z) => (
-                  <option key={z} value={z}>{z}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Switch Solo Urgentes */}
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-800">Solo Urgentes (SLA)</span>
-              <button
-                onClick={() => setOnlyUrgent(!onlyUrgent)}
-                className={`h-7 w-12 rounded-full p-1 transition-colors flex items-center ${
-                  onlyUrgent ? 'bg-[#E11D24] justify-end' : 'bg-slate-300 justify-start'
-                }`}
-              >
-                <span className="h-5 w-5 rounded-full bg-white shadow-sm" />
-              </button>
             </div>
 
             <button

@@ -143,7 +143,7 @@ export default function PackageLabelModal({ despacho, onClose }) {
             {/* Destino */}
             <div style={{ marginTop: '4px' }}>
               <span style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase' }}>Destino:</span>
-              <div style={{ fontWeight: 'bold' }}>{despacho.zona_entrega}</div>
+              <div style={{ fontWeight: 'bold' }}>{despacho.cliente_direccion || despacho.direccion_entrega || despacho.zona_entrega}</div>
             </div>
 
             <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }} />

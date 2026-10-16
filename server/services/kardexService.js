@@ -284,12 +284,28 @@ export async function buscarFacturaKardex(numFactura) {
   if (!client) throw new Error('Base de datos no disponible');
 
   try {
-    const { rows } = await client.query(`
+    // 1) Coincidencia exacta ignorando guiones y espacios (1M-43567 = 1M43567)
+    let { rows } = await client.query(`
       SELECT *
       FROM kardex_ventas
-      WHERE UPPER(TRIM(num_factura)) = UPPER(TRIM($1))
+      WHERE REGEXP_REPLACE(UPPER(num_factura), '[^A-Z0-9]', '', 'g') = REGEXP_REPLACE(UPPER($1), '[^A-Z0-9]', '', 'g')
       ORDER BY id ASC
     `, [numFactura]);
+
+    // 2) Si el kardex guarda solo el número (sin prefijo), buscar por los dígitos
+    //    de la factura con máscara (RM-00064 → 64), siempre que la factura sea única.
+    const digitos = String(numFactura || '').match(/-(\d+)$/)?.[1];
+    if (rows.length === 0 && digitos) {
+      const res = await client.query(`
+        SELECT *
+        FROM kardex_ventas
+        WHERE LTRIM(REGEXP_REPLACE(num_factura, '[^0-9]', '', 'g'), '0') = LTRIM($1, '0')
+          AND REGEXP_REPLACE(UPPER(num_factura), '[^A-Z]', '', 'g') = ''
+        ORDER BY id ASC
+      `, [digitos]);
+      const facturasDistintas = new Set(res.rows.map(r => r.num_factura));
+      if (facturasDistintas.size === 1) rows = res.rows;
+    }
 
     if (rows.length === 0) return null;
 
@@ -332,6 +348,7 @@ export async function buscarFacturaKardex(numFactura) {
 export async function buscarFacturasPorPrefijo(prefijo, limite = 8) {
   const client = await getDbClient();
   if (!client) return [];
+  const digitosPrefijo = (String(prefijo).match(/-(\d+)$/)?.[1] || '').replace(/^0+/, '');
 
   try {
     const { rows } = await client.query(`
@@ -342,11 +359,18 @@ export async function buscarFacturasPorPrefijo(prefijo, limite = 8) {
         COUNT(*) as total_items,
         SUM(valor_total) as valor_total
       FROM kardex_ventas
-      WHERE UPPER(num_factura) LIKE UPPER($1)
+      WHERE REGEXP_REPLACE(UPPER(num_factura), '[^A-Z0-9]', '', 'g') LIKE $1
+         OR ($3::text <> '' AND REGEXP_REPLACE(UPPER(num_factura), '[^A-Z]', '', 'g') = ''
+             AND LTRIM(REGEXP_REPLACE(num_factura, '[^0-9]', '', 'g'), '0') LIKE $3::text)
       GROUP BY num_factura, nit_cliente, fecha_factura
       ORDER BY fecha_factura DESC
       LIMIT $2
-    `, [`${prefijo.trim()}%`, limite]);
+    `, [
+      `${prefijo.toUpperCase().replace(/[^A-Z0-9]/g, '')}%`,
+      limite,
+      // Dígitos tras el guion de la máscara (ej. "1M-435" → "435%") para kardex sin prefijo
+      digitosPrefijo ? `${digitosPrefijo}%` : ''
+    ]);
 
     return rows.map(r => ({
       num_factura:  r.num_factura,

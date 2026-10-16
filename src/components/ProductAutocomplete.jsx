@@ -5,7 +5,7 @@ import { Search, Package, Plus, Loader2 } from 'lucide-react';
 let _cachedInventario = null;
 let _fetchPromise = null;
 
-function getInventario() {
+export function getInventario() {
   if (_cachedInventario) return Promise.resolve(_cachedInventario);
   if (!_fetchPromise) {
     _fetchPromise = fetch('/inventario.json')

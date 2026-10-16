@@ -30,7 +30,10 @@ export function formatearItemsParaExcel(items) {
     .map(it => {
       const cant = it.cantidad_solicitada || it.cantidad || 1;
       const desc = it.descripcion_producto || it.descripcion || it.nombre || it.sku || 'Artículo';
-      return `• ${cant}x ${String(desc).trim()}`;
+      const unidad = String(it.unidad || '').trim().toUpperCase();
+      return unidad
+        ? `• ${cant} ${unidad} x ${String(desc).trim()}`
+        : `• ${cant}x ${String(desc).trim()}`;
     })
     .join('\n');
 }

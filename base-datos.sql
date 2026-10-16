@@ -104,6 +104,7 @@ CREATE TABLE despacho_items (
     cantidad_solicitada INT NOT NULL CHECK (cantidad_solicitada > 0),
     cantidad_auditada INT NOT NULL DEFAULT 0 CHECK (cantidad_auditada >= 0),
     ubicacion_bodega VARCHAR(50) NOT NULL, -- Ej: 'P02-E04-N3' (Pasillo 2, Estante 4, Nivel 3)
+    unidad VARCHAR(20) DEFAULT 'UND', -- Unidad despachada (menor o mayor del catálogo, ej. UND / CAJA)
     peso_unitario_kg NUMERIC(6, 2) NOT NULL DEFAULT 0.00,
     precio_unitario NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
