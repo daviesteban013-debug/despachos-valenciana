@@ -11,7 +11,8 @@ import {
   WifiOff,
   Printer,
   DollarSign,
-  Trash2
+  Trash2,
+  MapPin
 } from 'lucide-react';
 import PackageLabelModal from './PackageLabelModal';
 import { FLOTA_VEHICULOS } from '../data/flota';
@@ -44,7 +45,11 @@ export default function DispatchCard({ despacho }) {
   const isUrgent = despacho.prioridad === 1;
   const tieneIncidencia = Boolean(despacho.incidencia_activa);
   const sinConfirmar = despacho._sync_status === 'PENDIENTE_DE_SYNC';
+  const rechazado = despacho._sync_status === 'RECHAZADO';
+  const soloEnDispositivo = String(despacho.id || '').startsWith('offline-');
   const isDespachado = despacho.estado_actual === 'DESPACHADO';
+  const clienteRetira = despacho.transportadora === 'Cliente Retira';
+  const direccion = despacho.cliente_direccion || despacho.direccion_entrega || despacho.zona_entrega || '';
 
   // ── Handlers (logica de negocio intacta) ──────────────────────────────────
   const handleCambiarVehiculo = (e) => {
@@ -57,7 +62,7 @@ export default function DispatchCard({ despacho }) {
 
   const handleDespachar = async (e) => {
     e.stopPropagation();
-    const placaFinal = placaSeleccionada || despacho.vehiculo_placa;
+    const placaFinal = clienteRetira ? 'CLIENTE RETIRA' : (placaSeleccionada || despacho.vehiculo_placa);
     if (!placaFinal) {
       setErrorSinPlaca(true);
       return;
@@ -74,7 +79,9 @@ export default function DispatchCard({ despacho }) {
 
   const handleRestaurar = (e) => {
     e.stopPropagation();
-    if (window.confirm(`Devolver la orden ${despacho.codigo_orden} a PENDIENTE?`)) {
+    if (window.confirm(`Devolver la orden ${despacho.codigo_orden} a PENDIENTE?
+
+Si ya estaba registrada en el Excel, esa fila se conserva y no se duplicará al volver a despachar.`)) {
       restaurarACola(despacho.id);
     }
   };
@@ -151,6 +158,12 @@ export default function DispatchCard({ despacho }) {
           >
             {despacho.cliente_nombre}
           </h3>
+          {direccion && (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 truncate" title={direccion}>
+              <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
+              <span className="truncate">{direccion}</span>
+            </p>
+          )}
         </div>
 
         {/* ── CUERPO ── */}
@@ -186,7 +199,22 @@ export default function DispatchCard({ despacho }) {
                 <span>Sin confirmar en servidor</span>
               </div>
               <p className="text-[11px] text-amber-800 leading-snug">
-                Este despacho existe solo en este dispositivo. Se reintentara enviarlo automaticamente cuando haya conexion.
+                {soloEnDispositivo
+                  ? 'Este despacho existe solo en este dispositivo. Se reintentara enviarlo automaticamente cuando haya conexion.'
+                  : 'La salida de este despacho no ha sido confirmada por el servidor. Se reintentara automaticamente sin duplicar el Excel.'}
+              </p>
+            </div>
+          )}
+
+          {/* Banner: el servidor rechazó la orden (no se reintenta) */}
+          {rechazado && (
+            <div className="bg-red-50 border border-red-300/70 rounded-xl p-2.5 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-red-900 mb-0.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-[#E11D24] shrink-0" />
+                <span>Rechazado por el servidor</span>
+              </div>
+              <p className="text-[11px] text-red-800 leading-snug">
+                {despacho._sync_error || 'El servidor no aceptó este despacho.'} Revisa los datos, elimínalo y créalo de nuevo.
               </p>
             </div>
           )}
@@ -304,6 +332,14 @@ export default function DispatchCard({ despacho }) {
                 <Truck className="w-4 h-4 shrink-0" />
                 <span className="whitespace-nowrap">DESPACHAR</span>
               </button>
+              {clienteRetira ? (
+                <div
+                  className="flex items-center shrink-0 bg-red-800 border-l border-red-700 rounded-r-xl px-2"
+                  title="El cliente recoge con su propio transporte"
+                >
+                  <span className="text-white/90 text-[10px] sm:text-[11px] font-bold px-0.5 whitespace-nowrap">CLIENTE RETIRA</span>
+                </div>
+              ) : (
               <div
                 className="relative flex items-center shrink-0 bg-red-800 border-l border-red-700 rounded-r-xl px-2 hover:bg-red-900 transition-colors cursor-pointer"
                 onClick={(e) => e.stopPropagation()}
@@ -321,6 +357,7 @@ export default function DispatchCard({ despacho }) {
                 <span className="font-mono text-white/90 text-[10px] sm:text-[11px] font-bold px-0.5 truncate max-w-[70px] sm:max-w-[85px] inline-block align-middle">{placaSeleccionada}</span>
                 <span className="text-white/50 text-[10px] shrink-0">▼</span>
               </div>
+              )}
             </div>
           ) : (
             /* DESPACHADO → indicador + devolver */

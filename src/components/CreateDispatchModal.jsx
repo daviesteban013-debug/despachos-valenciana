@@ -5,8 +5,14 @@ import {
   Truck, Warehouse, Package, MessageSquare, Plus, Save,
   Check, Trash2, Loader2, Zap, CheckCircle2
 } from 'lucide-react';
-import ProductAutocomplete from './ProductAutocomplete';
+import ProductAutocomplete, { getInventario } from './ProductAutocomplete';
 import { FLOTA_VEHICULOS } from '../data/flota';
+import {
+  FACTURA_REGEX,
+  MENSAJE_FORMATO_FACTURA,
+  formatearFactura,
+  facturaDesdeKardex
+} from '../utils/factura';
 import AddVehicleModal from './AddVehicleModal';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -42,8 +48,30 @@ const BODEGAS_SALIDA = [
   { id: '04', nombre: '04 - Bodega El Zulia' }
 ];
 
+// Transportadoras de la empresa. "Cliente Retira": el cliente recoge con su propio transporte.
+const TRANSPORTADORA_FLOTA = 'Flota Propia';
+const TRANSPORTADORA_CLIENTE_RETIRA = 'Cliente Retira';
+const PLACA_CLIENTE_RETIRA = 'CLIENTE RETIRA';
+
+// Unidades de un artículo del catálogo: menor (und_base) y, si existe, mayor (und_alt × factor)
+function opcionesUnidad(item) {
+  const menor = (item.und_base || 'UND').trim();
+  const mayor = (item.und_alt || '').trim();
+  const factor = Number(item.factor) || 1;
+  const opciones = [{ valor: menor, etiqueta: `${menor} (menor)` }];
+  // Si ambas unidades tienen el mismo nombre (ej. UND/UND) no se pueden distinguir al guardar
+  if (mayor && mayor !== menor) {
+    opciones.push({
+      valor: mayor,
+      etiqueta: factor > 1 ? `${mayor} x${factor} (mayor)` : `${mayor} (mayor)`
+    });
+  }
+  return opciones;
+}
+
 const INITIAL_FORM = {
   numero_factura: '',
+  transportadora: TRANSPORTADORA_FLOTA,
   cliente_nombre: '',
   direccion_entrega: '',
   valor_factura: '',
@@ -116,7 +144,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
       // ✅ Auto-llenar campos con los datos del kardex
       setForm(prev => ({
         ...prev,
-        numero_factura: data.num_factura,
+        numero_factura: facturaDesdeKardex(data.num_factura, prev.numero_factura),
         cliente_nombre: data.nit_cliente || '',
         valor_factura:  Math.round(data.valor_total)
       }));
@@ -126,19 +154,33 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
         ...prev,
         numero_factura: null,
         cliente_nombre: null,
-        valor_factura: null
+        valor_factura: null,
+        items: null
       }));
 
+      // Unidades menor/mayor tomadas del catálogo (el kardex no las trae)
+      let catalogoPorCodigo = new Map();
+      try {
+        const catalogo = await getInventario();
+        catalogoPorCodigo = new Map(catalogo.map(p => [String(p.codigo).trim(), p]));
+      } catch (_) { /* sin catálogo: solo unidad UND */ }
+
       // Convertir ítems del kardex al formato del modal
-      const itemsKardex = data.items.map(item => ({
+      const itemsKardex = data.items.map(item => {
+        const prod = catalogoPorCodigo.get(String(item.codigo_producto).trim()) || {};
+        return {
         codigo:          item.codigo_producto,
         descripcion:     item.descripcion || item.codigo_producto,
-        und_base:        'UND',
+        und_base:        prod.und_base || 'UND',
+        und_alt:         prod.und_alt || '',
+        factor:          prod.factor || 1,
+        unidad:          prod.und_base || 'UND',
         cantidad:        item.cantidad,
         precio_unitario: item.precio_unitario,
         _kardex_valor:   item.valor_total,
         _kardex_bodega:  item.bodega
-      }));
+        };
+      });
 
       setSelectedItems(itemsKardex);
       setKardexCargada(true);
@@ -282,13 +324,17 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
 
   const validate = () => {
     const errs = {};
-    if (!form.numero_factura.trim())  errs.numero_factura  = 'Factura / Remisión requerida';
+    if (!form.numero_factura.trim())  errs.numero_factura  = 'Factura requerida';
+    else if (!FACTURA_REGEX.test(form.numero_factura.trim())) errs.numero_factura = MENSAJE_FORMATO_FACTURA;
     if (!form.cliente_nombre.trim())  errs.cliente_nombre  = 'Nombre del cliente requerido';
     if (!form.direccion_entrega.trim()) errs.direccion_entrega = 'Dirección de entrega requerida';
     if (!form.valor_factura || Number(form.valor_factura) <= 0) errs.valor_factura = 'Ingrese un valor válido';
+    if (selectedItems.length === 0) errs.items = 'Agrega al menos un artículo al despacho';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
+
+  const esClienteRetira = form.transportadora === TRANSPORTADORA_CLIENTE_RETIRA;
 
   const guardar = async (crearOtro) => {
     if (!validate()) return;
@@ -298,7 +344,8 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
       direccion_entrega: form.direccion_entrega.trim(),
       valor_factura:    Number(form.valor_factura) || 0,
       jornada:          form.jornada,
-      vehiculo_placa:   form.vehiculo_placa,
+      transportadora:   form.transportadora || TRANSPORTADORA_FLOTA,
+      vehiculo_placa:   esClienteRetira ? PLACA_CLIENTE_RETIRA : form.vehiculo_placa,
       bodega_id:        form.bodega_id,
       ciudad:           form.ciudad,
       observaciones:    form.observaciones?.trim() || '',
@@ -446,7 +493,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
                 autoComplete="off"
                 enterKeyHint="go"
                 value={form.numero_factura}
-                onChange={e => handleChange('numero_factura', e.target.value.toUpperCase())}
+                onChange={e => handleChange('numero_factura', formatearFactura(e.target.value))}
                 onFocus={() => kardexSugerencias.length > 0 && setMostrarSugerencias(true)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && form.numero_factura.trim()) {
@@ -454,7 +501,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
                     cargarFacturaKardex(form.numero_factura.trim());
                   }
                 }}
-                placeholder="Ej: 70058 — el kardex auto-llena el despacho"
+                placeholder="Ej: 1M-43567 — el kardex auto-llena el despacho"
                 className={`w-full h-11 px-3 pr-10 rounded-xl border text-sm font-bold font-mono bg-white focus:outline-none focus:ring-2 transition-all uppercase ${
                   errors.numero_factura
                     ? 'border-red-400 ring-1 ring-red-400'
@@ -617,7 +664,37 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
             </div>
           </div>
 
-          {/* ── 6. VEHÍCULO ── */}
+          {/* ── 6. TRANSPORTADORA ── */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+              <Truck className="h-3.5 w-3.5 text-slate-400" />
+              Transportadora
+            </label>
+            <div className="flex h-11 rounded-xl border border-slate-300 overflow-hidden bg-slate-50 p-0.5">
+              {[TRANSPORTADORA_FLOTA, TRANSPORTADORA_CLIENTE_RETIRA].map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => handleChange('transportadora', t)}
+                  className={`flex-1 flex items-center justify-center gap-1 text-xs font-bold rounded-lg transition-all ${
+                    (form.transportadora || TRANSPORTADORA_FLOTA) === t
+                      ? 'bg-[#E11D24] text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            {esClienteRetira && (
+              <p className="text-[11px] text-slate-500 mt-1">
+                El cliente recoge con su propio transporte. Se registrará en la hoja <strong>CLIENTE RETIRA</strong> del Excel.
+              </p>
+            )}
+          </div>
+
+          {/* ── 7. VEHÍCULO (solo flota propia) ── */}
+          {!esClienteRetira && (
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider">
@@ -653,6 +730,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
               </option>
             </select>
           </div>
+          )}
 
           {/* ── 8. OBSERVACIONES ── */}
           <div>
@@ -690,10 +768,15 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
                     i.codigo === prod.codigo ? { ...i, cantidad: i.cantidad + 1 } : i
                   ));
                 } else {
-                  setSelectedItems(prev => [...prev, { ...prod, cantidad: 1 }]);
+                  setSelectedItems(prev => [...prev, { ...prod, unidad: prod.und_base || 'UND', cantidad: 1 }]);
                 }
+                if (errors.items) setErrors(prev => ({ ...prev, items: null }));
               }}
             />
+
+            {errors.items && (
+              <p className="text-xs text-red-600 mt-1 font-semibold">{errors.items}</p>
+            )}
 
             {/* Lista de ítems seleccionados / cargados del kardex */}
             {selectedItems.length > 0 && (
@@ -707,7 +790,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-slate-800 truncate">{item.descripcion}</p>
                         <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
-                          {item.codigo} • {item.und_base}
+                          {item.codigo}
                           {item._kardex_bodega && (
                             <span className="bg-amber-100 text-amber-700 px-1 rounded text-[9px] font-bold">
                               {item._kardex_bodega}
@@ -719,6 +802,27 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
                         {item._kardex_valor && (
                           <span className="text-[10px] font-mono text-emerald-700 font-bold hidden sm:block">
                             ${Number(item._kardex_valor).toLocaleString('es-CO')}
+                          </span>
+                        )}
+                        {opcionesUnidad(item).length > 1 ? (
+                          <select
+                            value={item.unidad || item.und_base || 'UND'}
+                            onChange={e => {
+                              const unidad = e.target.value;
+                              setSelectedItems(prev =>
+                                prev.map(i => i.codigo === item.codigo ? { ...i, unidad } : i)
+                              );
+                            }}
+                            className="h-7 px-1 text-[11px] font-bold border border-slate-300 rounded bg-white focus:ring-1 focus:ring-[#E11D24] outline-none max-w-[110px]"
+                            title="Unidad de despacho"
+                          >
+                            {opcionesUnidad(item).map(op => (
+                              <option key={op.valor} value={op.valor}>{op.etiqueta}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-[11px] font-bold text-slate-500 font-mono">
+                            {item.unidad || item.und_base || 'UND'}
                           </span>
                         )}
                         <input
@@ -752,10 +856,14 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between text-xs text-slate-600">
             <div className="flex items-center gap-2">
               <Truck className="h-4 w-4 text-[#E11D24]" />
-              <span>Vehículo: <strong className="text-slate-900">{form.vehiculo_placa}</strong></span>
+              <span>
+                {esClienteRetira
+                  ? <strong className="text-slate-900">Cliente retira</strong>
+                  : <>Vehículo: <strong className="text-slate-900">{form.vehiculo_placa}</strong></>}
+              </span>
             </div>
             <span className="font-mono text-[11px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">
-              Hoja Excel: {form.vehiculo_placa}
+              Hoja Excel: {esClienteRetira ? PLACA_CLIENTE_RETIRA : form.vehiculo_placa}
             </span>
           </div>
 

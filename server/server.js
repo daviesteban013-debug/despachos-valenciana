@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { requireWmsAuth } from './middlewares/wmsAuth.js';
+import { requireWmsAuth, esAdmin, adminEmailsConfigurados } from './middlewares/wmsAuth.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import {
   listarInventario,
@@ -46,6 +46,7 @@ import {
   crearVehiculoController
 } from './controllers/vehiculosController.js';
 import { inicializarTablaVehiculos } from './services/vehiculosService.js';
+import { inicializarColumnasDespachos } from './services/syncDespachoExcelService.js';
 import {
   obtenerPerfilController,
   obtenerBorradorController,
@@ -60,6 +61,7 @@ dotenv.config();
 // Inicialización de esquemas persistentes
 inicializarTablaVehiculos();
 inicializarTablaUsuarioPerfil();
+inicializarColumnasDespachos();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // CORS: leer orígenes desde env. En desarrollo se agrega localhost:5173.
@@ -89,23 +91,19 @@ const corsOptions = {
 // ADMIN_EMAILS: lista de correos con permisos para rutas destructivas.
 // Si no está definida, las rutas destructivas deniegan siempre.
 // ──────────────────────────────────────────────────────────────────────────────
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
-  .split(',')
-  .map(e => e.trim().toLowerCase())
-  .filter(Boolean);
 
 /**
  * Middleware: exige que el usuario ya autenticado esté en ADMIN_EMAILS.
  * Debe usarse DESPUÉS de requireWmsAuth.
  */
 const requireAdminAuth = (req, res, next) => {
-  if (ADMIN_EMAILS.length === 0) {
+  if (adminEmailsConfigurados() === 0) {
     return res.status(403).json({
       error: 'Acción no disponible: ADMIN_EMAILS no está configurada. Contacta al administrador.'
     });
   }
   const email = (req.user?.email || '').toLowerCase();
-  if (!ADMIN_EMAILS.includes(email)) {
+  if (!esAdmin(email)) {
     console.warn(`[adminAuth] Acceso denegado (403) a ruta de admin para: ${email}`);
     return res.status(403).json({
       error: 'Tu cuenta no tiene permisos de administrador para esta operación.'
@@ -259,7 +257,7 @@ app.get('/api/despachos', listarDespachos);
 app.post('/api/despachos', crearDespacho);
 app.get('/api/despachos/exportar-plantilla', exportarPlantillaExcel);
 app.patch('/api/despachos/:id/estado', cambiarEstadoDespacho);
-app.delete('/api/despachos/:id', eliminarDespacho);
+app.delete('/api/despachos/:id', destructiveLimiter, eliminarDespacho);
 app.post('/api/despachos/:id/reintentar-sync', reintentarSincronizacionDrive);
 app.post('/api/despachos/:id/incidencia', gestionarIncidenciaDespacho);
 app.post('/api/despachos/cargar-plantilla-referencia', upload.single('archivo'), cargarPlantillaReferenciaController);
@@ -308,7 +306,7 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`📡 WebSockets inicializados exitosamente`);
     console.log(`📡 Endpoints WMS Seguros en http://localhost:${PORT}/api/despachos`);
     console.log(`🔒 CORS Origins: ${allowedOrigins.join(', ') || '(ninguno en producción)'}`);
-    console.log(`🔒 Admin Emails configurados: ${ADMIN_EMAILS.length}`);
+    console.log(`🔒 Admin Emails configurados: ${adminEmailsConfigurados()}`);
     inicializarTablaVehiculos().catch(e => console.warn('[VEHICULOS] Init warning:', e.message));
   });
 }

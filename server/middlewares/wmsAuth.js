@@ -21,6 +21,22 @@ const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '')
 
 const hayRestriccion = ALLOWED_DOMAIN || ALLOWED_EMAILS.length > 0;
 
+// ADMIN_EMAILS: correos con permisos para operaciones destructivas.
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
+export const adminEmailsConfigurados = () => ADMIN_EMAILS.length;
+
+/**
+ * Indica si el email pertenece a un administrador (ADMIN_EMAILS).
+ * Sin ADMIN_EMAILS configurada nadie es administrador.
+ */
+export function esAdmin(email) {
+  return ADMIN_EMAILS.includes((email || '').toLowerCase());
+}
+
 // Fallo de arranque en producción si no hay ninguna restricción configurada.
 // En desarrollo/test solo emite advertencia para no bloquear el onboarding.
 if (!hayRestriccion) {

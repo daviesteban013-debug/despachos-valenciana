@@ -16,6 +16,7 @@ import {
   ESTILOS_CELDA,
   inyectarMembreteInstitucional
 } from './excelStyles.js';
+import { formatearFechaDDMMYYYY } from '../utils/fechas.js';
 
 /**
  * Convierte la lista de artículos del despacho en un texto multilínea formateado para la celda de Excel.
@@ -29,7 +30,10 @@ export function formatearItemsParaExcel(items) {
     .map(it => {
       const cant = it.cantidad_solicitada || it.cantidad || 1;
       const desc = it.descripcion_producto || it.descripcion || it.nombre || it.sku || 'Artículo';
-      return `• ${cant}x ${String(desc).trim()}`;
+      const unidad = String(it.unidad || '').trim().toUpperCase();
+      return unidad
+        ? `• ${cant} ${unidad} x ${String(desc).trim()}`
+        : `• ${cant}x ${String(desc).trim()}`;
     })
     .join('\n');
 }
@@ -69,8 +73,7 @@ export async function crearPlantillaBase() {
     
     sheet.columns = ANCHOS_COLUMNAS_9;
     // Utilizamos la nueva función inyectarMembreteInstitucional
-    const now = new Date();
-    const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const todayStr = formatearFechaDDMMYYYY();
     inyectarMembreteInstitucional(sheet, `Fecha: ${todayStr}`, placa);
   }
 
@@ -157,24 +160,8 @@ export async function registrarDespachoEnPlantilla({
     throw new Error('Debe especificar un vehículo válido para el registro en la plantilla.');
   }
 
-  // Formato de fecha para el bloque (DD/MM/YYYY)
-  let fechaBloqueStr = '';
-  if (fechaDespacho) {
-    const d = new Date(fechaDespacho);
-    if (!isNaN(d.getTime())) {
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      fechaBloqueStr = `${day}/${month}/${year}`;
-    }
-  }
-  if (!fechaBloqueStr) {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    fechaBloqueStr = `${day}/${month}/${year}`;
-  }
+  // Formato de fecha para el bloque (DD/MM/YYYY), en la zona horaria de la operación
+  const fechaBloqueStr = formatearFechaDDMMYYYY(fechaDespacho);
 
   // Encolar la operación atómica
   return enqueue(async () => {
@@ -430,8 +417,7 @@ export async function agregarVehiculoEnPlantilla(vehiculoIdentificador) {
     worksheet = workbook.addWorksheet(nombreHoja, { views: [{ showGridLines: true }] });
     worksheet.columns = ANCHOS_COLUMNAS_9;
 
-    const now = new Date();
-    const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const todayStr = formatearFechaDDMMYYYY();
     inyectarMembreteInstitucional(worksheet, `Fecha: ${todayStr}`, vehiculoNormalizado);
 
     // 5. Generar buffer actualizado y guardar (Google Drive + Local)
