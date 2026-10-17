@@ -5,7 +5,8 @@ import {
   Truck, Warehouse, Package, MessageSquare, Plus, Save,
   Check, Trash2, Loader2, Zap, CheckCircle2
 } from 'lucide-react';
-import ProductAutocomplete, { getInventario } from './ProductAutocomplete';
+import ProductAutocomplete from './ProductAutocomplete';
+import { obtenerCatalogoArticulos } from '../services/catalogoArticulos';
 import { FLOTA_VEHICULOS } from '../data/flota';
 import {
   FACTURA_REGEX,
@@ -161,7 +162,7 @@ export default function CreateDispatchModal({ isOpen, onClose }) {
       // Unidades menor/mayor tomadas del catálogo (el kardex no las trae)
       let catalogoPorCodigo = new Map();
       try {
-        const catalogo = await getInventario();
+        const catalogo = await obtenerCatalogoArticulos();
         catalogoPorCodigo = new Map(catalogo.map(p => [String(p.codigo).trim(), p]));
       } catch (_) { /* sin catálogo: solo unidad UND */ }
 

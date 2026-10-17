@@ -164,28 +164,28 @@ export default function SelectorPage() {
 
               <div>
                 <span className="text-xs font-black text-blue-600 uppercase tracking-wider">
-                  Módulo 3 — Administrador de Inventario
+                  Módulo 3 — Toma física de inventario
                 </span>
                 <h2 className="text-2xl font-black text-slate-900 mt-1">
-                  Gestión de Inventario
+                  Cuadre de Inventario
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
-                  Panel de administración del catálogo de 350 productos y stock exacto por bodega. Importación y conciliación desde Excel del ERP sin sobrescrituras ciegas.
+                  Conteo físico por planillas, reconteo de diferencias y cuadre contra las existencias del TNS para medir el error del sistema.
                 </p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-slate-100 text-xs font-semibold text-slate-700">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Catálogo maestro con 350+ productos</span>
+                  <span>Planillas de conteo por bodega y ubicación</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Stock por bodega con desglose expandible</span>
+                  <span>Reconteo de los artículos con diferencia</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Importador y conciliador de Excel (.xlsx)</span>
+                  <span>Exactitud, sobrantes y faltantes en Excel</span>
                 </div>
               </div>
             </div>
@@ -195,7 +195,7 @@ export default function SelectorPage() {
                 to="/inventario"
                 className="w-full min-h-[48px] py-3.5 px-6 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-xl text-sm font-black tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
               >
-                <span>Abrir Panel Inventario</span>
+                <span>Abrir Cuadre de Inventario</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <a

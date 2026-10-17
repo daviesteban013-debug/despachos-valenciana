@@ -12,7 +12,6 @@ import {
   listarInventario,
   detalleProducto,
   importarExcel,
-  importarDemoExcel,
   listarDiferencias,
   resolverDiferencia
 } from './controllers/inventarioController.js';
@@ -55,6 +54,8 @@ import {
   actualizarPreferenciasController
 } from './controllers/usuarioController.js';
 import { inicializarTablaUsuarioPerfil, obtenerOCrearPerfil } from './services/usuarioService.js';
+import { inicializarTablasCuadre } from './services/cuadreService.js';
+import * as cuadre from './controllers/cuadreController.js';
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ dotenv.config();
 inicializarTablaVehiculos();
 inicializarTablaUsuarioPerfil();
 inicializarColumnasDespachos();
+inicializarTablasCuadre();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // CORS: leer orígenes desde env. En desarrollo se agrega localhost:5173.
@@ -238,10 +240,37 @@ app.patch('/api/usuario/preferencias', actualizarPreferenciasController);
 app.get('/api/inventario', listarInventario);
 app.get('/api/inventario/diferencias', listarDiferencias);
 app.post('/api/inventario/diferencias/:id/resolver', resolverDiferencia);
-// Ruta de importación inventario (permitida para usuarios autenticados)
+// Importación de inventario: solo administradores (ADMIN_EMAILS, validado en el controlador)
 app.post('/api/inventario/importar', destructiveLimiter, upload.single('archivo'), importarExcel);
-app.post('/api/inventario/importar-demo', importarDemoExcel);
 app.get('/api/inventario/:sku', detalleProducto);
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RUTAS DE CUADRE DE INVENTARIO (toma física anual: conteo, reconteo y cuadre)
+// Escritura de jornadas, importación y reconteos: solo ADMIN_EMAILS (validado en el controlador)
+// ──────────────────────────────────────────────────────────────────────────────
+app.get('/api/cuadre/permisos', cuadre.permisos);
+app.get('/api/cuadre/bodegas', cuadre.bodegas);
+app.get('/api/cuadre/articulos', cuadre.articulos);
+app.get('/api/cuadre/jornadas', cuadre.jornadas);
+app.post('/api/cuadre/jornadas', cuadre.nuevaJornada);
+app.get('/api/cuadre/jornadas/:id', cuadre.jornada);
+app.patch('/api/cuadre/jornadas/:id', cuadre.editarJornada);
+app.post(
+  '/api/cuadre/jornadas/:id/importar',
+  destructiveLimiter,
+  upload.fields([{ name: 'articulos', maxCount: 1 }, { name: 'existencias', maxCount: 1 }]),
+  cuadre.importar
+);
+app.get('/api/cuadre/jornadas/:id/planillas', cuadre.planillas);
+app.post('/api/cuadre/jornadas/:id/planillas', cuadre.nuevaPlanilla);
+app.get('/api/cuadre/jornadas/:id/cuadre', cuadre.cuadre);
+app.post('/api/cuadre/jornadas/:id/reconteos', cuadre.nuevoReconteo);
+app.get('/api/cuadre/jornadas/:id/exportar', cuadre.exportar);
+app.get('/api/cuadre/planillas/:id', cuadre.planilla);
+app.patch('/api/cuadre/planillas/:id', cuadre.editarPlanilla);
+app.post('/api/cuadre/planillas/:id/lineas', cuadre.nuevaLinea);
+app.patch('/api/cuadre/lineas/:id', cuadre.editarLinea);
+app.delete('/api/cuadre/lineas/:id', cuadre.borrarLinea);
 
 // ──────────────────────────────────────────────────────────────────────────────
 // RUTAS DE FACTURACIÓN Y MOSTRADOR
