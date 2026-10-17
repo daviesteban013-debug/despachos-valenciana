@@ -5,7 +5,7 @@ import { VentaMostradorProvider } from './modules/ventaMostrador/store/ventaMost
 import SelectorPage from './modules/ventaMostrador/pages/SelectorPage';
 import FacturacionPage from './modules/ventaMostrador/pages/FacturacionPage';
 import VitrinaPage from './modules/ventaMostrador/pages/VitrinaPage';
-import InventarioPage from './modules/inventario/pages/InventarioPage';
+import CuadreInventarioPage from './modules/inventario/pages/CuadreInventarioPage';
 import WmsDespachoApp from './WmsDespachoApp';
 
 export default function App() {
@@ -33,8 +33,8 @@ export default function App() {
           }
         />
 
-        {/* Módulo de Gestión de Inventario (Rol Admin) */}
-        <Route path="/inventario" element={<InventarioPage />} />
+        {/* Módulo Cuadre de Inventario: toma física anual (conteo, reconteo y cuadre vs TNS) */}
+        <Route path="/inventario" element={<CuadreInventarioPage />} />
 
         {/* Módulo WMS de despacho a domicilio (aislado con su propio WmsProvider) */}
         <Route

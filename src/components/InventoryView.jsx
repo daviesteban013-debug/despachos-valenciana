@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Package, Hash, Box, Calendar, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { obtenerCatalogoArticulos } from '../services/catalogoArticulos';
 
 const ITEMS_PER_PAGE = 100;
 
@@ -10,10 +11,9 @@ export default function InventoryView() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
-  // Carga lazy del inventario desde /public (no entra al bundle)
+  // Carga lazy del catálogo del WMS desde /public (no entra al bundle)
   useEffect(() => {
-    fetch('/inventario.json')
-      .then(r => r.json())
+    obtenerCatalogoArticulos()
       .then(data => {
         setInventarioData(data);
         setLoading(false);
@@ -34,7 +34,7 @@ export default function InventoryView() {
         item.descripcion.toLowerCase().includes(term) ||
         item.codigo.toLowerCase().includes(term)
     );
-  }, [searchTerm]);
+  }, [searchTerm, inventarioData]);
 
   // Paginación
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);

@@ -2,9 +2,16 @@ import { ApiError } from '../middlewares/errorHandler.js';
 import { getDbClient } from '../config/db.js';
 import {
   procesarImportacionExcel,
-  resolverDiferenciaInventario,
-  generarExcelPruebaBuffer
+  resolverDiferenciaInventario
 } from '../services/importacionExcelService.js';
+import { esAdmin } from '../middlewares/wmsAuth.js';
+
+// El rol se decide en el servidor con ADMIN_EMAILS (nunca con un header que manda el cliente)
+function exigirAdmin(req, next, mensaje) {
+  if (esAdmin(req.user?.email)) return true;
+  next(new ApiError(403, mensaje));
+  return false;
+}
 
 // GET /api/inventario?seccion=...&sku=...&buscar=...
 export async function listarInventario(req, res, next) {
@@ -115,13 +122,10 @@ export async function detalleProducto(req, res, next) {
   }
 }
 
-// POST /api/inventario/importar (Solo rol admin)
+// POST /api/inventario/importar (Solo administradores)
 export async function importarExcel(req, res, next) {
   try {
-    const rol = req.headers['x-user-role'] || req.body?.rol || 'admin';
-    if (rol !== 'admin') {
-      return next(new ApiError(403, 'Acceso denegado. Se requiere rol de administrador para importar inventario.'));
-    }
+    if (!exigirAdmin(req, next, 'Acceso denegado. Se requiere ser administrador para importar inventario.')) return;
 
     let buffer = null;
     let nombreArchivo = 'importacion_excel.xlsx';
@@ -136,7 +140,7 @@ export async function importarExcel(req, res, next) {
       return next(new ApiError(400, 'No se recibió ningún archivo Excel (.xlsx).'));
     }
 
-    const resultado = await procesarImportacionExcel(buffer, nombreArchivo, req.headers['x-user-name'] || 'admin');
+    const resultado = await procesarImportacionExcel(buffer, nombreArchivo, req.user.email);
     return res.json(resultado);
   } catch (error) {
     console.error('Error importando Excel:', error);
@@ -144,31 +148,11 @@ export async function importarExcel(req, res, next) {
   }
 }
 
-// POST /api/inventario/importar-demo (Generador de prueba con 1 click)
-export async function importarDemoExcel(req, res, next) {
-  try {
-    const rol = req.headers['x-user-role'] || 'admin';
-    if (rol !== 'admin') {
-      return next(new ApiError(403, 'Acceso denegado. Se requiere rol de administrador.'));
-    }
-
-    const bufferPrueba = await generarExcelPruebaBuffer();
-    const resultado = await procesarImportacionExcel(bufferPrueba, 'ERP_Valenciana_Simulado.xlsx', 'admin_demo');
-    return res.json(resultado);
-  } catch (error) {
-    console.error('Error procesando importación demo:', error);
-    return next(new ApiError(500, error.message));
-  }
-}
-
-// GET /api/inventario/diferencias (Solo rol admin)
+// GET /api/inventario/diferencias (Solo administradores)
 export async function listarDiferencias(req, res, next) {
+  if (!exigirAdmin(req, next, 'Acceso denegado. Solo administradores pueden ver diferencias de inventario.')) return;
   const client = await getDbClient();
   try {
-    const rol = req.headers['x-user-role'] || 'admin';
-    if (rol !== 'admin') {
-      return next(new ApiError(403, 'Acceso denegado. Solo administradores pueden ver diferencias de inventario.'));
-    }
 
     const { rows: pendientes } = await client.query(`
       SELECT d.*, p.nombre AS producto_nombre, b.nombre AS bodega_nombre
@@ -201,13 +185,10 @@ export async function listarDiferencias(req, res, next) {
   }
 }
 
-// POST /api/inventario/diferencias/:id/resolver (Solo rol admin)
+// POST /api/inventario/diferencias/:id/resolver (Solo administradores)
 export async function resolverDiferencia(req, res, next) {
   try {
-    const rol = req.headers['x-user-role'] || 'admin';
-    if (rol !== 'admin') {
-      return next(new ApiError(403, 'Acceso denegado. Solo administradores pueden resolver diferencias.'));
-    }
+    if (!exigirAdmin(req, next, 'Acceso denegado. Solo administradores pueden resolver diferencias.')) return;
 
     const { id } = req.params;
     const { accion } = req.body; // 'aplicar' | 'descartar'
@@ -216,11 +197,7 @@ export async function resolverDiferencia(req, res, next) {
       return next(new ApiError(400, 'Debe especificar la acción: "aplicar" o "descartar".'));
     }
 
-    const resuelta = await resolverDiferenciaInventario(
-      id,
-      accion,
-      req.headers['x-user-name'] || 'admin'
-    );
+    const resuelta = await resolverDiferenciaInventario(id, accion, req.user.email);
 
     return res.json({
       mensaje: `Diferencia ${id} resuelta como "${resuelta.estado}".`,

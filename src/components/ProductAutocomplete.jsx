@@ -1,35 +1,19 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Package, Plus, Loader2 } from 'lucide-react';
-
-// Cache global para no volver a fetchear si ya se cargó
-let _cachedInventario = null;
-let _fetchPromise = null;
-
-export function getInventario() {
-  if (_cachedInventario) return Promise.resolve(_cachedInventario);
-  if (!_fetchPromise) {
-    _fetchPromise = fetch('/inventario.json')
-      .then(r => r.json())
-      .then(data => {
-        _cachedInventario = data;
-        return data;
-      });
-  }
-  return _fetchPromise;
-}
+import { obtenerCatalogoArticulos, catalogoArticulosEnCache } from '../services/catalogoArticulos';
 
 export default function ProductAutocomplete({ onAddProduct }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [inventario, setInventario] = useState(_cachedInventario || []);
-  const [loading, setLoading] = useState(!_cachedInventario);
+  const [inventario, setInventario] = useState(catalogoArticulosEnCache() || []);
+  const [loading, setLoading] = useState(!catalogoArticulosEnCache());
   const wrapperRef = useRef(null);
 
-  // Carga lazy una sola vez (usa caché global si ya se cargó en InventoryView)
+  // Carga lazy una sola vez (caché compartida del catálogo del WMS)
   useEffect(() => {
-    if (_cachedInventario) return;
+    if (catalogoArticulosEnCache()) return;
     setLoading(true);
-    getInventario()
+    obtenerCatalogoArticulos()
       .then(data => {
         setInventario(data);
         setLoading(false);
