@@ -6,7 +6,7 @@ const BODEGAS_POR_DEFECTO = ['00', 'D', 'E', 'Y'];
 
 const fechaCorta = (f) => String(f || '').slice(0, 10).split('-').reverse().join('/');
 
-export default function JornadasPanel({ jornadas, bodegas, esAdmin, jornadaId, onSeleccionar, onCambio, notificar }) {
+export default function JornadasPanel({ jornadas, bodegas, esAdmin, emailUsuario, jornadaId, onSeleccionar, onCambio, notificar }) {
   const [creando, setCreando] = useState(false);
   const [form, setForm] = useState({ nombre: '', fecha_corte: '', bodegas: BODEGAS_POR_DEFECTO });
   const [guardando, setGuardando] = useState(false);
@@ -47,6 +47,13 @@ export default function JornadasPanel({ jornadas, bodegas, esAdmin, jornadaId, o
         )}
       </div>
 
+      {!esAdmin && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
+          Entraste como <strong>{emailUsuario || 'una cuenta sin correo'}</strong>, que no es administradora.
+          Por eso no ves <strong>"Nueva jornada"</strong> ni la carga de Excel del TNS. Pide a un administrador que agregue tu correo.
+        </div>
+      )}
+
       {creando && (
         <form onSubmit={crear} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
           <div className="grid sm:grid-cols-2 gap-3">
@@ -86,7 +93,7 @@ export default function JornadasPanel({ jornadas, bodegas, esAdmin, jornadaId, o
 
       {jornadas.length === 0 && !creando && (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center text-sm text-slate-500">
-          {esAdmin ? 'No hay jornadas. Crea la primera con "Nueva jornada".' : 'Aún no hay jornadas de cuadre. Un administrador debe crearla.'}
+          {esAdmin ? 'No hay jornadas. Crea la primera con "Nueva jornada".' : 'Aún no hay jornadas de cuadre.'}
         </div>
       )}
 

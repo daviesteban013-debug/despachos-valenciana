@@ -1,5 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 import dotenv from 'dotenv';
+import { getDbClient } from '../config/db.js';
 dotenv.config();
 
 const cleanVal = (v) => (v || '').trim().replace(/^["']|["']$/g, '');
@@ -21,20 +22,68 @@ const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '')
 
 const hayRestriccion = ALLOWED_DOMAIN || ALLOWED_EMAILS.length > 0;
 
-// ADMIN_EMAILS: correos con permisos para operaciones destructivas.
+// Administradores: correos con permisos para operaciones destructivas.
+// Dos fuentes, se suman:
+//   - ADMIN_EMAILS (variable de entorno)
+//   - tabla usuarios_admin en la base (se puede gestionar sin tocar el hosting)
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
   .map(e => e.trim().toLowerCase())
   .filter(Boolean);
 
-export const adminEmailsConfigurados = () => ADMIN_EMAILS.length;
+let adminsBaseDatos = new Set();
+const REFRESCO_ADMINS_MS = 60 * 1000;
+
+async function cargarAdminsBaseDatos() {
+  const db = await getDbClient();
+  if (!db) return;
+  try {
+    const { rows } = await db.query('SELECT LOWER(email) AS email FROM usuarios_admin');
+    adminsBaseDatos = new Set(rows.map(r => r.email));
+  } catch (err) {
+    console.warn('[wmsAuth] No se pudo leer usuarios_admin:', err.message);
+  } finally {
+    db.release();
+  }
+}
 
 /**
- * Indica si el email pertenece a un administrador (ADMIN_EMAILS).
- * Sin ADMIN_EMAILS configurada nadie es administrador.
+ * Crea la tabla usuarios_admin si no existe, carga los correos y los refresca
+ * cada minuto (así un admin agregado en la base aplica sin reiniciar).
+ */
+export async function inicializarAdminsBaseDatos() {
+  const db = await getDbClient();
+  if (!db) {
+    console.warn('[wmsAuth] PostgreSQL no disponible: solo se usará ADMIN_EMAILS.');
+    return;
+  }
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS usuarios_admin (
+        email VARCHAR(255) PRIMARY KEY,
+        agregado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        nota TEXT
+      )
+    `);
+  } catch (err) {
+    console.error('[wmsAuth] Error creando usuarios_admin:', err.message);
+  } finally {
+    db.release();
+  }
+  await cargarAdminsBaseDatos();
+  console.log(`✅ Administradores: ${ADMIN_EMAILS.length} por ADMIN_EMAILS, ${adminsBaseDatos.size} en la base.`);
+  setInterval(cargarAdminsBaseDatos, REFRESCO_ADMINS_MS).unref();
+}
+
+export const adminEmailsConfigurados = () => new Set([...ADMIN_EMAILS, ...adminsBaseDatos]).size;
+
+/**
+ * Indica si el email pertenece a un administrador (ADMIN_EMAILS o tabla usuarios_admin).
+ * Sin ninguna de las dos configurada nadie es administrador.
  */
 export function esAdmin(email) {
-  return ADMIN_EMAILS.includes((email || '').toLowerCase());
+  const e = (email || '').toLowerCase();
+  return Boolean(e) && (ADMIN_EMAILS.includes(e) || adminsBaseDatos.has(e));
 }
 
 // Fallo de arranque en producción si no hay ninguna restricción configurada.

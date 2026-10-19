@@ -151,7 +151,7 @@ function Cuadre({ usuario, setUsuario }) {
             <Loader2 className="w-6 h-6 animate-spin text-[#E11D24]" /> Cargando cuadre de inventario...
           </div>
         ) : pestana === 'jornadas' || !jornada ? (
-          <JornadasPanel jornadas={jornadas} bodegas={bodegas} esAdmin={esAdmin} jornadaId={jornadaId}
+          <JornadasPanel jornadas={jornadas} bodegas={bodegas} esAdmin={esAdmin} emailUsuario={permisos?.email} jornadaId={jornadaId}
             onSeleccionar={seleccionarJornada} onCambio={cargarJornadas} notificar={notificar} />
         ) : pestana === 'cuadre' ? (
           <CuadrePanel jornada={jornada} bodegas={bodegas} esAdmin={esAdmin} onAbrirPlanilla={abrirPlanilla} notificar={notificar} />

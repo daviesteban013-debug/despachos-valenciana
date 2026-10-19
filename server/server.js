@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { requireWmsAuth, esAdmin, adminEmailsConfigurados } from './middlewares/wmsAuth.js';
+import { requireWmsAuth, esAdmin, adminEmailsConfigurados, inicializarAdminsBaseDatos } from './middlewares/wmsAuth.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import {
   listarInventario,
@@ -64,6 +64,7 @@ inicializarTablaVehiculos();
 inicializarTablaUsuarioPerfil();
 inicializarColumnasDespachos();
 inicializarTablasCuadre();
+inicializarAdminsBaseDatos();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // CORS: leer orígenes desde env. En desarrollo se agrega localhost:5173.
