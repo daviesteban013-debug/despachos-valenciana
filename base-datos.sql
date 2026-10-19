@@ -161,7 +161,7 @@ CREATE TABLE devoluciones (
 -- 8. ÍNDICES DE RENDIMIENTO PARA TIEMPO REAL WMS
 -- ----------------------------------------------------------------------------
 CREATE INDEX idx_despachos_estado ON despachos(estado_actual);
-CREATE INDEX idx_despachos_prioridad_corte ON despachos(prioridad ASC, horario_corte ASC);
+CREATE INDEX idx_despachos_prioridad ON despachos(prioridad);
 CREATE INDEX idx_despachos_transportadora ON despachos(transportadora);
 CREATE INDEX idx_despachos_ruta ON despachos(ruta_id);
 CREATE INDEX idx_despacho_items_despacho ON despacho_items(despacho_id);
