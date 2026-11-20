@@ -6,7 +6,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { requireWmsAuth, esAdmin, adminEmailsConfigurados, inicializarAdminsBaseDatos } from './middlewares/wmsAuth.js';
+import { requireWmsAuth, esAdmin, adminEmailsConfigurados, inicializarUsuariosAutorizados } from './middlewares/wmsAuth.js';
+import * as usuariosAutorizados from './controllers/usuariosAutorizadosController.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import {
   listarInventario,
@@ -64,7 +65,7 @@ inicializarTablaVehiculos();
 inicializarTablaUsuarioPerfil();
 inicializarColumnasDespachos();
 inicializarTablasCuadre();
-inicializarAdminsBaseDatos();
+inicializarUsuariosAutorizados();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // CORS: leer orígenes desde env. En desarrollo se agrega localhost:5173.
@@ -244,6 +245,14 @@ app.post('/api/inventario/diferencias/:id/resolver', resolverDiferencia);
 // Importación de inventario: solo administradores (ADMIN_EMAILS, validado en el controlador)
 app.post('/api/inventario/importar', destructiveLimiter, upload.single('archivo'), importarExcel);
 app.get('/api/inventario/:sku', detalleProducto);
+
+// ──────────────────────────────────────────────────────────────────────────────
+// USUARIOS AUTORIZADOS (quién entra a la app y con qué rol). Solo administradores.
+// ──────────────────────────────────────────────────────────────────────────────
+app.get('/api/usuarios-autorizados', usuariosAutorizados.listar);
+app.post('/api/usuarios-autorizados', usuariosAutorizados.agregar);
+app.patch('/api/usuarios-autorizados/:email', usuariosAutorizados.cambiarRol);
+app.delete('/api/usuarios-autorizados/:email', destructiveLimiter, usuariosAutorizados.quitar);
 
 // ──────────────────────────────────────────────────────────────────────────────
 // RUTAS DE CUADRE DE INVENTARIO (toma física anual: conteo, reconteo y cuadre)

@@ -2,7 +2,8 @@ import { jwtDecode } from 'jwt-decode';
 
 // Cliente HTTP del módulo Cuadre de Inventario.
 // Sin datos de respaldo: si el servidor falla, se lanza el error para mostrarlo.
-const API = `${import.meta.env.VITE_API_URL || ''}/api/cuadre`;
+const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api`;
+const API = `${API_BASE}/cuadre`;
 
 function token() {
   try {
@@ -20,7 +21,7 @@ function token() {
   }
 }
 
-async function pedir(ruta, { method = 'GET', body, form } = {}) {
+async function pedir(ruta, { method = 'GET', body, form, base = API } = {}) {
   const t = token();
   const headers = {};
   if (t) headers.Authorization = `Bearer ${t}`;
@@ -28,7 +29,7 @@ async function pedir(ruta, { method = 'GET', body, form } = {}) {
 
   let res;
   try {
-    res = await fetch(`${API}${ruta}`, {
+    res = await fetch(`${base}${ruta}`, {
       method,
       headers,
       body: form || (body !== undefined ? JSON.stringify(body) : undefined)
@@ -88,6 +89,15 @@ export const cuadreApi = {
     const nombre = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '')?.[1] || 'Cuadre.xlsx';
     return { blob: await res.blob(), nombre };
   }
+};
+
+// Usuarios autorizados (quién entra a la app y con qué rol). Solo administradores.
+const USUARIOS = { base: `${API_BASE}/usuarios-autorizados` };
+export const usuariosApi = {
+  listar: () => json('', USUARIOS),
+  agregar: (email, rol) => json('', { ...USUARIOS, method: 'POST', body: { email, rol } }),
+  cambiarRol: (email, rol) => json(`/${encodeURIComponent(email)}`, { ...USUARIOS, method: 'PATCH', body: { rol } }),
+  quitar: (email) => json(`/${encodeURIComponent(email)}`, { ...USUARIOS, method: 'DELETE' })
 };
 
 /** Formato de cantidades: hasta 4 decimales, separador colombiano. */

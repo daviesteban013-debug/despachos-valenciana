@@ -22,68 +22,92 @@ const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '')
 
 const hayRestriccion = ALLOWED_DOMAIN || ALLOWED_EMAILS.length > 0;
 
-// Administradores: correos con permisos para operaciones destructivas.
-// Dos fuentes, se suman:
-//   - ADMIN_EMAILS (variable de entorno)
-//   - tabla usuarios_admin en la base (se puede gestionar sin tocar el hosting)
+// Administradores y usuarios autorizados. Dos fuentes que se suman:
+//   - Variables de entorno: ALLOWED_EMAILS / ALLOWED_EMAIL_DOMAIN (acceso) y ADMIN_EMAILS (admin)
+//   - Tabla usuarios_autorizados en la base, gestionada por los admins desde la app
+//     (pestaña Usuarios del Cuadre de Inventario), con rol CONTADOR o ADMIN.
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
   .map(e => e.trim().toLowerCase())
   .filter(Boolean);
 
-let adminsBaseDatos = new Set();
-const REFRESCO_ADMINS_MS = 60 * 1000;
+export const ROLES_USUARIO = ['CONTADOR', 'ADMIN'];
 
-async function cargarAdminsBaseDatos() {
+let usuariosBaseDatos = new Map(); // email → rol
+const REFRESCO_USUARIOS_MS = 60 * 1000;
+
+/** Relee la tabla usuarios_autorizados (también se llama tras cada cambio desde la app). */
+export async function recargarUsuariosAutorizados() {
   const db = await getDbClient();
   if (!db) return;
   try {
-    const { rows } = await db.query('SELECT LOWER(email) AS email FROM usuarios_admin');
-    adminsBaseDatos = new Set(rows.map(r => r.email));
+    const { rows } = await db.query('SELECT LOWER(email) AS email, rol FROM usuarios_autorizados');
+    usuariosBaseDatos = new Map(rows.map(r => [r.email, r.rol]));
   } catch (err) {
-    console.warn('[wmsAuth] No se pudo leer usuarios_admin:', err.message);
+    console.warn('[wmsAuth] No se pudo leer usuarios_autorizados:', err.message);
   } finally {
     db.release();
   }
 }
 
 /**
- * Crea la tabla usuarios_admin si no existe, carga los correos y los refresca
- * cada minuto (así un admin agregado en la base aplica sin reiniciar).
+ * Crea la tabla usuarios_autorizados si no existe, pasa a ella los admins de la
+ * tabla anterior usuarios_admin (si existe) y la relee cada minuto.
  */
-export async function inicializarAdminsBaseDatos() {
+export async function inicializarUsuariosAutorizados() {
   const db = await getDbClient();
   if (!db) {
-    console.warn('[wmsAuth] PostgreSQL no disponible: solo se usará ADMIN_EMAILS.');
+    console.warn('[wmsAuth] PostgreSQL no disponible: solo se usarán las variables de entorno.');
     return;
   }
   try {
     await db.query(`
-      CREATE TABLE IF NOT EXISTS usuarios_admin (
+      CREATE TABLE IF NOT EXISTS usuarios_autorizados (
         email VARCHAR(255) PRIMARY KEY,
+        rol VARCHAR(10) NOT NULL DEFAULT 'CONTADOR' CHECK (rol IN ('CONTADOR', 'ADMIN')),
+        agregado_por VARCHAR(255),
         agregado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        nota TEXT
+        actualizado_por VARCHAR(255),
+        actualizado_en TIMESTAMPTZ
       )
     `);
+    const { rows } = await db.query("SELECT to_regclass('public.usuarios_admin') IS NOT NULL AS existe");
+    if (rows[0]?.existe) {
+      const { rowCount } = await db.query(`
+        INSERT INTO usuarios_autorizados (email, rol, agregado_por, agregado_en)
+        SELECT LOWER(email), 'ADMIN', 'migración usuarios_admin', agregado_en FROM usuarios_admin
+        ON CONFLICT (email) DO NOTHING
+      `);
+      if (rowCount > 0) console.log(`[wmsAuth] ${rowCount} admin(s) pasados de usuarios_admin a usuarios_autorizados.`);
+    }
   } catch (err) {
-    console.error('[wmsAuth] Error creando usuarios_admin:', err.message);
+    console.error('[wmsAuth] Error preparando usuarios_autorizados:', err.message);
   } finally {
     db.release();
   }
-  await cargarAdminsBaseDatos();
-  console.log(`✅ Administradores: ${ADMIN_EMAILS.length} por ADMIN_EMAILS, ${adminsBaseDatos.size} en la base.`);
-  setInterval(cargarAdminsBaseDatos, REFRESCO_ADMINS_MS).unref();
+  await recargarUsuariosAutorizados();
+  const admins = [...usuariosBaseDatos.values()].filter(r => r === 'ADMIN').length;
+  console.log(`✅ Usuarios en la base: ${usuariosBaseDatos.size} (${admins} admin). ADMIN_EMAILS: ${ADMIN_EMAILS.length}.`);
+  setInterval(recargarUsuariosAutorizados, REFRESCO_USUARIOS_MS).unref();
 }
 
-export const adminEmailsConfigurados = () => new Set([...ADMIN_EMAILS, ...adminsBaseDatos]).size;
+export const adminEmailsConfigurados = () => new Set([
+  ...ADMIN_EMAILS,
+  ...[...usuariosBaseDatos].filter(([, rol]) => rol === 'ADMIN').map(([email]) => email)
+]).size;
 
 /**
- * Indica si el email pertenece a un administrador (ADMIN_EMAILS o tabla usuarios_admin).
+ * Indica si el email pertenece a un administrador (ADMIN_EMAILS o rol ADMIN en la base).
  * Sin ninguna de las dos configurada nadie es administrador.
  */
 export function esAdmin(email) {
   const e = (email || '').toLowerCase();
-  return Boolean(e) && (ADMIN_EMAILS.includes(e) || adminsBaseDatos.has(e));
+  return Boolean(e) && (ADMIN_EMAILS.includes(e) || usuariosBaseDatos.get(e) === 'ADMIN');
+}
+
+/** Correos y dominio autorizados por variables de entorno (solo lectura desde la app). */
+export function accesosDeEntorno() {
+  return { correos: [...ALLOWED_EMAILS], admins: [...ADMIN_EMAILS], dominio: ALLOWED_DOMAIN || null };
 }
 
 // Fallo de arranque en producción si no hay ninguna restricción configurada.
@@ -106,11 +130,14 @@ if (!hayRestriccion) {
 }
 
 /**
- * Evalúa si un email está autorizado según las variables de entorno.
+ * Evalúa si un email está autorizado: tabla usuarios_autorizados o variables de entorno.
  * @param {string} email - Email verificado por Google (ya lowercase)
  * @returns {boolean}
  */
 function emailAutorizado(email) {
+  // Criterio 0: autorizado desde la app (tabla usuarios_autorizados) o admin por entorno
+  if (usuariosBaseDatos.has(email) || ADMIN_EMAILS.includes(email)) return true;
+
   if (!hayRestriccion) return true; // sin configuración → acceso abierto (solo en desarrollo)
 
   // Criterio 1: whitelist individual de correos

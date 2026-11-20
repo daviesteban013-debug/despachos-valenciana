@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ClipboardCheck, CalendarDays, ClipboardList, Scale, Loader2, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, CalendarDays, ClipboardList, Scale, Loader2, ShieldCheck, X, Users } from 'lucide-react';
 import AuthGate from '../../../components/AuthGate';
 import GoogleAuthBadge from '../../../components/GoogleAuthBadge';
 import { cuadreApi } from '../services/cuadreApi';
@@ -8,6 +8,7 @@ import JornadasPanel from '../components/JornadasPanel';
 import PlanillasPanel from '../components/PlanillasPanel';
 import CapturaPlanilla from '../components/CapturaPlanilla';
 import CuadrePanel from '../components/CuadrePanel';
+import UsuariosPanel from '../components/UsuariosPanel';
 
 const CLAVE_JORNADA = 'cuadre_jornada_activa';
 
@@ -29,7 +30,8 @@ export default function CuadreInventarioPage() {
 const PESTANAS = [
   { id: 'planillas', etiqueta: 'Conteo', icono: ClipboardList },
   { id: 'cuadre', etiqueta: 'Cuadre', icono: Scale },
-  { id: 'jornadas', etiqueta: 'Jornadas', icono: CalendarDays }
+  { id: 'jornadas', etiqueta: 'Jornadas', icono: CalendarDays },
+  { id: 'usuarios', etiqueta: 'Usuarios', icono: Users, soloAdmin: true }
 ];
 
 function Cuadre({ usuario, setUsuario }) {
@@ -120,13 +122,13 @@ function Cuadre({ usuario, setUsuario }) {
             <GoogleAuthBadge user={usuario} setUser={setUsuario} />
           </div>
         </div>
-        <nav className="max-w-7xl mx-auto px-4 flex gap-1">
-          {PESTANAS.map(p => {
+        <nav className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
+          {PESTANAS.filter(p => !p.soloAdmin || esAdmin).map(p => {
             const Icono = p.icono;
             const activa = pestana === p.id;
             return (
               <button key={p.id} onClick={() => { setPestana(p.id); if (p.id !== 'planillas') setPlanillaId(null); }}
-                className={`px-3 py-2.5 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-colors ${
+                className={`px-3 py-2.5 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-colors shrink-0 ${
                   activa ? 'border-[#E11D24] text-[#E11D24]' : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}>
                 <Icono className="w-4 h-4" /> {p.etiqueta}
@@ -150,6 +152,8 @@ function Cuadre({ usuario, setUsuario }) {
           <div className="flex items-center justify-center py-20 text-slate-500 gap-2">
             <Loader2 className="w-6 h-6 animate-spin text-[#E11D24]" /> Cargando cuadre de inventario...
           </div>
+        ) : pestana === 'usuarios' && esAdmin ? (
+          <UsuariosPanel notificar={notificar} />
         ) : pestana === 'jornadas' || !jornada ? (
           <JornadasPanel jornadas={jornadas} bodegas={bodegas} esAdmin={esAdmin} emailUsuario={permisos?.email} jornadaId={jornadaId}
             onSeleccionar={seleccionarJornada} onCambio={cargarJornadas} notificar={notificar} />
